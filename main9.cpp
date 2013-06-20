@@ -13,7 +13,7 @@ const int MAP_HEIGHT = 45;
 //parameters for dungeon generator
 int ROOM_MAX_SIZE = 10;
 int ROOM_MIN_SIZE = 6;
-int MAX_ROOMS = 45;
+int MAX_ROOMS = 30;
 
 TCODColor color_dark_wall(0, 0, 100);
 TCODColor color_dark_ground(50, 50, 150);
@@ -69,7 +69,12 @@ public:
     }
 
     bool intersect(Rect &other){
-        return (x1 <= other.x2 && x2 >= other.x1 && y1 <= other.y2 && y2 >= other.y1);
+        // return (self.x1 <= other.x2 and self.x2 >= other.x1 and
+        //        self.y1 <= other.y2 and self.y2 >= other.y1)
+        std::cout << " " << x1 << " " << other.x2 << " " << x2 << " " << other.x1 << " " << y1 << " " << other.y2 << " "
+            << y2 << " " << other.y1 << std::endl;
+        return (x1 <= other.x2 && x2 >= other.x1 &&
+               y1 <= other.y2 && y2 >= other.y1);
     }
 };
 
@@ -180,43 +185,80 @@ void make_map(Object &duh){
            map_array[3597] = Tile(1,1);
         }
         ++row;
-    }
+    } // fills map with walls 
 
-    std::vector<Rect*> rooms;
+    std::vector<Rect> rooms;
+    int num_rooms = 0;
 
-    int s = 0;
+    int prev_x = 0;
+    int prev_y = 0;
 
-    for (int r = 0; r <= MAX_ROOMS; ++r){
+//Rect new_room(1, 1, 1, 1);
+//rooms.push_back(&new_room);
+
+    while (num_rooms <= MAX_ROOMS){
+        bool failed;
+Sleep(550);
+        std::cout << "num_rooms: " << num_rooms << std::endl;
+        std::cout << "Rooms array: " << rooms.size() << std::endl;
+
 
         TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
 
         //random width and height
-        int w = wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
-        int h = wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
+        int w = 0;
+         w=    wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
+        int h = 0;
+         h=   wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
         //random position without going out of the boundaries of the map
-        int x = wtf->getInt( 0, MAP_WIDTH - w - 1,0);
-        int y = wtf->getInt( 0, MAP_HEIGHT - h - 1,0);
+        int x = 0;
+         x=   wtf->getInt( 0, MAP_WIDTH - w - 1,0);
+        int y = 0;
+         y=   wtf->getInt( 0, MAP_HEIGHT - h - 1,0);
 
+        //Rect *new_room = new Rect(x, y, w, h);
         Rect new_room(x, y, w, h);
+std::cout << "new room x y w h: " << x << " " << y << " "  << w << " " << h << std::endl;
 
-        bool failed = false;
 
+        failed = false;
+        
         for (unsigned int i = 0; i<rooms.size(); ++i){
-            if (new_room.intersect(*rooms[i])){ failed = true; break;}
-        }   
+std::cout << "i: " << i  << std::endl;
+
+            if ( new_room.intersect(rooms[i]) ){ 
+                failed = true;
+                
+                std::cout << "failed?: " << failed  << std::endl;
+
+                break;}
+                    }  
+       // Sleep(3550);
 
         if (!failed){
             create_room(new_room);
-            if (s == 0){
-            duh.x = new_room.center_x;
-            duh.y = new_room.center_y; // new player coordinates from room 0
+            if (num_rooms == 0){
+                duh.x = new_room.center_x;
+                duh.y = new_room.center_y; // new player coordinates from room 0
+            } else {
+                npc.x = new_room.center_x;
+                npc.y = new_room.center_y; // new npc coordinates from whatever room
+                
+                prev_x = rooms[num_rooms].center_x;
+                prev_y = rooms[num_rooms].center_y;
+
+                if (wtf->getInt(0, 1, 0) == 1){
+                    create_h_tunnel(prev_x, rooms[num_rooms].center_x, prev_y);
+                    create_v_tunnel(prev_y, rooms[num_rooms].center_y, rooms[num_rooms].center_x);
+                } else {
+                    create_v_tunnel(prev_y, rooms[num_rooms].center_y, prev_x);
+                    create_h_tunnel(prev_x, rooms[num_rooms].center_x, rooms[num_rooms].center_y);
+                }
             }
-            else    {
-            npc.x = new_room.center_x;
-            npc.y = new_room.center_y; // new npc coordinates from whatever room
-            }
+            num_rooms = num_rooms + 1; // add room to counter
+            rooms.push_back(new_room); // add room to array
         }
-        ++s;
+           
     }
 
     npc.h = npc.h +2;
