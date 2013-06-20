@@ -65,6 +65,7 @@ TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "
 TCODConsole *load = new TCODConsole(win_x, win_y);  // load screen
 
 TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT));  // combat UI panel
+TCODConsole *r_panel = new TCODConsole((win_x - MAP_WIDTH), MAP_HEIGHT); // panel on right of map 
 // 30, 46 message log
 int BAR_WIDTH = 20;
 int MSG_X = 30; // BAR_WIDTH + 2;
@@ -1231,6 +1232,11 @@ void render_all (){
     con->setBackgroundFlag(TCOD_BKGND_SET);
     con->print(0, 0, "%c1%c%c2%c%c3%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
             TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
+
+    con->putChar(10, 10, 666, TCOD_BKGND_SET);
+    con->putChar(10+1, 10, 667, TCOD_BKGND_SET);
+    con->putChar(10, 10+1, 668, TCOD_BKGND_SET);
+    con->putChar(10+1, 10+1, 669, TCOD_BKGND_SET);
     
     TCODConsole::blit(con,0,0,0,0,TCODConsole::root,0,0);
 }
@@ -2645,7 +2651,7 @@ void draw_menu_2(int state, int pickone, int sel, int rolled, int pick, Statisti
 
     TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::yellow, TCODColor::black);
     TCODConsole::root->print(4, 37, "Note:");
-    TCODConsole::root->printRect(4, 38, 60, 20, "Six numbers will be generated (%c2d6+6%c, for each attribute), when accepted, you can then bind each of the six Categories to one of the numbers. Note that each level coresponds to the sum of the one below. For example: MMC + MMP + MMS = MM, MM + MR = M. \"Capacity\" also defines the maximum \"Power\" and \"Speed\" can reach.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->printRect(4, 38, 60, 20, "Six numbers will be generated (%c2d6+6%c, for each attribute), when accepted, you can then bind each of the six Categories to one of the numbers. Note that each level corresponds to the sum of the one below. For example: MMC + MMP + MMS = MM, MM + MR = M. \"Capacity\" also defines the maximum \"Power\" and \"Speed\" can reach.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
 }
 
 int menu_1(){
@@ -2674,7 +2680,8 @@ int menu_1(){
 
 int main() {
 
-    TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE);
+    //TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE);
+    TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
     //TCODConsole::setCustomFont("sample_full_unicode.png",TCOD_FONT_LAYOUT_ASCII_INROW,32,2048);
     TCODSystem::setFps(LIMIT_FPS);
         
@@ -2718,6 +2725,10 @@ int main() {
 
     //TCODConsole::mapAsciiCodeToFont('s',4,0);
     //TCODConsole::mapAsciiCodeToFont(TCOD_CHAR_HLINE,4,0);
+    TCODConsole::mapAsciiCodeToFont(666,1,16);
+    TCODConsole::mapAsciiCodeToFont(667,2,16);
+    TCODConsole::mapAsciiCodeToFont(668,1,17);
+    TCODConsole::mapAsciiCodeToFont(669,2,17);
 
     /* 
     msg_log msg1;
@@ -2953,7 +2964,7 @@ int main() {
                
             fov_recompute = true;
             render_all();
-            TCODConsole::flush(); // this updates the screen
+TCODConsole::flush(); // this updates the screen
             //TCOD_key_t key = 
                 TCODConsole::waitForKeypress(true);
 
@@ -2993,6 +3004,7 @@ int main() {
             if (break_combat) break; // break combat mode if monsters all dead or out of FoV
 
             con->clear();
+            r_panel->clear();
             TCODConsole::root->clear();
 
             int myroll = 0;
@@ -3018,30 +3030,73 @@ int main() {
                 *(monsters[i].initiative) = i+1;
             }  
 
-            TCODConsole::root->setAlignment(TCOD_RIGHT);
-            TCODConsole::root->print(win_x-1, 3, "Initiative list");
+            r_panel->setAlignment(TCOD_RIGHT);
+            r_panel->print((win_x-MAP_WIDTH)-1, 3, "Initiative list");
 
             unsigned int player_own = player.initiative;
 
             // Create initiative UI list
-            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            r_panel->setDefaultForeground(TCODColor::white);
             TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::yellow, TCODColor::black);
             TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lightAmber,TCODColor::black);
             for (unsigned int i = 0; i<monsters.size(); ++i) {
                 if (i == (player_own - 1)){
-                    TCODConsole::root->print(win_x-2, 5+(i), "[%c%d%c] Player <", TCOD_COLCTRL_1, 
+                    r_panel->print((win_x-MAP_WIDTH)-2, 5+(i), "[%c%d%c] Player <", TCOD_COLCTRL_1, 
                             player.temp_init, TCOD_COLCTRL_STOP);
                 } else {
                     for (unsigned int b = 0; b<monvector.size(); ++b) {
                         unsigned int monster_ini =  monvector[b].initiative;
                         if ((i+1) == monster_ini){
-                            TCODConsole::root->print(win_x-2, 5+ (i), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
+                            r_panel->print((win_x-MAP_WIDTH)-2, 5+ (i), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
                                     monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
                                     monvector[b].name, TCOD_COLCTRL_STOP);
                         }
                     }
                 }
-            }    
+            }  
+
+            r_panel->setBackgroundFlag(TCOD_BKGND_SET);
+            TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lightYellow, TCODColor::darkestRed);
+            TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::lighterGreen, TCODColor::darkestRed);
+            TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::darkGreen, TCODColor::darkestRed);
+            TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::darkGreen, TCODColor::darkestRed);
+            r_panel->print((win_x-MAP_WIDTH)-2, 16, "%cAF%c%cAF%c%cA*%c%cA*%c", TCOD_COLCTRL_1, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
+            r_panel->print((win_x-MAP_WIDTH)-2, 17, "%cDF%c%cD*%c%cDA%c%cDA%c", TCOD_COLCTRL_1, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
+            TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lighterRed, TCODColor::darkestRed);
+            TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::lighterGreen, TCODColor::black);
+            TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::lightYellow, TCODColor::black);
+            TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::darkGreen, TCODColor::darkestRed);
+            r_panel->print((win_x-MAP_WIDTH)-2, 18, "%cA*%c%c**%c%c**%c%cA*%c", TCOD_COLCTRL_1, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
+            r_panel->print((win_x-MAP_WIDTH)-2, 19, "%cDF%c%cDB%c%c**%c%cDA%c", TCOD_COLCTRL_1, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
+            TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::darkestRed);
+            TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::red, TCODColor::black);
+            TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::lighterGreen, TCODColor::black);
+            TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::lightYellow, TCODColor::darkestRed);
+            r_panel->print((win_x-MAP_WIDTH)-2, 20, "%cA2%c%cA1%c%c**%c%c**%c", TCOD_COLCTRL_1, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
+            r_panel->print((win_x-MAP_WIDTH)-2, 21, "%cD*%c%cD*%c%cDB%c%c**%c", TCOD_COLCTRL_1, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
+            TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::darkestRed);
+            TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::red, TCODColor::darkestRed);
+            TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::red, TCODColor::darkestRed);
+            TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::lighterGreen, TCODColor::darkestRed);
+            r_panel->print((win_x-MAP_WIDTH)-2, 22, "%cA3%c%cA2%c%cA1%c%c**%c", TCOD_COLCTRL_1, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
+            r_panel->print((win_x-MAP_WIDTH)-2, 23, "%cD*%c%cD*%c%cD*%c%cDB%c", TCOD_COLCTRL_1, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
+
 
             TCODConsole::root->setAlignment(TCOD_CENTER);
             TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
@@ -3053,7 +3108,8 @@ int main() {
             
             fov_recompute = true;
             render_all();
-            TCODConsole::flush(); // this updates the screen
+            TCODConsole::blit(r_panel,0,0,0,0,TCODConsole::root,MAP_WIDTH, 0);
+TCODConsole::flush(); // this updates the screen
             //TCOD_key_t key2 = 
                 TCODConsole::waitForKeypress(true); // to start combat
 
