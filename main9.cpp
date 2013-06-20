@@ -6,7 +6,7 @@
 #include "libtcod.hpp"
 #include <windows.h> // for Sleep()
 
-#include <process.h>
+// #include <process.h> //used for threading?
 
 const int   win_x   =   95; // window width in cells
 const int   win_y   =   63; // window height in cells
@@ -25,7 +25,6 @@ const int no_turn = 2;
 const int dead = 99;
 
 int stance_pos = 1;
-
 
 //parameters for dungeon generator
 int ROOM_MAX_SIZE = 10;
@@ -168,6 +167,7 @@ class AI;
 
 class Object_monster;
 
+
 class Object_player;
 
 class Fighter {
@@ -192,6 +192,8 @@ public:
         if (damage > 0) hp -= damage;
     }
 };
+
+
 
 class Object_monster {
 
@@ -285,6 +287,86 @@ public:
 
 };
 
+ 
+
+class Statistics {
+
+public:
+
+    int M;
+    int P;
+    int S;
+
+    int MM;
+    int MR;
+    int PM;
+    int PN;
+    int SM;
+    int SP;
+
+    int MMC;
+    int MMP;
+    int MMS;
+
+    int MRC;
+    int MRP;
+    int MRS;
+
+    int PMC;
+    int PMP;
+    int PMS;
+
+    int PNC;
+    int PNP;
+    int PNS;
+
+    int SMC;
+    int SMP;
+    int SMS;
+
+    int SPC;
+    int SPP;
+    int SPS;
+
+    Statistics(int a){
+       M = 0;
+     P= 0;
+   S= 0;
+
+     MM= 0;
+     MR= 0;
+     PM= 0;
+    PN= 0;
+    SM= 0;
+     SP= 0;
+
+     MMC= 0;
+   MMP= 0;
+     MMS= 0;
+
+     MRC= 0;
+    MRP= 0;
+    MRS= 0;
+
+    PMC= 0;
+     PMP= 0;
+     PMS= 0;
+
+     PNC= 0;
+     PNP= 0;
+     PNS= 0;
+
+     SMC= 0;
+    SMP= 0;
+    SMS= 0;
+
+    SPC= 0;
+     SPP= 0;
+    SPS= 0;
+    }
+
+};
+
 class Object_player {
 
 public: // public should be moved down, but I keep it here for debug messages
@@ -299,13 +381,16 @@ public: // public should be moved down, but I keep it here for debug messages
     int bloody;
     bool blocks;
     Fighter stats;
+    Statistics sts;
 
     int combat_move;
     int speed;
     int initiative;
     int temp_init; // total initiative value for messages/list
 
-    Object_player(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
+    Object_player(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter, Statistics
+            loc_sts) :
+        stats(loc_fighter), sts(loc_sts) {
         x = a;
         y = b;
         selfchar = pchar;
@@ -343,6 +428,8 @@ public: // public should be moved down, but I keep it here for debug messages
 
     ~Object_player(){} // ?
 };
+
+
 
 
 std::vector<Object_player*> myvector; // player vector object
@@ -448,10 +535,11 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
 
 
 Fighter fighter_component(30, 2, 5, 8); // hp, defense, power
-Object_player playera(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
-Object_player playerb(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
+Statistics stati(0);
+//Object_player playera(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
+//Object_player playerb(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
 
-Object_player player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
+Object_player player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component, stati);
 //strcpy(player.name, "Playername");
 //strcpy(monster.name, "orc");
 
@@ -841,6 +929,7 @@ TCOD_key_t keyz;
     TCOD_mouse_t mousez;
     TCOD_event_t ev;
 
+// never used    
 void threadm( void* pParams )
     {
 
@@ -1784,6 +1873,21 @@ void Message_Log(){
             }
         }
 
+        for (int n = 0; n < 7; ++n){
+            panel->setDefaultForeground(TCODColor::lighterGrey);
+            panel->setDefaultBackground(TCODColor::black);
+            panel->print(32, n+1, "%c", TCOD_CHAR_VLINE);
+        //TCODConsole::root->print(win_x-1, n, "%c", TCOD_CHAR_VLINE);
+        }
+    for (int n = 0; n < 20; ++n){
+        panel->setDefaultForeground(TCODColor::lighterGrey);
+        panel->setDefaultBackground(TCODColor::black);
+        panel->print(n+33, 0, "%c", TCOD_CHAR_HLINE);
+        //TCODConsole::root->print(n, win_y-1, "%c", TCOD_CHAR_HLINE);
+    }
+    panel->print(32, 0, "%c", TCOD_CHAR_NW);
+
+        /*
         panel->setDefaultForeground(TCODColor::grey);
         panel->print(32, 0, "o");
         panel->print(90, 0, "o");
@@ -1793,6 +1897,7 @@ void Message_Log(){
         for (int n = 1; n < (90-32); n++) panel->print((32+n), 16, "%c",TCOD_CHAR_HLINE);
         for (int n = 1; n < (16); n++) panel->print(32, n, "%c",TCOD_CHAR_VLINE);
         for (int n = 1; n < (16); n++) panel->print(90, n, "%c",TCOD_CHAR_VLINE);
+        */
     }
 
 }
@@ -1838,6 +1943,709 @@ void draw_menu_1(int state){
             TCODConsole::root->setDefaultBackground(TCODColor::black);
             break;
     }
+}
+
+void rollstat(int &cap, int &pow, int &spd){
+    TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
+    TCODRandom * ftw = TCODRandom::getInstance(); // initializer for random, no idea why
+    int added = 6; // 2d6 + 6
+
+    int rolla = 0;
+    int rollb = 0;
+    int rollt = 0;
+    //Sleep(200);
+    rolla = wtf->getInt(1, 6, 0);
+    rollb = ftw->getInt(1, 6, 0);
+    rollt = (rolla + rollb) + added;
+    int capt = 0;
+    capt = rollt;
+            int powt = 100;
+            while(powt > capt){
+            rolla = wtf->getInt(1, 6, 0);
+            rollb = ftw->getInt(1, 6, 0);
+            powt = (rolla + rollb) + added;
+            }
+            int spdt = 100;
+            while(spdt > capt){
+            rolla = wtf->getInt(1, 6, 0);
+            rollb = ftw->getInt(1, 6, 0);
+            spdt = (rolla + rollb) + added;
+            }  
+            cap = capt;
+            pow = powt;
+            spd = spdt;
+}
+
+void draw_frame(const char *title1, const char *title2){
+    for (int n = 0; n < win_y; ++n){
+        TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+        TCODConsole::root->setDefaultBackground(TCODColor::black);
+        TCODConsole::root->print(0, n, "%c", TCOD_CHAR_VLINE);
+        TCODConsole::root->print(win_x-1, n, "%c", TCOD_CHAR_VLINE);
+    }
+    for (int n = 0; n < win_x; ++n){
+        TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+        TCODConsole::root->setDefaultBackground(TCODColor::black);
+        TCODConsole::root->print(n, 0, "%c", TCOD_CHAR_HLINE);
+        TCODConsole::root->print(n, win_y-1, "%c", TCOD_CHAR_HLINE);
+    }
+    TCODConsole::root->print(0, 0, "%c", TCOD_CHAR_NW);
+    TCODConsole::root->print(win_x-1, 0, "%c", TCOD_CHAR_NE);
+    TCODConsole::root->print(0, win_y-1, "%c", TCOD_CHAR_SW);
+    TCODConsole::root->print(win_x-1, win_y-1, "%c", TCOD_CHAR_SE);
+
+    TCODConsole::root->setAlignment(TCOD_CENTER);
+    TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::yellow, TCODColor::black);
+    TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::white, TCODColor::black);
+    TCODConsole::root->print(win_x/2, 0, "[ %c%s%c - %c%s%c ]", TCOD_COLCTRL_1, title1, TCOD_COLCTRL_STOP,
+            TCOD_COLCTRL_2, title2, TCOD_COLCTRL_STOP);
+    
+}
+
+// just adds dots to the statistics UI
+void dotme(std::vector<int> wheredot){
+    TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+    for(unsigned int f = 0; f < wheredot.size(); ++f){
+        for(int n = 0; n < 10; ++n){
+            TCODConsole::root->print(13+n, wheredot[f], ".");
+        }
+        for(int n = 0; n < 10; ++n){
+            TCODConsole::root->print(34+n, wheredot[f], ".");
+        }
+        for(int n = 0; n < 10; ++n){
+            TCODConsole::root->print(55+n, wheredot[f], ".");
+        }
+    }
+}    
+
+struct tempnumst { int total; int a; int b; int c; };
+
+std::vector<tempnumst> tempnumbers;
+
+// state-rollmenu pickone-numberselected sel-whichnumber pick-bindphase
+void draw_menu_2(int state, int pickone, int sel, int rolled, int pick, Statistics &rollst, bool bind, int rolled1ce){
+    TCODConsole::root->setAlignment(TCOD_LEFT);
+    TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
+    TCODConsole::root->setDefaultForeground(TCODColor::white);
+    TCODConsole::root->setDefaultBackground(TCODColor::black);
+   
+    //this block simply flags the lines that need to be dotted
+    std::vector<int> dotlines;
+    int d1 = 5; 
+    dotlines.push_back(d1);
+    d1 = 9; 
+    dotlines.push_back(d1);
+    d1 = 10; 
+    dotlines.push_back(d1);
+    d1 = 14; 
+    dotlines.push_back(d1);
+    d1 = 15; 
+    dotlines.push_back(d1);
+    d1 = 16; 
+    dotlines.push_back(d1);
+    d1 = 18; 
+    dotlines.push_back(d1);
+    d1 = 19; 
+    dotlines.push_back(d1);
+    d1 = 20; 
+    dotlines.push_back(d1);
+    dotme(dotlines);
+
+    if(pick == 1){
+        switch (sel){
+            case 1:
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(22, 9, ">");
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                break;
+            case 2:
+                
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(22, 10, ">");
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                break;
+            case 3:
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(43, 9, ">");
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                break;
+            case 4:
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(43, 10, ">");
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                break;
+            case 5:
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(64, 9, ">");
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                break;
+            case 6:
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(64, 10, ">");
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                break;
+        }        
+        switch(pickone){
+            case 1:
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total);
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                for(unsigned int n = 1; n < tempnumbers.size(); n++){
+                    TCODConsole::root->print(5+(n*5), 26, "%d", tempnumbers[n].total);
+                }
+                /* TCODConsole::root->print(10, 26, "%d", rollst.MR);
+                TCODConsole::root->print(15, 26, "%d", rollst.PM);
+                TCODConsole::root->print(20, 26, "%d", rollst.PN);
+                TCODConsole::root->print(25, 26, "%d", rollst.SM);
+                TCODConsole::root->print(30, 26, "%d", rollst.SP);
+                */
+                break;
+            case 2:
+                
+                TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total); 
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(10, 26, "%d", tempnumbers[1].total);
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                for(unsigned int n = 2; n < tempnumbers.size(); n++){
+                    TCODConsole::root->print(5+(n*5), 26, "%d", tempnumbers[n].total);
+                }
+                break;
+            case 3:
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total); 
+                TCODConsole::root->print(10, 26, "%d", tempnumbers[1].total);
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(15, 26, "%d", tempnumbers[2].total);
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                for(unsigned int n = 3; n < tempnumbers.size(); n++){
+                    TCODConsole::root->print(5+(n*5), 26, "%d", tempnumbers[n].total);
+                }
+                break;
+            case 4:
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total); 
+                TCODConsole::root->print(10, 26, "%d", tempnumbers[1].total);
+                TCODConsole::root->print(15, 26, "%d", tempnumbers[2].total);
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(20, 26, "%d", tempnumbers[3].total);
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                for(unsigned int n = 4; n < tempnumbers.size(); n++){
+                    TCODConsole::root->print(5+(n*5), 26, "%d", tempnumbers[n].total);
+                }
+                break;
+            case 5:
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total); 
+                TCODConsole::root->print(10, 26, "%d", tempnumbers[1].total);
+                TCODConsole::root->print(15, 26, "%d", tempnumbers[2].total);
+                TCODConsole::root->print(20, 26, "%d", tempnumbers[3].total);
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(25, 26, "%d", tempnumbers[4].total);
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                for(unsigned int n = 5; n < tempnumbers.size(); n++){
+                    TCODConsole::root->print(5+(n*5), 26, "%d", tempnumbers[n].total);
+                }
+                break;
+            case 6:
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total); 
+                TCODConsole::root->print(10, 26, "%d", tempnumbers[1].total);
+                TCODConsole::root->print(15, 26, "%d", tempnumbers[2].total);
+                TCODConsole::root->print(20, 26, "%d", tempnumbers[3].total);
+                TCODConsole::root->print(25, 26, "%d", tempnumbers[4].total);
+                TCODConsole::root->setDefaultForeground(TCODColor::black);
+                TCODConsole::root->setDefaultBackground(TCODColor::white);
+                TCODConsole::root->print(30, 26, "%d", tempnumbers[5].total);
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setDefaultBackground(TCODColor::black);
+                break;    
+        }    
+        
+    } else if (pick !=2){
+    switch(state){
+        case 1:
+            TCODConsole::root->setDefaultForeground(TCODColor::black);
+            TCODConsole::root->setDefaultBackground(TCODColor::white);
+            TCODConsole::root->print(3, 30, "Roll");
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black);
+            TCODConsole::root->print(3, 31, "Accept");
+            TCODConsole::root->print(3, 32, "Skip generation");
+            TCODConsole::root->print(3, 33, "Quit");
+            break;
+        case 2:
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black); 
+            TCODConsole::root->print(3, 30, "Roll");
+            TCODConsole::root->setDefaultForeground(TCODColor::black);
+            TCODConsole::root->setDefaultBackground(TCODColor::white);
+            TCODConsole::root->print(3, 31, "Accept");
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black);
+            TCODConsole::root->print(3, 32, "Skip generation");
+            TCODConsole::root->print(3, 33, "Quit");
+            break;
+            case 3:
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black);
+            TCODConsole::root->print(3, 30, "Roll");
+            TCODConsole::root->print(3, 31, "Accept");
+            TCODConsole::root->setDefaultForeground(TCODColor::black);
+            TCODConsole::root->setDefaultBackground(TCODColor::white);
+            TCODConsole::root->print(3, 32, "Skip generation");
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black);
+            TCODConsole::root->print(3, 33, "Quit");
+            break;
+            case 4:
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black);
+            TCODConsole::root->print(3, 30, "Roll");
+            TCODConsole::root->print(3, 31, "Accept");
+            TCODConsole::root->print(3, 32, "Skip generation");
+            TCODConsole::root->setDefaultForeground(TCODColor::black);
+            TCODConsole::root->setDefaultBackground(TCODColor::white);
+            TCODConsole::root->print(3, 33, "Quit");
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black);
+            break;
+    }
+    } else {
+        switch(state){
+        case 1:
+            TCODConsole::root->setDefaultForeground(TCODColor::black);
+            TCODConsole::root->setDefaultBackground(TCODColor::white);
+            TCODConsole::root->print(3, 30, "Restart");
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black);
+            TCODConsole::root->print(3, 31, "Confirm");
+            TCODConsole::root->print(3, 32, "Quit");
+            break;
+        case 2:
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black); 
+            TCODConsole::root->print(3, 30, "Restart");
+            TCODConsole::root->setDefaultForeground(TCODColor::black);
+            TCODConsole::root->setDefaultBackground(TCODColor::white);
+            
+            TCODConsole::root->print(3, 31, "Confirm");
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black);
+            TCODConsole::root->print(3, 32, "Quit");
+            break;
+            case 3:
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black);
+            TCODConsole::root->print(3, 30, "Restart");
+            TCODConsole::root->print(3, 31, "Confirm");
+            TCODConsole::root->setDefaultForeground(TCODColor::black);
+            TCODConsole::root->setDefaultBackground(TCODColor::white);
+            TCODConsole::root->print(3, 32, "Quit");
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setDefaultBackground(TCODColor::black);
+            break;
+        }
+    }
+
+    if(bind){ // enter pressed, make the binding
+        switch(sel){ // which stat
+            case 1:
+                //switch(pickone){ // which number
+                   // case 1:
+                        player.sts.MM = tempnumbers[pickone-1].total;
+                        player.sts.MMC = tempnumbers[pickone-1].a;
+                        player.sts.MMP = tempnumbers[pickone-1].b;
+                        player.sts.MMS = tempnumbers[pickone-1].c;
+                      //  break;
+                    /* case 2:
+                        player.sts.MM = tempnumbers[pickone-1].total;
+                        player.sts.MMC = tempnumbers[pickone-1].a;
+                        player.sts.MMP = tempnumbers[pickone-1].b;
+                        player.sts.MMS = tempnumbers[pickone-1].c;
+                        break;
+                    case 3:
+                        player.sts.MM = tempnumbers[pickone-1].total;
+                        player.sts.MMC = tempnumbers[pickone-1].a;
+                        player.sts.MMP = tempnumbers[pickone-1].b;
+                        player.sts.MMS = tempnumbers[pickone-1].c;
+                        break;
+                    case 4:
+                        player.sts.MM = tempnumbers[pickone-1].total;
+                        player.sts.MMC = tempnumbers[pickone-1].a;
+                        player.sts.MMP = tempnumbers[pickone-1].b;
+                        player.sts.MMS = tempnumbers[pickone-1].c;
+                        break;
+                    case 5:
+                        player.sts.MM = tempnumbers[pickone-1].total;
+                        player.sts.MMC = tempnumbers[pickone-1].a;
+                        player.sts.MMP = tempnumbers[pickone-1].b;
+                        player.sts.MMS = tempnumbers[pickone-1].c;
+                        break;
+                    case 6:
+                        player.sts.MM = tempnumbers[pickone-1].total;
+                        player.sts.MMC = tempnumbers[pickone-1].a;
+                        player.sts.MMP = tempnumbers[pickone-1].b;
+                        player.sts.MMS = tempnumbers[pickone-1].c;
+                        break;
+                        */
+                //}
+                tempnumbers.erase(tempnumbers.begin()+(pickone-1));
+                break;
+            case 2:
+                //switch(pickone){
+                   // case 1:
+                        player.sts.MR = tempnumbers[pickone-1].total;
+                        player.sts.MRC = tempnumbers[pickone-1].a;
+                        player.sts.MRP = tempnumbers[pickone-1].b;
+                        player.sts.MRS = tempnumbers[pickone-1].c;
+                       // break;
+                        /* 
+                    case 2:
+                        player.sts.MR = tempnumbers[pickone-1].total;
+                        break;
+                    case 3:
+                        player.sts.MR = tempnumbers[pickone-1].total;
+                        break;
+                    case 4:
+                        player.sts.MR = tempnumbers[pickone-1].total;
+                        break;
+                    case 5:
+                        player.sts.MR = tempnumbers[pickone-1].total;
+                        break;
+                    case 6:
+                        player.sts.MR = tempnumbers[pickone-1].total;
+                        break;
+                }
+                */
+                tempnumbers.erase(tempnumbers.begin()+(pickone-1));
+                break;
+            case 3:
+                //switch(pickone){
+                  //  case 1:
+                        player.sts.PM = tempnumbers[pickone-1].total;
+                        player.sts.PMC = tempnumbers[pickone-1].a;
+                        player.sts.PMP = tempnumbers[pickone-1].b;
+                        player.sts.PMS = tempnumbers[pickone-1].c;
+                        /* 
+                        break;
+                    case 2:
+                        player.sts.PM = tempnumbers[pickone-1].total;
+                        break;
+                    case 3:
+                        player.sts.PM = tempnumbers[pickone-1].total;
+                        break;
+                    case 4:
+                        player.sts.PM = tempnumbers[pickone-1].total;
+                        break;
+                    case 5:
+                        player.sts.PM = tempnumbers[pickone-1].total;
+                        break;
+                    case 6:
+                        player.sts.PM = tempnumbers[pickone-1].total;
+                        break;
+                } 
+        */
+                tempnumbers.erase(tempnumbers.begin()+(pickone-1));
+                break;   
+            case 4:
+                //switch(pickone){
+                    //case 1:
+                        player.sts.PN = tempnumbers[pickone-1].total;
+                        player.sts.PNC = tempnumbers[pickone-1].a;
+                        player.sts.PNP = tempnumbers[pickone-1].b;
+                        player.sts.PNS = tempnumbers[pickone-1].c;
+                        /* 
+                        break;
+                    case 2:
+                        player.sts.PN = tempnumbers[pickone-1].total;
+                        break;
+                    case 3:
+                        player.sts.PN = tempnumbers[pickone-1].total;
+                        break;
+                    case 4:
+                        player.sts.PN = tempnumbers[pickone-1].total;
+                        break;
+                    case 5:
+                        player.sts.PN = tempnumbers[pickone-1].total;
+                        break;
+                    case 6:
+                        player.sts.PN = tempnumbers[pickone-1].total;
+                        break;
+                } 
+                */ 
+                tempnumbers.erase(tempnumbers.begin()+(pickone-1));
+                break;
+            case 5:
+                //switch(pickone){
+                   // case 1:
+                        player.sts.SM = tempnumbers[pickone-1].total;
+                        player.sts.SMC = tempnumbers[pickone-1].a;
+                        player.sts.SMP = tempnumbers[pickone-1].b;
+                        player.sts.SMS = tempnumbers[pickone-1].c;
+                        /* 
+                        break;
+                    case 2:
+                        player.sts.SM = tempnumbers[pickone-1].total;
+                        break;
+                    case 3:
+                        player.sts.SM = tempnumbers[pickone-1].total;
+                        break;
+                    case 4:
+                        player.sts.SM = tempnumbers[pickone-1].total;
+                        break;
+                    case 5:
+                        player.sts.SM = tempnumbers[pickone-1].total;
+                        break;
+                    case 6:
+                        player.sts.SM = tempnumbers[pickone-1].total;
+                        break;
+                } 
+                */
+                tempnumbers.erase(tempnumbers.begin()+(pickone-1));
+                break;
+            case 6:
+                //switch(pickone){
+                   // case 1:
+                        player.sts.SP = tempnumbers[pickone-1].total;
+                        player.sts.SPC = tempnumbers[pickone-1].a;
+                        player.sts.SPP = tempnumbers[pickone-1].b;
+                        player.sts.SPS = tempnumbers[pickone-1].c;
+                        /* 
+                        break;
+                    case 2:
+                        player.sts.SP = tempnumbers[pickone-1].total;
+                        break;
+                    case 3:
+                        player.sts.SP = tempnumbers[pickone-1].total;
+                        break;
+                    case 4:
+                        player.sts.SP = tempnumbers[pickone-1].total;
+                        break;
+                    case 5:
+                        player.sts.SP = tempnumbers[pickone-1].total;
+                        break;
+                    case 6:
+                        player.sts.SP = tempnumbers[pickone-1].total;
+                        break;
+                } 
+                */
+                tempnumbers.erase(tempnumbers.begin()+(pickone-1));
+                break;    
+        }
+    }
+
+    if(rolled){
+    int total = 300;
+
+    while(total > 255){
+
+        tempnumbers.clear();
+        for (int n = 0; n < 6; ++n){
+        tempnumst tempn;
+        rollstat(tempn.a, tempn.b, tempn.c);
+        tempn.total = tempn.a + tempn.b + tempn.c;
+        tempnumbers.push_back(tempn);
+        }
+        total = tempnumbers[0].total + tempnumbers[1].total + tempnumbers[2].total + tempnumbers[3].total +
+            tempnumbers[4].total + tempnumbers[5].total;
+
+
+    rollstat(rollst.MMC, rollst.MMP, rollst.MMS);
+    rollstat(rollst.MRC, rollst.MRP, rollst.MRS);
+    rollstat(rollst.PMC, rollst.PMP, rollst.PMS);
+    rollstat(rollst.PNC, rollst.PNP, rollst.PNS);
+    rollstat(rollst.SMC, rollst.SMP, rollst.SMS);
+    rollstat(rollst.SPC, rollst.SPP, rollst.SPS);
+    /*total = rollst.MMC + rollst.MMP + rollst.MMS + rollst.MRC + rollst.MRP + rollst.MRS +
+        rollst.PMC + rollst.PMP + rollst.PMS + rollst.PNC + rollst.PNP + rollst.PNS +
+        rollst.SMC + rollst.SMP + rollst.SMS + rollst.SPC + rollst.SPP + rollst.SPS;
+        */
+    }
+
+    rollst.MM = rollst.MMC + rollst.MMP + rollst.MMS;
+    rollst.MR = rollst.MRC + rollst.MRP + rollst.MRS;
+    rollst.PM = rollst.PMC + rollst.PMP + rollst.PMS;
+    rollst.PN = rollst.PNC + rollst.PNP + rollst.PNS;
+    rollst.SM = rollst.SMC + rollst.SMP + rollst.SMS;
+    rollst.SP = rollst.SPC + rollst.SPP + rollst.SPS;
+
+    
+    
+    /* 
+    tempnumbers.push_back(rollst.MM);
+    tempnumbers.push_back(rollst.MR);
+    tempnumbers.push_back(rollst.PM);
+    tempnumbers.push_back(rollst.PN);
+    tempnumbers.push_back(rollst.SM);
+    tempnumbers.push_back(rollst.SP);
+    */
+
+    player.sts.MM = player.sts.MMC + player.sts.MMP + player.sts.MMS;
+    player.sts.MR = player.sts.MRC + player.sts.MRP + player.sts.MRS;
+    player.sts.PM = player.sts.PMC + player.sts.PMP + player.sts.PMS;
+    player.sts.PN = player.sts.PNC + player.sts.PNP + player.sts.PNS;
+    player.sts.SM = player.sts.SMC + player.sts.SMP + player.sts.SMS;
+    player.sts.SP = player.sts.SPC + player.sts.SPP + player.sts.SPS;
+
+    }
+    player.sts.M = player.sts.MM + player.sts.MR;
+    player.sts.P = player.sts.PM + player.sts.PN;
+    player.sts.S = player.sts.SM + player.sts.SP;
+    
+
+    TCODConsole::root->setDefaultForeground(TCODColor::white);
+    if (pick !=2){
+        TCODConsole::root->print(3, 24, "ROLLED TOTALS");
+    } else {
+        TCODConsole::root->print(3, 24, "Character creation complete");
+    }
+    if(!pick && rolled1ce){
+        TCODConsole::root->setDefaultForeground(TCODColor::lightGreen);
+    TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total);
+    TCODConsole::root->print(10, 26, "%d", tempnumbers[1].total);
+    TCODConsole::root->print(15, 26, "%d", tempnumbers[2].total);
+    TCODConsole::root->print(20, 26, "%d", tempnumbers[3].total);
+    TCODConsole::root->print(25, 26, "%d", tempnumbers[4].total);
+    TCODConsole::root->print(30, 26, "%d", tempnumbers[5].total);
+    }
+   
+    if (pick == 2){
+        TCODConsole::root->print(0, 0, "DONE");
+    }
+
+    
+
+    TCODConsole::root->setDefaultForeground(TCODColor::white);
+    TCODConsole::root->print(3, 3, "TRAITS");
+    TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+    TCODConsole::root->print(5, 5, "(M)Mental");
+    TCODConsole::root->print(26, 5, "(P)Physical");
+    TCODConsole::root->print(47, 5, "(S)Spiritual");
+
+    TCODConsole::root->setDefaultForeground(TCODColor::white);
+       TCODConsole::root->print(3, 7, "CATEGORIES"); 
+       TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+       TCODConsole::root->print(5, 9, "(MM)Mnemonic");
+       TCODConsole::root->print(5, 10, "(MR)Reasoning");
+       TCODConsole::root->print(26, 9, "(PM)Muscular");
+       TCODConsole::root->print(26, 10, "(PN)Neural");
+       TCODConsole::root->print(47, 9, "(SM)Metaphysical");
+       TCODConsole::root->print(47, 10, "(SP)Psychic");
+
+       TCODConsole::root->setDefaultForeground(TCODColor::white);
+       TCODConsole::root->print(3, 12, "ATTRIBUTES");
+       TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+       TCODConsole::root->print(5, 14, "(MMC)Capacity");
+       TCODConsole::root->print(5, 15, "(MMP)Power");
+       TCODConsole::root->print(5, 16, "(MMS)Speed");
+
+       TCODConsole::root->print(5, 18, "(MRC)Capacity");
+       TCODConsole::root->print(5, 19, "(MRP)Power");
+       TCODConsole::root->print(5, 20, "(MRS)Speed");
+
+       TCODConsole::root->print(26, 14, "(PMC)Capacity");
+       TCODConsole::root->print(26, 15, "(PMP)Power");
+       TCODConsole::root->print(26, 16, "(PMS)Speed");
+
+       TCODConsole::root->print(26, 18, "(PNC)Capacity");
+       TCODConsole::root->print(26, 19, "(PNP)Power");
+       TCODConsole::root->print(26, 20, "(PNS)Speed");
+
+       TCODConsole::root->print(47, 14, "(SMC)Capacity");
+       TCODConsole::root->print(47, 15, "(SMP)Power");
+       TCODConsole::root->print(47, 16, "(SMS)Speed");
+
+       TCODConsole::root->print(47, 18, "(SPC)Capacity");
+       TCODConsole::root->print(47, 19, "(SPP)Power");
+       TCODConsole::root->print(47, 20, "(SPS)Speed");
+
+       TCODConsole::root->setAlignment(TCOD_RIGHT);
+       TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+
+       TCODConsole::root->print(23, 5, "%d", (player.sts.M));
+       TCODConsole::root->print(44, 5, "%d", (player.sts.P));
+       TCODConsole::root->print(65, 5, "%d", (player.sts.S));
+
+       TCODConsole::root->setDefaultForeground(TCODColor::lighterCyan);
+       TCODConsole::root->print(23, 9, "%d", (player.sts.MM));
+       TCODConsole::root->print(23, 10, "%d", (player.sts.MR));
+       TCODConsole::root->print(44, 9, "%d", (player.sts.PM));
+       TCODConsole::root->print(44, 10, "%d", (player.sts.PN));
+       TCODConsole::root->print(65, 9, "%d", (player.sts.SM));
+       TCODConsole::root->print(65, 10, "%d", (player.sts.SP));
+
+       TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+       TCODConsole::root->print(23, 14, "%d", (player.sts.MMC));
+       TCODConsole::root->print(23, 15, "%d", (player.sts.MMP));
+       TCODConsole::root->print(23, 16, "%d", (player.sts.MMS));
+
+       TCODConsole::root->print(23, 18, "%d", (player.sts.MRC));
+       TCODConsole::root->print(23, 19, "%d", (player.sts.MRP));
+       TCODConsole::root->print(23, 20, "%d", (player.sts.MRS));
+
+       TCODConsole::root->print(44, 14, "%d", (player.sts.PMC));
+       TCODConsole::root->print(44, 15, "%d", (player.sts.PMP));
+       TCODConsole::root->print(44, 16, "%d", (player.sts.PMS));
+
+       TCODConsole::root->print(44, 18, "%d", (player.sts.PNC));
+       TCODConsole::root->print(44, 19, "%d", (player.sts.PNP));
+       TCODConsole::root->print(44, 20, "%d", (player.sts.PNS));
+
+       TCODConsole::root->print(65, 14, "%d", (player.sts.SMC));
+       TCODConsole::root->print(65, 15, "%d", (player.sts.SMP));
+       TCODConsole::root->print(65, 16, "%d", (player.sts.SMS));
+
+       TCODConsole::root->print(65, 18, "%d", (player.sts.SPC));
+       TCODConsole::root->print(65, 19, "%d", (player.sts.SPP));
+       TCODConsole::root->print(65, 20, "%d", (player.sts.SPS));
+            
+        draw_frame("Character Creation", "Choose Attributes");
+
+        TCODConsole::root->setAlignment(TCOD_LEFT);
+
+        for (int n = 0; n < 15; ++n){
+        TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+        TCODConsole::root->setDefaultBackground(TCODColor::black);
+        TCODConsole::root->print(3, n+36, "%c", TCOD_CHAR_VLINE);
+        //TCODConsole::root->print(win_x-1, n, "%c", TCOD_CHAR_VLINE);
+    }
+    for (int n = 0; n < 30; ++n){
+        TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+        TCODConsole::root->setDefaultBackground(TCODColor::black);
+        TCODConsole::root->print(n+3, 36, "%c", TCOD_CHAR_HLINE);
+        //TCODConsole::root->print(n, win_y-1, "%c", TCOD_CHAR_HLINE);
+    }
+    TCODConsole::root->print(3, 36, "%c", TCOD_CHAR_NW);
+
+    TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::yellow, TCODColor::black);
+    TCODConsole::root->print(4, 37, "Note:");
+    TCODConsole::root->printRect(4, 38, 60, 20, "Six numbers will be generated (%c2d6+6%c, for each attribute), when accepted, you can then bind each of the six Categories to one of the numbers. Note that each level coresponds to the sum of the one below. For example: MMC + MMP + MMS = MM, MM + MR = M. \"Capacity\" also defines the maximum \"Power\" and \"Speed\" can reach.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
 }
 
 int menu_1(){
@@ -1906,9 +2714,10 @@ int main() {
     player.speed = 6;
     bool quit_now = false;
 
-    bool loped = false;
+    //bool loped = false; // used for threading?
 
-    TCODConsole::mapAsciiCodeToFont('s',4,0);
+    //TCODConsole::mapAsciiCodeToFont('s',4,0);
+    //TCODConsole::mapAsciiCodeToFont(TCOD_CHAR_HLINE,4,0);
 
     /* 
     msg_log msg1;
@@ -1949,6 +2758,100 @@ int main() {
         if (TCODConsole::isWindowClosed()) return 0;
 
         TCODConsole::flush(); // this updates the screen
+    }
+
+    if(menu_index == 1){
+        loopme = 1;
+        menu_index = 1;
+        what_menu = 0;
+        int roll = 0; // roll values
+        int ch_roll = 0; // accept value
+        int rolledonce = 0;
+        int pick_index = 1;
+        Statistics rollstat(0); // temp for storing rolled values
+        int selection = 1; // point to stat to binding
+        int selection2 = 6; // total of numbers
+        //int selection3 = 4;
+        bool doingso = false;
+    while (loopme){
+        TCODConsole::root->clear();
+      
+        draw_menu_2(menu_index, pick_index, selection, roll, ch_roll, rollstat, doingso, rolledonce);
+        if (roll == 1) rolledonce = 1;
+        roll = 0;
+        if (doingso) {++selection;--selection2;}
+        if (doingso && (pick_index>1)){ --pick_index;}
+        if (doingso && (selection > 6)) {ch_roll = 2; menu_index = 1;} // char done
+        doingso = false;
+       
+        what_menu = menu_1();
+
+        if (ch_roll == 1){ // binding numbers
+            if (what_menu == move_up){
+            if(pick_index == 1){ 
+                pick_index = selection2;
+            } else --pick_index;
+        }    
+        
+        if (what_menu == move_down){
+            if(pick_index == selection2){ 
+                pick_index = 1;
+            } else ++pick_index; 
+        }
+
+        if (what_menu == action){  doingso = true;  }
+           //--pick_index;}
+
+        } else if(ch_roll == 2) {
+           if (what_menu == move_up){
+            if(menu_index == 1){ 
+                menu_index = 3;
+            } else --menu_index;
+        }    
+        
+        if (what_menu == move_down){
+            if(menu_index == 3){ 
+                menu_index = 1;
+            } else ++menu_index; 
+        }  
+        if (what_menu == action && menu_index == 1){ ch_roll = 0; selection = 1; selection2 = 6; pick_index = 1;
+            what_menu = 0; roll = 0; rolledonce = 0; menu_index = 1;}
+        if (what_menu == action && menu_index == 2) loopme = 0;
+        if (what_menu == action && menu_index == 3) return 0;
+
+        } else {if (what_menu == move_up){
+            if(menu_index == 1){ 
+                menu_index = 4;
+            } else --menu_index;
+        }    
+        
+        if (what_menu == move_down){
+            if(menu_index == 4){ 
+                menu_index = 1;
+            } else ++menu_index; 
+        }  
+        if (what_menu == action && menu_index == 1) roll = 1; 
+        if ((what_menu == action && menu_index == 2) && rolledonce) ch_roll = 1;
+        if (what_menu == action && menu_index == 3) loopme = 0;
+        if (what_menu == action && menu_index == 4) return 0;
+        }
+
+        
+
+        if (TCODConsole::isWindowClosed()) return 0;
+
+        //std::cout << "Player " << player.sts.MMC << " " << player.sts.MMP << " " << player.sts.MMS << std::endl;
+
+        TCODConsole::flush(); // this updates the screen
+
+        /*
+        std::cout << "numbers: ";
+        for(int n = 0; n < tempnumbers.size(); ++n){
+            std::cout << tempnumbers[n].total << " ";
+        } std::cout << " ch " << ch_roll << std::endl;
+        */
+         
+    }
     }
     
     while (! TCODConsole::isWindowClosed()) {
@@ -2051,7 +2954,8 @@ int main() {
             fov_recompute = true;
             render_all();
             TCODConsole::flush(); // this updates the screen
-            TCOD_key_t key = TCODConsole::waitForKeypress(true);
+            //TCOD_key_t key = 
+                TCODConsole::waitForKeypress(true);
 
             bool break_combat = true;
             TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
@@ -2150,7 +3054,8 @@ int main() {
             fov_recompute = true;
             render_all();
             TCODConsole::flush(); // this updates the screen
-            TCOD_key_t key2 = TCODConsole::waitForKeypress(true); // to start combat
+            //TCOD_key_t key2 = 
+                TCODConsole::waitForKeypress(true); // to start combat
 
             // TURN SEQUENCE 
             for (unsigned int i = 0; i<monsters.size(); ++i) {
@@ -2346,8 +3251,6 @@ int main() {
                                 render_all();
                                 TCODConsole::root->print(win_x/2,win_y-4,"%cMONSTER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
 
-                                
-
                                 TCODConsole::flush();
                                 Sleep(100);
                                 ++ctl; // for trail animation on monster movement
@@ -2361,7 +3264,6 @@ int main() {
                     } // for
                 } // else
             }
-
             
             std::cout << "END COMBAT TURN" << std::endl;
             std::cout << std::endl;
