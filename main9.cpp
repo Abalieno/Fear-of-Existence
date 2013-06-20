@@ -4227,9 +4227,6 @@ int main() {
 
     while (! TCODConsole::isWindowClosed()) {
 
-
-        //player.stats.hp = 5;
-
         /* int seco;
         
         seco = TCODSystem::getElapsedSeconds();
