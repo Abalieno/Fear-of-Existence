@@ -6,7 +6,31 @@ const int   win_x   =   80; // window width in cells
 const int   win_y   =   50; // window height in cells
 const int   LIMIT_FPS = 20;
 
+const int MAP_WIDTH = 80;
+const int MAP_HEIGHT = 45;
+
+TCODColor color_dark_wall(0, 0, 100);
+TCODColor color_dark_ground(50, 50, 150);
+
 TCODConsole *con = new TCODConsole(win_x, win_y);
+
+class Tile {
+
+public:
+
+    int blocked;
+    int block_sight;
+
+    Tile() { blocked = 0; block_sight = 0; }
+
+    Tile(int isblocked, int isblock_sight){
+        blocked = isblocked;
+        block_sight = isblock_sight;
+        if (blocked) block_sight = 1;
+    }
+};
+
+std::vector<Tile> map_array; // declared here because used in Object.move
 
 class Object {
 
@@ -25,14 +49,21 @@ public: // public should be moved down, but I keep it here for debug messages
     }
 
     void move(int dx, int dy) {
+       
+        int tempx = 0;
+        int tempy = 0;
+        tempx = x + dx;
+        tempy = y + dy;
+
+        if (!map_array[tempy*MAP_WIDTH+tempx].blocked){
         x += dx;
         y += dy;
+        } else std::cout << "Fuck, it's blocked. " << std::endl;
 
-        if (x >= 80) x = 79;
-        if (y >= 50) y = 49;
-        if (x <= 0) x = 0;
-        if (y <= 0) y = 0;
-        std::cout << "x in move: " << x << std::endl; 
+        if (x >= MAP_WIDTH) {x = MAP_WIDTH-1;std::cout << "No, I'm not stepping into the void." << std::endl;}
+        if (y >= MAP_HEIGHT) {y = MAP_HEIGHT-1;std::cout << "No, I'm not stepping into the void." << std::endl;}
+        if (x <= 0) {x = 0;std::cout << "No, I'm not stepping into the void." << std::endl;}
+        if (y <= 0) {y = 0;std::cout << "No, I'm not stepping into the void." << std::endl;}
     }  
 
     void draw() {
@@ -44,7 +75,64 @@ public: // public should be moved down, but I keep it here for debug messages
     void clear() {
         con->putChar(x, y, ' ', TCOD_BKGND_NONE);
     }
-};    
+};  
+
+void make_map(){
+           map_array.resize(MAP_HEIGHT * MAP_WIDTH);
+        
+    int row = 0;
+    
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+           map_array[row * MAP_WIDTH + l] = Tile(0,0);
+           map_array[3597] = Tile(1,1);
+        }
+        ++row;
+    }
+
+map_array[1].blocked = 1;
+map_array[1].block_sight = 1;
+map_array[4].blocked = 1;
+map_array[4].block_sight = 1;
+map_array[1789].blocked = 1;
+map_array[1789].block_sight = 1;
+map_array[1790-MAP_WIDTH].blocked = 1;
+map_array[1790-MAP_WIDTH].block_sight = 1;
+map_array[1790-MAP_WIDTH*2].blocked = 1;
+map_array[1790-MAP_WIDTH*2].block_sight = 1;
+map_array[1790].blocked = 1;
+map_array[1790].block_sight = 1;
+map_array[1791].blocked = 1;
+map_array[1791].block_sight = 1;
+map_array[1792].blocked = 1;
+map_array[1792].block_sight = 1;
+map_array[1793].blocked = 1;
+map_array[1793].block_sight = 1;
+map_array[1810].blocked = 1;
+map_array[1810].block_sight = 1;
+
+}
+
+void render_all (std::vector<Object*> &invector){
+
+    bool wall = 0;
+
+    int row = 0;
+
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            wall = map_array[row * MAP_WIDTH + l].blocked;
+            if (wall) con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
+            else con->setCharBackground(l, i, color_dark_ground, TCOD_BKGND_SET);
+         }
+        ++row;
+    }
+
+    for (unsigned int i = 0; i<invector.size(); ++i) invector[i]->draw();
+    
+    TCODConsole::blit(con,0,0,80,50,TCODConsole::root,0,0);
+}
 
 bool handle_keys(Object &duh) {
 
@@ -73,38 +161,28 @@ int main() {
 
     std::vector<Object*> myvector;
 
-    std::vector<int> test;
-    test.push_back(25);
-    test.push_back(50);
-    for (unsigned int i = 0; i<test.size(); ++i){
-        std::cout << test[i] << std::endl;
-    }
-
     myvector.push_back(&player);
     myvector.push_back(&npc);
 
-    std::cout << myvector.size() << std::endl; // 2
-    std::cout << player.selfchar << std::endl; 
-    
+    make_map();
+
     TCODConsole::initRoot(win_x, win_y, "windowname", false);
     
     while (! TCODConsole::isWindowClosed()) {
 
-         TCODConsole::root->clear();
-       
-        for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->draw();
+        TCODConsole::root->clear();
         
-        con->setDefaultForeground(TCODColor::white);
-        con->print(1, 1, "Use arrows to move.");
-
-        TCODConsole::blit(con,0,0,80,50,TCODConsole::root,0,0);
+        render_all(myvector);
+        
+        TCODConsole::root->setAlignment(TCOD_RIGHT);
+        TCODConsole::root->setDefaultForeground(TCODColor::white);
+        TCODConsole::root->print(78, 47, "Use arrows to move");
+        TCODConsole::root->print(78, 48, "Press 'q' to quit");
+       
         TCODConsole::flush(); // this updates the screen
 
         for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->clear();
 
-        std::cout << "true player: " << player.x << " npc: " << npc.x << std::endl;
-        std::cout << "vector: " << myvector[0]->x << std::endl;
-        
         if (handle_keys(player)) break;
     }
     return 0;
