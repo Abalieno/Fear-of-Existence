@@ -8,6 +8,12 @@
 
 // #include <process.h> //used for threading?
 
+int imageinit = 1;
+float whattime = 0;
+//TCODImage *pix;
+
+bool revealdungeon = 0;
+
 const int MAP_WIDTH = 110;
 const int MAP_HEIGHT = 70;
 // 16map 55 35
@@ -15,8 +21,8 @@ const int MAP_HEIGHT = 70;
 const int MAP_WIDTH_AREA = 110;
 const int MAP_HEIGHT_AREA = 70;
 
-const int   win_x   = (MAP_WIDTH) + 15 +3; // window width in cells
-const int   win_y   = (MAP_HEIGHT)+ 18 +3; // window height in cells
+const int   win_x   = (MAP_WIDTH) + 15 +3; // window width in cells 128 1024
+const int   win_y   = (MAP_HEIGHT)+ 18 +3; // window height in cells 91 728
 const int   LIMIT_FPS = 20;
 
 const int quit = 1;
@@ -31,7 +37,8 @@ const int dead = 99;
 int stance_pos = 1;
 
 int bigg = 0; // sets 16x16 font
-int bigg2 = 0;
+int bigg2 = 0; // is in minimap
+int bigg3 = 0; // is in tinymap
 
 //parameters for dungeon generator
 int ROOM_MAX_SIZE = 10;
@@ -73,9 +80,11 @@ bool no_combat = false; // disable combat mode
 
 TCODConsole *con = new TCODConsole(220, 140);
 TCODConsole *con_mini = new TCODConsole(MAP_WIDTH+2, MAP_HEIGHT+2);
+
+TCODConsole *con_tini = new TCODConsole(MAP_WIDTH+2, MAP_HEIGHT+2); // for tinymap
 TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
 TCODConsole *load = new TCODConsole(win_x, win_y);  // load screen
-TCODConsole *widget_1 = new TCODConsole(3, 1);
+TCODConsole *widget_1 = new TCODConsole(4, 1);
 
 TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT));  // combat UI panel
 TCODConsole *r_panel = new TCODConsole((win_x - MAP_WIDTH), MAP_HEIGHT); // panel on right of map 
@@ -1127,6 +1136,7 @@ void threadm( void* pParams )
       //  }
     }
 
+// in combat
 void I_am_moused(){
     //TCOD_key_t key;
     //TCOD_mouse_t mouse;
@@ -1144,7 +1154,12 @@ void I_am_moused(){
         bigg2 = 1;
     } else {
         bigg2 = 0;
-    }    
+    }  
+    if(mousez.cx == 3 && mousez.cy == 0) {
+        bigg3 = 1;
+    } else {
+        bigg3 = 0;
+    }
 
     //std::cout << "MOUSE " << x << " " << y << std::endl;
 
@@ -1224,6 +1239,8 @@ void I_am_moused(){
     }
 }
 
+
+// out of combat
 void I_am_moused2(){ // doubled because of main loop, changes where messages are printed
     //TCOD_key_t key;
     //TCOD_mouse_t mouse;
@@ -1241,7 +1258,12 @@ void I_am_moused2(){ // doubled because of main loop, changes where messages are
         bigg2 = 1;
     } else {
         bigg2 = 0;
-    } 
+    }
+    if(mousez.cx == 3 && mousez.cy == 0) {
+        bigg3 = 1;
+    } else {
+        bigg3 = 0;
+    }
 
     //std::cout << "MOUSE " << x << " " << y << std::endl;
 
@@ -1387,8 +1409,8 @@ void render_all (){
     if (fov_recompute){
         fov_map->computeFov(player.x,player.y, TORCH_RADIUS, FOV_LIGHT_WALLS,FOV_ALGO);
 
-        for (int i = 0; i < MAP_HEIGHT ;++i){
-            for (int l = 0; l < MAP_WIDTH ;++l) {
+        for (int i = 0; i < MAP_HEIGHT ;++i){ // i = column
+            for (int l = 0; l < MAP_WIDTH ;++l) { // l = row
                 visible = fov_map->isInFov(l,i);
                 wall = map_array[i * MAP_WIDTH + l].blocked;
                 isbloody = map_array[i * MAP_WIDTH + l].bloodyt;
@@ -1421,7 +1443,7 @@ void render_all (){
                 }
 
                 if (!visible){
-                    if (map_array[i * MAP_WIDTH + l].explored){
+                    if (map_array[i * MAP_WIDTH + l].explored || revealdungeon){
                     if (wall){
                         if(bigg){
                             con->putChar((l*2), (i*2), 503, TCOD_BKGND_SET);
@@ -1471,11 +1493,12 @@ void render_all (){
                             con->setCharForeground(l, i, color_dark_groundF);
                             con->setCharBackground(l, i, color_dark_ground, TCOD_BKGND_SET);
                         }
-                        if (bigg2){
+                        if (bigg2 ){
                             con_mini->putChar(l+1, i+1, '.', TCOD_BKGND_SET);
                             con_mini->setCharForeground(l+1, i+1, color_dark_groundF);
                             con_mini->setCharBackground(l+1, i+1, color_dark_ground, TCOD_BKGND_SET);
                         }
+                        
                         
                     }
                                         }
@@ -1573,6 +1596,7 @@ void render_all (){
                             con_mini->setCharBackground(l+1, i+1, color_light_ground, TCOD_BKGND_SET);
                         }
                         
+                        
                     }
                     if (isbloody > 0){
                 if (isbloody >= 4) blood = blood1;
@@ -1599,6 +1623,8 @@ void render_all (){
 
     fov_recompute = false;
     }
+
+    
 
     
     for (unsigned int i = 0; i<monvector.size(); ++i) {
@@ -1672,6 +1698,71 @@ void render_all (){
     con_mini->print(0, MAP_HEIGHT+1, "%c", TCOD_CHAR_SW);
     con_mini->print(MAP_WIDTH+1, MAP_HEIGHT+1, "%c", TCOD_CHAR_SE);
         TCODConsole::blit(con_mini,0,0,0,0,TCODConsole::root,0,0); // minimap layer
+        //con_mini->clear();
+    }
+
+    
+if(bigg3){
+    for (int n = 0; n < (MAP_HEIGHT/2)+1; ++n){
+        con_tini->setDefaultForeground(TCODColor::lighterGrey);
+        con_tini->setDefaultBackground(TCODColor::black);
+        con_tini->print(0, n, "%c", TCOD_CHAR_VLINE);
+        con_tini->print((MAP_WIDTH/2)+1, n, "%c", TCOD_CHAR_VLINE);
+    }
+    for (int n = 0; n < (MAP_WIDTH/2)+1; ++n){
+        con_tini->setDefaultForeground(TCODColor::lighterGrey);
+        con_tini->setDefaultBackground(TCODColor::black);
+        con_tini->print(n, 0, "%c", TCOD_CHAR_HLINE);
+        con_tini->print(n, (MAP_HEIGHT/2), "%c", TCOD_CHAR_HLINE);
+    }
+    con_tini->print(0, 0, "%c", TCOD_CHAR_NW);
+    con_tini->print((MAP_WIDTH/2)+1, 0, "%c", TCOD_CHAR_NE);
+    con_tini->print(0, (MAP_HEIGHT/2), "%c", TCOD_CHAR_SW);
+    con_tini->print((MAP_WIDTH/2)+1, (MAP_HEIGHT/2), "%c", TCOD_CHAR_SE);
+    // draws tinymap, 2 steps at once, tinyblock goes 0-15 for all subcell
+    for (int i = 0; i < (MAP_HEIGHT-2) ;i += 2){ // i = column
+            for (int l = 0; l < MAP_WIDTH ;l += 2) { // l = row
+                int tinyblock = map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked | 
+                    ( map_array[(i * MAP_WIDTH + (l+1))+ MAP_WIDTH].blocked << 1 ) |
+                    ( map_array[((i+1) * MAP_WIDTH + l)+ MAP_WIDTH].blocked << 2 ) |
+                    ( map_array[((i+1) * MAP_WIDTH + (l+1))+ MAP_WIDTH].blocked << 3 );
+                //std::cout << tinyblock << " ";
+                con_tini->putChar((l/2)+1, (i/2)+1, (tinyblock+400), TCOD_BKGND_SET);
+                con_tini->setCharForeground((l/2)+1, (i/2)+1, TCODColor::black);
+                con_tini->setCharBackground((l/2)+1, (i/2)+1, color_light_ground, TCOD_BKGND_SET);
+            }
+    }  
+    con_tini->putChar((player.x)/2+1, (player.y)/2+1, 400, TCOD_BKGND_SET);
+    con_tini->setCharForeground((player.x)/2+1, (player.y)/2+1, TCODColor::black);
+    con_tini->setCharBackground((player.x)/2+1, (player.y)/2+1, TCODColor::white, TCOD_BKGND_SET);
+
+    //TCODImage *pix = new TCODImage(TCODConsole::root);
+   // if(imageinit){
+    /* 
+    float whattimenow = 0;
+    whattimenow = TCODSystem::getElapsedSeconds();
+    if((whattime+5) < whattimenow || whattime == 0){
+        whattime = TCODSystem::getElapsedSeconds();
+        TCODImage *pix = new TCODImage(TCODConsole::root);
+        //imageinit = 0;
+        //pix->save("mypic.bmp");
+        pix->scale(110,70); // if blitted2x it shows at half size
+        //pix->blit2x(TCODConsole::root, 0, 0, 0, 0, -1, -1);
+        //pix->save("mypic2.bmp");
+  //  }   
+        //pix->scale(1024,728);   
+        std::cout << "loopin";
+        //pix->refreshConsole(TCODConsole::root);
+        //pix->scale(220,140);
+        //pix->blitRect(TCODConsole::root, 0, 0,  -1, -1);
+        pix->blit2x(TCODConsole::root, 0, 0, 0, 0, -1, -1);
+       // imageinit = 1;
+
+        //TCODConsole::blit(con_tini,0,0,0,0,TCODConsole::root,0,0); // minimap layer
+        //con_tini->clear();
+        delete pix; 
+    } */ 
+TCODConsole::blit(con_tini,0,0,0,0,TCODConsole::root,0,0); // minimap layer
     }
 
     switch(stance_pos){
@@ -1693,10 +1784,14 @@ void render_all (){
             break;
     }
     widget_1->setBackgroundFlag(TCOD_BKGND_SET);
-    widget_1->print(0, 0, "%c1%c%c2%c%c3%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
+    widget_1->print(0, 0, "%c1%c%c2%c%c34%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
             TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
     //widget_1->print(10, 0, "Hello.");
     TCODConsole::blit(widget_1,0,0,0,0,TCODConsole::root,0,0);
+
+    // fps count
+        int fpscount = TCODSystem::getFps();
+        TCODConsole::root->print(100, 0, "FPS: %d", fpscount);
     
 }
 
@@ -1944,6 +2039,8 @@ int handle_keys(Object_player &duh) {
   
     if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'q' ) return quit;
 
+    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'v' ){ if (revealdungeon) revealdungeon = false; else revealdungeon = true; Sleep (100);}
+
     if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'd' ){ if (debug) debug = false; else debug = true; Sleep (100);}
 
     if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'r' ){
@@ -2111,7 +2208,7 @@ int handle_keys(Object_player &duh) {
     
     // end KEY RIGHT cycle
     }
-    std::cout << "player.x: " << duh.x << " player.y: " << duh.y << std::endl; 
+    //std::cout << "player.x: " << duh.x << " player.y: " << duh.y << std::endl; 
     return 0;
 }    
 
@@ -3219,6 +3316,23 @@ int main() {
     map_8x16_font();
     map_16x16_tile();
 
+    TCODConsole::mapAsciiCodeToFont(400,2,16);
+    TCODConsole::mapAsciiCodeToFont(401,2,17);
+    TCODConsole::mapAsciiCodeToFont(402,2,18);
+    TCODConsole::mapAsciiCodeToFont(403,2,19);
+    TCODConsole::mapAsciiCodeToFont(404,2,20);
+    TCODConsole::mapAsciiCodeToFont(405,2,21);
+    TCODConsole::mapAsciiCodeToFont(406,2,22);
+    TCODConsole::mapAsciiCodeToFont(407,2,23);
+    TCODConsole::mapAsciiCodeToFont(408,2,24);
+    TCODConsole::mapAsciiCodeToFont(409,2,25);
+    TCODConsole::mapAsciiCodeToFont(410,2,26);
+    TCODConsole::mapAsciiCodeToFont(411,2,27);
+    TCODConsole::mapAsciiCodeToFont(412,2,28);
+    TCODConsole::mapAsciiCodeToFont(413,2,29);
+    TCODConsole::mapAsciiCodeToFont(414,2,30);
+    TCODConsole::mapAsciiCodeToFont(415,2,31);
+
     /* 
     msg_log msg1;
     TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
@@ -3399,9 +3513,8 @@ int main() {
         TCODConsole::root->print(win_x-2, MAP_HEIGHT+8, "Press 'd' for DEBUG");
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::yellow,TCODColor::black);
         if (debug) TCODConsole::root->print(win_x-2, MAP_HEIGHT+9, "%cMonster count%c: %d",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, killall);
-        
+
         TCODConsole::root->print(win_x-1, 0, "Mode-N");
-       
 
         TCODConsole::root->setAlignment(TCOD_CENTER);
         TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
@@ -3923,7 +4036,7 @@ TCODConsole::flush(); // this updates the screen
                 } // vector end cycle
             } // game state cycle
 
-        std::cout << "END MONSTER TURN" << std::endl;
+        //std::cout << "END MONSTER TURN" << std::endl;
 
         for (unsigned int i = 0; i<monvector.size(); ++i) {
                 monvector[i].in_sight = false;
