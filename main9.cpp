@@ -4,8 +4,8 @@
 #include "libtcod.hpp"
 #include <windows.h> // for Sleep()
 
-const int   win_x   =   80; // window width in cells
-const int   win_y   =   50; // window height in cells
+const int   win_x   =   95; // window width in cells
+const int   win_y   =   60; // window height in cells
 const int   LIMIT_FPS = 20;
 
 const int MAP_WIDTH = 80;
@@ -22,10 +22,12 @@ int ROOM_MAX_SIZE = 10;
 int ROOM_MIN_SIZE = 6;
 int MAX_ROOMS = 30;
 int MAX_ROOM_MONSTERS = 3;
+unsigned int MAX_TOTAL_MONSTERS = 20;
 
 TCOD_fov_algorithm_t FOV_ALGO = FOV_BASIC; //default FOV algorithm
 bool FOV_LIGHT_WALLS = true;
 int TORCH_RADIUS = 10;
+int MON_RADIUS = 8; // used for monster FoV
 
 TCODColor color_dark_wall(0, 0, 50);
 TCODColor color_dark_ground(15, 15, 80);
@@ -45,10 +47,16 @@ TCODColor monsterdead(TCODColor::darkGreen);
 
 bool fov_recompute;
 
+bool debug = false;
+bool no_combat = true; // disable combat mode
+
+
 TCODConsole *con = new TCODConsole(MAP_WIDTH, MAP_HEIGHT);
 TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
 
 TCODMap * fov_map = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
+TCODMap * fov_map_mons = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
+
 
 class Tile {
 
@@ -146,16 +154,18 @@ class Object_player;
 
 class Fighter {
 public:
+    int speed;
     int max_hp;
     int hp;
     int defense;
     int power;
 
-    Fighter(int inithp, int defval, int powval){
+    Fighter(int inithp, int defval, int powval, int speedval){
         max_hp = inithp;
         hp = inithp;
         defense = defval;
         power = powval;
+        speed = speedval;
     }
 
     void attack(Object_player &player, Object_monster &monster, bool who); 
@@ -181,6 +191,15 @@ public: // public should be moved down, but I keep it here for debug messages
     Fighter stats;
     AI * myai;
     bool alive;
+    int chase; // used to move monster after player for a short while
+    int active; // used for wandering mode
+    int pl_x;
+    int pl_y;
+    bool stuck;
+    int bored;
+    bool boren; // 100 bored, if to 0, boren true, start recuperating
+    bool in_sight;
+    int combat_move;
 
     Object_monster(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
         x = a;
@@ -211,7 +230,7 @@ public: // public should be moved down, but I keep it here for debug messages
         con->setDefaultForeground(color);
         if (!uh) colorb = con->getCharBackground(x, y);
         con->setDefaultBackground(colorb);
-        if (fov_map->isInFov(x,y))
+        if (fov_map->isInFov(x,y) || debug == 1)
         con->putChar(x, y, selfchar, TCOD_BKGND_SET);
     }
 
@@ -229,6 +248,7 @@ public: // public should be moved down, but I keep it here for debug messages
         if (dx == 0 && target_x > x) pdir = true;
         if (dy == 0 && target_y > y) pdir = true;
 
+        if ( (dx < 2 && dx > -2) && (dy < 2 && dy > -2) )
         move(dx, dy, pdir);
         //std::cout << "move: " << dx << dy << std::endl;
     }
@@ -249,7 +269,7 @@ public: // public should be moved down, but I keep it here for debug messages
 
 class AI {
 public:
-     virtual bool take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y) {std::cout << "WHAT" ;} 
+     virtual bool take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y, bool myfov) {std::cout << "WHAT" ;} 
 
 };
 
@@ -272,6 +292,7 @@ public: // public should be moved down, but I keep it here for debug messages
     int bloody;
     bool blocks;
     Fighter stats;
+    int combat_move;
 
     Object_player(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
         x = a;
@@ -322,18 +343,24 @@ public:
 
     }
 
-    virtual bool take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y){
-       // float dist = 0;
- 
-        if (fov_map->isInFov(monster.x,monster.y)){
-            std::cout << "The " << monster.name << " in view! " << std::endl;
+    virtual bool take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y, bool myfov){
+        //float dist = 0;
+std::cout << monster.combat_move << std::endl; 
+        
+            std::cout << "The " << monster.name << " is active! " << std::endl;
 //dist = monster.distance_to(p_x, p_y);
-            if (monster.distance_to(p_x, p_y) >= 2){
+            if ( (monster.distance_to(p_x, p_y) >= 2) || (monster.chase == 1 && !myfov)){
+            if (no_combat || monster.combat_move >= 1)    
+            
+            { // move up to and including player pos
+                
                 monster.move_towards(p_x, p_y);
+                if(!no_combat)monster.combat_move -= 1;
                 std::cout << "The " << monster.name << " is moving." << std::endl;
                 return false;
-            } else {
-            TCODConsole::root->clear();
+            }} else if (myfov){ 
+                if (no_combat || (monster.combat_move >= 4)) {
+                TCODConsole::root->clear();
                 mesg->setAlignment(TCOD_LEFT);
                 mesg->setDefaultForeground(TCODColor::yellow);
                 mesg->setDefaultBackground(TCODColor::black);
@@ -357,13 +384,16 @@ public:
                 fov_recompute = true;
                 //render_all();
                 TCODConsole::flush();
-            monster.stats.attack(player, monster, 1) ;
-            return true;
+                monster.stats.attack(player, monster, 1) ;
+                if(!no_combat)monster.combat_move -= 4;
+                return true;
+            } else if (myfov && !no_combat) monster.combat_move = 0;
             }
-        }
+        
         //else std::cout << "The " << monster.name << " lurks in the dark! " ;
-       return false; 
-    }    
+        return false; 
+    } 
+
 };
 
 
@@ -399,7 +429,7 @@ Object(int a, int b, char chr, string?, TCODColor color, bool blocks, ai *AI)
 if(player->ai!=NULL)
     player->ai->take_turn()
     */
-Fighter fighter_component(30, 2, 5); // hp, defense, power
+Fighter fighter_component(30, 2, 5, 8); // hp, defense, power
 Object_player playera(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
 Object_player playerb(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
 
@@ -445,6 +475,7 @@ void Object_monster::move(int dx, int dy, bool p_dir) {
         if (!is_blocked(tempx,tempy)){
             x += dx;
             y += dy;
+            stuck = false;
             if (bloody > 0){
                 if (bloody >= map_array[y * MAP_WIDTH + x].bloodyt)
                 map_array[y * MAP_WIDTH + x].bloodyt = bloody;
@@ -452,29 +483,54 @@ void Object_monster::move(int dx, int dy, bool p_dir) {
         } else { 
             if (dy == -1 && dx == 0){
                 if (p_dir == false){
-                    if (!is_blocked(tempx-1,y)){x += (dx-1);}
+                    if (!is_blocked(tempx-1,y)){
+                        x += (dx-1);
+                        stuck = false;
+                    } else stuck = true;
                 }    
-                else if (!is_blocked(tempx+1,y)){x += (dx+1);}
+                else if (!is_blocked(tempx+1,y)){
+                    x += (dx+1);
+                    stuck = false;
+                } else stuck = true;
             } 
             else if (dx == -1 && dy == 0){
                 if (p_dir == false){
-                    if (!is_blocked(x,tempy-1)){y += (dy-1);}
+                    if (!is_blocked(x,tempy-1)){
+                        y += (dy-1);
+                        stuck = false;
+                    } else stuck = true;
                 }    
-                else if (!is_blocked(x,tempy+1)){y += (dy+1);}
+                else if (!is_blocked(x,tempy+1)){
+                    y += (dy+1);
+                    stuck = false;
+                } else stuck = true;
             }
             else if (dy == 1 && dx == 0){
                 if (p_dir == false){
-                    if (!is_blocked(tempx-1,y)){x += (dx-1);}
+                    if (!is_blocked(tempx-1,y)){
+                        x += (dx-1);
+                        stuck = false;
+                    } else stuck = true;
                 }    
-                else if (!is_blocked(tempx+1,y)){x += (dx+1);}
+                else if (!is_blocked(tempx+1,y)){
+                    x += (dx+1);
+                    stuck = false;
+                } else stuck = true;
             } 
             else if (dx == 1 && dy == 0){
                 if (p_dir == false){
-                    if (!is_blocked(x,tempy-1)){y += (dy-1);}
+                    if (!is_blocked(x,tempy-1)){
+                        y += (dy-1);
+                        stuck = false;
+                    } else stuck = true;
                 }    
-                else if (!is_blocked(x,tempy+1)){y += (dy+1);}
+                else if (!is_blocked(x,tempy+1))
+                {y += (dy+1);
+                    stuck = false;
+                    } else stuck = true;
             }
             //std::cout << "Fuck, it's blocked. " << std::endl;
+            stuck = true;
         }    
 /* }
         if (x >= MAP_WIDTH) {x = MAP_WIDTH-1;std::cout << "No, I'm not stepping into the void." << std::endl;}
@@ -516,13 +572,18 @@ BasicMonster orc_ai;
 
 
 void place_objects(Rect room){
+
+    if (monvector.size() >= MAX_TOTAL_MONSTERS) return ;
+
     TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
 
+    //int empty_room = wtf->getInt(0, 100, 0);
+    //if (empty_room < 60){
     int num_mosters = wtf->getInt(0, MAX_ROOM_MONSTERS, 0);
 
     int x, y;
 
-    Fighter fighter_component(0, 0, 0);
+    Fighter fighter_component(0, 0, 0, 0);
     Object_monster monster(0, 0, 'i', TCODColor::black, TCODColor::black, 0, fighter_component);
 
     for (int i = 0; i < num_mosters; ++i){
@@ -530,7 +591,7 @@ void place_objects(Rect room){
         y = wtf->getInt((room.y1+1), (room.y2-1), 0);
         if (!is_blocked(x,y)){
         if ( wtf->getInt(0, 100, 0) < 80){
-            Fighter fighter_component(10, 0, 3); // hp, defense, power
+            Fighter fighter_component(10, 0, 3, 2); // hp, defense, power, speed
             monster.x = x;
             monster.y = y;
             monster.selfchar= 'o';
@@ -543,9 +604,15 @@ void place_objects(Rect room){
             monster.stats = fighter_component;
             monster.myai = &orc_ai;
             monster.alive = true;
+            monster.chase = 0;
+            monster.stuck = 0;
+            monster.bored = 500;
+            monster.boren = false;
+            monster.in_sight = false;
+            monster.combat_move = 6;
             }
         else {
-            Fighter fighter_component(12, 1, 4); // hp, defense, power
+            Fighter fighter_component(12, 1, 4, 4); // hp, defense, power, speed
             monster.x = x;
             monster.y = y;
             monster.selfchar= 'T';
@@ -558,12 +625,19 @@ void place_objects(Rect room){
             monster.stats = fighter_component;
             monster.myai = &orc_ai;
             monster.alive = true;
+            monster.chase = 0;
+            monster.stuck = 0;
+            monster.bored = 500;
+            monster.boren = false;
+            monster.in_sight = false;
+            monster.combat_move = 8;
         }  
         monvector.push_back(monster);
-    }
+        }
+     }
     
     std::cout << " Monster array: " << myvector.size() << std::endl;
-    }
+   // }
 }
 
 int killall = 0; // monster count
@@ -861,6 +935,9 @@ short int bloodycount = 0;
 int game_state = 0;
 int player_action = 0;
 
+int m_x = 0;
+int m_y = 0;
+
 void player_move_attack(int dx, int dy){
     
     int x = player.x + dx;
@@ -878,8 +955,9 @@ void player_move_attack(int dx, int dy){
         }
     }
 
-    if (is_it && monvector[target].alive){
+    if (is_it && monvector[target].alive && player.combat_move >= 4){
         player.stats.attack(player, monvector[target], 0);
+        if(!no_combat)player.combat_move -= 4; // decrease combat movement only if in combat mode
         if (monvector[target].stats.hp < 1){
                 //monvector.erase (target); 
                 --killall;
@@ -895,6 +973,8 @@ void player_move_attack(int dx, int dy){
                 fov_recompute = true;
                 render_all();
                 TCODConsole::flush();
+                m_x = 0;
+        m_y = 0;
             }
             else {
                 char tchar = monvector[target].selfchar;
@@ -919,12 +999,16 @@ void player_move_attack(int dx, int dy){
                 render_all();
                 TCODConsole::flush();
                 std::cout << "monster target hp: " << monvector[target].stats.hp << std::endl;
+                m_x = 0;
+        m_y = 0;
             }
         std::cout << "The " << monvector[target].name << " laughs of your attack!" << std::endl;
     } else { 
         //std::cout << "TIMES INTO move loop"  << std::endl;
-        player.move(dx, dy, monvector);
-        fov_recompute = true;
+        //player.move(dx, dy, monvector);
+        //fov_recompute = true;
+        m_x = dx;
+        m_y = dy;
     }    
 }
 
@@ -941,7 +1025,12 @@ int handle_keys(Object_player &duh) {
   
     if ( key.c == 'q' ) return quit;
 
+    if ( key.c == 'd' ){ if (debug) debug = false; else debug = true; Sleep (100);}
+
     if ( key.c == 'r' ){
+
+        m_x = 0;
+        m_y = 0;
 
         std::cout << " Monster array: " << monvector.size() << std::endl;
         unsigned int b = monvector.size();
@@ -957,6 +1046,15 @@ int handle_keys(Object_player &duh) {
                         l].blocked));
                 //map_array[row * MAP_WIDTH + l] = Tile(1,1);
             }
+
+        }
+        for (int i = 0; i < MAP_HEIGHT ;++i){
+            for (int l = 0; l < MAP_WIDTH ;++l) {
+                fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+                //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+            }
+
         }
         fov_recompute = true;
         player.stats.hp = 30;
@@ -969,6 +1067,8 @@ int handle_keys(Object_player &duh) {
     if (game_state == playing) {
 
     if ( key.c == 'p' ){
+        m_x = 0;
+        m_y = 0;
         TCODConsole::root->clear();
         mesg->setAlignment(TCOD_LEFT);
         mesg->setDefaultForeground(TCODColor::white);
@@ -1080,7 +1180,11 @@ int handle_keys(Object_player &duh) {
         player_move_attack(1, 0);
     }
 
-    else return no_turn;
+    else {
+        m_x = 0;
+        m_y = 0;
+        return no_turn;
+    }
     
     // end KEY RIGHT cycle
     }
@@ -1088,8 +1192,187 @@ int handle_keys(Object_player &duh) {
     return 0;
 }    
 
+int handle_combat(Object_player &duh) {
+
+    bool mycase_p;
+    mycase_p = 0;
+    
+    TCOD_key_t key = TCODConsole::waitForKeypress(false); 
+
+    if (bloodycount < 0) bloodycount = 0; // if ... change color 
+  
+    if ( key.c == 'x' ) return quit;
+
+    if ( key.c == 'd' ){ if (debug) debug = false; else debug = true; Sleep (100);}
+
+    if ( key.c == 'r' ){
+
+        m_x = 0;
+        m_y = 0;
+
+        std::cout << " Monster array: " << monvector.size() << std::endl;
+        unsigned int b = monvector.size();
+        for (unsigned int i = 0; i < b; ++i) monvector.erase (monvector.begin()+i); // erase monster vector on map regen
+        std::cout << " Monster array: " << monvector.size() << std::endl; // 0
+
+        //Sleep(4000);
+        make_map(duh);
+        duh.bloody = 0;
+        for (int i = 0; i < MAP_HEIGHT ;++i){
+            for (int l = 0; l < MAP_WIDTH ;++l) {
+                fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+                //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+            }
+
+        }
+        for (int i = 0; i < MAP_HEIGHT ;++i){
+            for (int l = 0; l < MAP_WIDTH ;++l) {
+                fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+                //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+            }
+
+        }
+        fov_recompute = true;
+        player.stats.hp = 30;
+        player.selfchar = '@';
+        game_state = playing;
+        set_black();
+        alreadydead = 0;
+    }
+
+    if (game_state == playing) {
+
+    if ( key.c == 'p' ){
+        m_x = 0;
+        m_y = 0;
+        TCODConsole::root->clear();
+        mesg->setAlignment(TCOD_LEFT);
+        mesg->setDefaultForeground(TCODColor::white);
+        mesg->setDefaultBackground(TCODColor::black);
+        mesg->print(1, 1, "Give a direction to dig dungeon");
+        myvector[1]->draw(0);
+       
+        if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
+        else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
+
+        TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
+
+        TCODConsole::flush();
+        while (!mycase_p){
+            TCODConsole::waitForKeypress(true);
+            if (TCODConsole::isKeyPressed(TCODK_UP)){ 
+                std::cout << "Dig up." << std::endl; mycase_p = 1;
+                map_array[(duh.y - 1)*MAP_WIDTH +duh.x].blocked = 0;
+                map_array[(duh.y - 1)*MAP_WIDTH +duh.x].block_sight = 0;
+                mesg->clear();
+                for (int i = 0; i < MAP_HEIGHT ;++i){
+                    for (int l = 0; l < MAP_WIDTH ;++l) {
+                            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                            l].blocked));
+                            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+                    }
+                }
+                fov_recompute = true;
+                return false;
+            }
+            if (TCODConsole::isKeyPressed(TCODK_DOWN)){ 
+                std::cout << "Dig down." << std::endl;mycase_p = 1; 
+                map_array[(duh.y + 1)*MAP_WIDTH +duh.x].blocked = 0;
+                map_array[(duh.y + 1)*MAP_WIDTH +duh.x].block_sight = 0;
+                mesg->clear();
+                for (int i = 0; i < MAP_HEIGHT ;++i){
+                    for (int l = 0; l < MAP_WIDTH ;++l) {
+                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+                        //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+                    }
+                }
+                fov_recompute = true;
+                return false; 
+            }
+            if (TCODConsole::isKeyPressed(TCODK_LEFT)){
+                std::cout << "Dig left." << std::endl;mycase_p = 1;
+                map_array[duh.y*MAP_WIDTH +(duh.x -1)].blocked = 0;
+                map_array[duh.y*MAP_WIDTH +(duh.x -1)].block_sight = 0;
+                mesg->clear();
+                for (int i = 0; i < MAP_HEIGHT ;++i){
+                    for (int l = 0; l < MAP_WIDTH ;++l) {
+                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+                        //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+                    }
+                }
+                fov_recompute = true;
+                return false;
+            }
+            if (TCODConsole::isKeyPressed(TCODK_RIGHT)){ 
+                std::cout << "Dig right." << std::endl;mycase_p = 1;
+                map_array[duh.y*MAP_WIDTH +(duh.x + 1)].blocked = 0;
+                map_array[duh.y*MAP_WIDTH +(duh.x + 1)].block_sight = 0;
+                mesg->clear();
+                for (int i = 0; i < MAP_HEIGHT ;++i){
+                    for (int l = 0; l < MAP_WIDTH ;++l) {
+                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+                        //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+                    }
+                }
+                fov_recompute = true;
+                return false;
+            }
+        }
+    }
+
+    // end of KEY DIG cycle
+
+    if (TCODConsole::isKeyPressed(TCODK_UP)){
+        --bloodycount;
+        --duh.bloody;  
+        player_move_attack(0, -1);
+        //std::cout << " Monster array: " << myvector.size() << std::endl;
+    }
+
+    // end KEY UP cycle
+
+    else if (TCODConsole::isKeyPressed(TCODK_DOWN)){
+        --bloodycount;
+        --duh.bloody; 
+        player_move_attack(0, 1);
+    }
+
+    // end KEY DOWN cycle
+
+    else if (TCODConsole::isKeyPressed(TCODK_LEFT)){
+        --bloodycount;
+        --duh.bloody;   
+        player_move_attack(-1, 0);
+    }
+
+    // end KEY LEFT cycle
+
+    else if (TCODConsole::isKeyPressed(TCODK_RIGHT)){
+        --bloodycount; 
+        --duh.bloody; 
+        player_move_attack(1, 0);
+    }
+
+    else {
+        m_x = 0;
+        m_y = 0;
+        std::cout << "playern.x: " << duh.x << " playern.y: " << duh.y << std::endl;
+        return no_turn;
+    }
+    
+    // end KEY RIGHT cycle
+    }
+    std::cout << "player.x: " << duh.x << " player.y: " << duh.y << std::endl; 
+    return 0;
+}
+
 void player_death(){
-    Fighter fighter_component(0, 0, 0);
+    Fighter fighter_component(0, 0, 0, 0);
     Object_monster monster(player.x, player.y, 'i', TCODColor::black, TCODColor::black, 0, fighter_component);
     game_state = dead;
     player.selfchar = 'X';
@@ -1105,7 +1388,7 @@ void player_death(){
 }
 
 int main() {
-        
+
     TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE); 
     TCODSystem::setFps(LIMIT_FPS);
         
@@ -1119,7 +1402,14 @@ int main() {
             fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
                         l].blocked));
         }
-    } 
+    }
+
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+        }
+    }
 
     player.colorb = con->getCharBackground(player.x, player.y);
     //npc.colorb = con->getCharBackground(npc.x, npc.y);
@@ -1135,7 +1425,7 @@ int main() {
 
     game_state = playing;
 
-    
+    //TCODConsole::disableKeyboardRepeat(); 
     
     
     while (! TCODConsole::isWindowClosed()) {
@@ -1152,17 +1442,20 @@ int main() {
         TCODConsole::root->setAlignment(TCOD_LEFT);
         //TCODConsole::root->setDefaultBackground(TCODColor::black);
         TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->print(1, win_y-4, "Use arrows to move");
+        TCODConsole::root->print(1, MAP_HEIGHT+1, "Use arrows to move");
         TCODConsole::root->print(1, win_y-3, "Press 'q' to quit");
+        
         TCODConsole::root->setAlignment(TCOD_RIGHT);
         if (player.stats.hp < 7) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
         else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
         TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
-            TCODConsole::root->print(win_x-2, win_y-5, "HP: %c%d%c/%d",TCOD_COLCTRL_1, player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
+            TCODConsole::root->print(win_x-2, MAP_HEIGHT+1, "HP: %c%d%c/%d",TCOD_COLCTRL_1, player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
         //TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->print(win_x-2, win_y-4, "Press 'p' to punch walls");
-        TCODConsole::root->print(win_x-2, win_y-3, "Press 'r' to regenerate layout/revive player");
-
+        TCODConsole::root->print(win_x-2, MAP_HEIGHT+4, "Press 'p' to punch walls");
+        TCODConsole::root->print(win_x-2, MAP_HEIGHT+5, "Press 'r' to regenerate layout/revive player");
+        TCODConsole::root->print(win_x-2, MAP_HEIGHT+7, "Press 'd' for DEBUG");
+        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::yellow,TCODColor::black);
+        if (debug) TCODConsole::root->print(win_x-2, MAP_HEIGHT+8, "%cMonster count%c: %d",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, killall);
         
         
         TCODConsole::root->setAlignment(TCOD_CENTER);
@@ -1180,33 +1473,216 @@ int main() {
 
         for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->clear(); // player array, clar previous
 
+        int pla_x = player.x;
+        int pla_y = player.y;
+
+        bool combat_mode = false;
+
+        bool in_sight;
+
+        if (!no_combat){
+
+        for (unsigned int i = 0; i<monvector.size(); ++i) {
+            if(monvector[i].color == orc) monvector[i].combat_move = 6;
+            else monvector[i].combat_move = 8;
+            in_sight = fov_map->isInFov(monvector[i].x,monvector[i].y);
+            if(in_sight && monvector[i].alive == true){ 
+                combat_mode = true;
+                monvector[i].pl_x = pla_x; // if player in sight, store player pos
+                monvector[i].pl_y = pla_y;
+                monvector[i].chase = 1;
+                monvector[i].bored = 100;
+                monvector[i].stuck = false;
+                monvector[i].in_sight = true;
+                if (monvector[i].distance_to(player.x, player.y) < 2){
+                    monvector[i].pl_x = player.x; // if player in sight, store player pos
+                    monvector[i].pl_y = player.y;
+                        //monvector[i].chase = 1;
+                    } // this was needed so monsters one step away don't step ON the player, since
+                    // the monster moves after the player moved, so both move and overlap
+                
+            }    
+        } // activates combat mode as soon a monster is in sight, deactivates on subsequent loops
+
+        player.combat_move = 8; // 1 cost for movement, 4 for attack
+        while (combat_mode){
+            
+            std::cout << "first" << std::endl;
+            player_action = handle_combat(player);
+            if ((m_x != 0 || m_y != 0) && player.combat_move > 0){
+                player.move(m_x, m_y, monvector);
+                --player.combat_move;
+                //std::cout << "Combat move:" << player.combat_move << std::endl;
+                //std::cout << "Player:" << player.x << m_x << player.y << m_y << std::endl;
+            }
+            fov_recompute = true;
+            render_all();
+            TCODConsole::flush(); // this updates the screen
+            if (player.combat_move == 0){
+                for (unsigned int i = 0; i<monvector.size(); ++i) { 
+                    if (monvector[i].alive){
+                        if (monvector[i].in_sight){
+                            if (fov_map->isInFov(monvector[i].x,monvector[i].y)){
+                                monvector[i].pl_x = player.x; // if player in sight, store player pos
+                                monvector[i].pl_y = player.y;
+                            }
+                            std::cout << "monster doing something" << std::endl;
+                            while (monvector[i].combat_move > 0){
+                                if (monvector[i].myai->take_turn(monvector[i], player, monvector[i].pl_x,
+                                        monvector[i].pl_y,true)) render_all();
+                                render_all();
+                                TCODConsole::flush();
+                                Sleep(100);
+                                
+                            }
+                        }    
+                    }
+                } 
+                break;
+            }
+            if (player_action == quit){
+                Sleep(100);
+                combat_mode = false;
+                break;
+            }    
+        }
+
+        } else {// no combat
+            player.combat_move = 8;
+        } // reset list if combat didn't happen    
+
+
         player_action = handle_keys(player);
 
         if (player_action == quit) break;
+
         if (game_state == playing && player_action != no_turn){
             for (unsigned int i = 0; i<monvector.size(); ++i) { 
-                if (monvector[i].alive)
-                if (
-                monvector[i].myai->take_turn(monvector[i], player, player.x, player.y))
-                    render_all();
+                if (monvector[i].alive){
+
+                   /* 
+                      TCODLine::init(monvector[i].x,monvector[i].y,player.x,player.y);
+                    int step_x = monvector[i].x;
+                    int step_y = monvector[i].y;
+                    bool out_of_sight;
+                    out_of_sight = false;
+                    do { 
+                        if(map_array[step_y * MAP_WIDTH + step_x].blocked){
+                            out_of_sight = true;
+                            break; 
+                        }    
+                    } while(!TCODLine::step(&step_x, &step_y));
+                    */
+
+                    bool in_sight;
+                    in_sight = fov_map->isInFov(monvector[i].x,monvector[i].y);
+                    if (in_sight || (monvector[i].chase == 1 && !monvector[i].boren)){
+
+                        fov_map_mons->computeFov(monvector[i].x,monvector[i].y, MON_RADIUS, FOV_LIGHT_WALLS,FOV_ALGO);
+
+                    if ( (monvector[i].pl_x == monvector[i].x && monvector[i].pl_y == monvector[i].y) ||
+                            monvector[i].stuck){
+                        TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
+                        
+                        int vagab_x = 0;
+                        int vagab_y = 0;
+                        //while (!fov_map_mons->isInFov(vagab_x,vagab_y)){
+                        vagab_x = wtf->getInt(monvector[i].x - 10, monvector[i].x + 10, 0);
+                        if (vagab_x < 0) vagab_x = 0;
+                        if (vagab_x > MAP_WIDTH) vagab_x = MAP_WIDTH;
+                        vagab_y = wtf->getInt(monvector[i].y - 10, monvector[i].y + 10, 0);
+                        if (vagab_y < 0) vagab_y = 0;
+                        if (vagab_y > MAP_HEIGHT) vagab_y = MAP_HEIGHT;
+                        //}
+                        monvector[i].pl_x = vagab_x; // pick a random spot in FoV
+                        monvector[i].pl_y = vagab_y;
+                        //monvector[i].chase = 0; // monster arrived at destination
+                        
+                    }    
+                    --monvector[i].bored;
+
+                    if (in_sight){
+                        monvector[i].pl_x = pla_x; // if player in sight, store player pos
+                        monvector[i].pl_y = pla_y;
+                        monvector[i].chase = 1;
+                        monvector[i].boren = false;
+                        monvector[i].bored = 400;
+                        monvector[i].stuck = false;
+                        if (monvector[i].distance_to(player.x, player.y) < 2){
+                        monvector[i].pl_x = player.x; // if player in sight, store player pos
+                        monvector[i].pl_y = player.y;
+                        //monvector[i].chase = 1;
+                    } // this was needed so monsters one step away don't step ON the player, since
+                    // the monster moves after the player moved, so both move and overlap
+                    }
+                     
+
+                    std::cout << monvector[i].x << std::endl;
+                    std::cout << monvector[i].pl_x << std::endl;
+                    //std::cout << player.y << std::endl;
+                    //std::cout << monvector[i].pl_y << std::endl;
+                    //std::cout << monvector[i].stuck << std::endl;
+                    if (monvector[i].myai->take_turn(monvector[i], player, monvector[i].pl_x,
+                                monvector[i].pl_y,in_sight)) render_all();
+
+                    /*  if (monvector[i].x > 90 || monvector[i].x < 0){
+                        std::cout << "AFTER" << std::endl;
+                        std::cout << monvector[i].x << std::endl;
+                        Sleep(2000);
+                    } */
+                 
+                    // take_turn will check if monster is in FoV. Monsters only act if in FoV.
+                    
+                    for (unsigned int l = 0; l<monvector.size(); ++l) {
+                        
+                        if(fov_map_mons->isInFov(monvector[l].x,monvector[l].y) && monvector[l].chase == 0) {
+                        monvector[l].pl_x = monvector[i].pl_x;
+                        monvector[l].pl_y = monvector[i].pl_y;
+                        monvector[l].chase = 1;
+                        //monvector[l].bored = 200; //set already on monster
+                        }
+                    }
+                   
+                    
+                    
+                } //active 
+
+                    if (monvector[i].bored <= 0){
+                        monvector[i].boren = true; // flag for boringness recuperation
+                    }
+                    if (monvector[i].boren == true){
+                        monvector[i].bored += 2;
+                        if (monvector[i].bored >= 400){
+                            monvector[i].boren = false;
+                            monvector[i].chase = 0;
+                        }    
+                    } // when bored reaches 100, monster is bored, will start to recuperate till it hits 100 again
+
+                } // alve
                     //std::cout << "The " << monvector[i].name << " growls!" << std::endl; 
                 //render_all(myvector);
                 //TCODConsole::flush();
-            }  
-        std::cout << "END MONSTER TURN" << std::endl;    
+            }  // vector
+        std::cout << "END MONSTER TURN" << std::endl;
+        std::cout << "Combat mode:" << combat_mode << std::endl;
+
+        
           //  --playerb.stats.max_hp;
         //std::cout << "DEBUG: " << playera.stats.max_hp << std::endl;
         //std::cout << "DEBUG: " << playerb.stats.max_hp << std::endl;
         if (player.stats.hp < 1 && !alreadydead ){
             player_death();
             alreadydead = 1;
-        }
+        } else {
+            player.move(m_x, m_y, monvector);
+            fov_recompute = true;
+        } // this updates the player movement after the monster turn
 
-        }
+        } // game state
 
         
 
-    }
+    } // while cycle
     //std::cout << "DEBUG: " << playero.stats.max_hp << std::endl;
     //char bla;
     //std::cin >> bla;
