@@ -3,17 +3,17 @@
 #include "libtcod.hpp"
 #include <windows.h> // for Sleep()
 
-const int   win_x   =   80; // window width in cells
-const int   win_y   =   50; // window height in cells
+const int   win_x   =   100; // window width in cells
+const int   win_y   =   40; // window height in cells
 const int   LIMIT_FPS = 20;
 
-const int MAP_WIDTH = 80;
-const int MAP_HEIGHT = 45;
+const int MAP_WIDTH = 100;
+const int MAP_HEIGHT = 35;
 
 //parameters for dungeon generator
 int ROOM_MAX_SIZE = 10;
 int ROOM_MIN_SIZE = 6;
-int MAX_ROOMS = 30;
+int MAX_ROOMS = 32;
 
 TCOD_fov_algorithm_t FOV_ALGO = FOV_BASIC; //default FOV algorithm
 bool FOV_LIGHT_WALLS = true;
@@ -32,7 +32,7 @@ TCODColor color_light_ground(50, 50, 150);
 
 bool fov_recompute;
 
-TCODConsole *con = new TCODConsole(80, 45);
+TCODConsole *con = new TCODConsole(MAP_WIDTH, MAP_HEIGHT);
 TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
 
 TCODMap * fov_map = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
@@ -404,7 +404,7 @@ void render_all (std::vector<Object*> &invector){
 
     for (unsigned int i = 0; i<invector.size(); ++i) invector[i]->draw(0);
     
-    TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
+    TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
 }
 
 void bloodsplat(Object &cobj){
@@ -520,10 +520,10 @@ bool handle_keys(Object &duh) {
         mesg->print(1, 1, "Give a direction to dig dungeon");
         myvector[1]->draw(0);
        
-        if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
-        else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-4,1);
+        if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
+        else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
 
-        TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
+        TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
 
         TCODConsole::flush();
         while (!mycase_p){
@@ -618,9 +618,9 @@ bool handle_keys(Object &duh) {
                 npc.colorb = TCODColor::red;
                 npc.draw(1);
                 mesg->print(1, 1, "Hit!");
-                if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
-                else TCODConsole::blit(mesg,0,0,33,3,con,46,1);
-                TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
+                if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
+                else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
+                TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
                 TCODConsole::flush();
                 Sleep(200); // shitty way for attack "animation", uses windows.h
                 npc.colorb = color_dark_ground;
@@ -663,9 +663,9 @@ bool handle_keys(Object &duh) {
                 npc.colorb = TCODColor::red;
                 npc.draw(1);
                 mesg->print(1, 1, "Hit!");
-                if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
-                else TCODConsole::blit(mesg,0,0,33,3,con,46,1);
-                TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
+                if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
+                else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
+                TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
                 TCODConsole::flush();
                 Sleep(200);
                 npc.colorb = color_dark_ground;
@@ -706,9 +706,9 @@ bool handle_keys(Object &duh) {
                 npc.colorb = TCODColor::red;
                 npc.draw(1);
                 mesg->print(1, 1, "Hit!");
-                if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
-                else TCODConsole::blit(mesg,0,0,33,3,con,46,1);
-                TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
+                if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
+                else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
+                TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
                 TCODConsole::flush();
                 Sleep(200);
                 npc.colorb = color_dark_ground;
@@ -749,9 +749,9 @@ bool handle_keys(Object &duh) {
                 npc.colorb = TCODColor::red;
                 npc.draw(1);
                 mesg->print(1, 1, "Hit!");
-                if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
-                else TCODConsole::blit(mesg,0,0,33,3,con,46,1);
-                TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
+                if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
+                else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
+                TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
                 TCODConsole::flush();
                 Sleep(200);
                 npc.colorb = color_dark_ground;
@@ -778,7 +778,8 @@ bool handle_keys(Object &duh) {
 
 int main() {
         
-    TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE);
+    //TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE);
+    TCOD_console_set_custom_font("font-6.png", (TCOD_FONT_TYPE_GREYSCALE | TCOD_FONT_LAYOUT_ASCII_INROW), 0, 0);
     TCODSystem::setFps(LIMIT_FPS);
 
         
@@ -821,19 +822,19 @@ int main() {
         TCODConsole::root->setAlignment(TCOD_LEFT);
         //TCODConsole::root->setDefaultBackground(TCODColor::black);
         TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->print(1, 46, "Use arrows to move");
-        TCODConsole::root->print(1, 47, "Press 'q' to quit");
+        TCODConsole::root->print(1, 36, "Use arrows to move");
+        TCODConsole::root->print(1, 37, "Press 'q' to quit");
         TCODConsole::root->setAlignment(TCOD_RIGHT);
-        TCODConsole::root->print(78, 46, "Press 'p' to punch walls");
-        TCODConsole::root->print(78, 47, "Press 'r' to regenerate layout");
+        TCODConsole::root->print(98, 36, "Press 'p' to punch walls");
+        TCODConsole::root->print(98, 37, "Press 'r' to regenerate layout");
         
         TCODConsole::root->setAlignment(TCOD_CENTER);
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
         TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::yellow,TCODColor::white);
         if (npc.h > 0)
-            TCODConsole::root->print(39,49,"%cKILL%c the '%c%%%c'",
+            TCODConsole::root->print(49,39,"%cKILL%c the '%c%%%c'",
                 TCOD_COLCTRL_1,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP);
-        else TCODConsole::root->print(39,49,"%cKILLED!%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+        else TCODConsole::root->print(49,39,"%cKILLED!%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
        
         TCODConsole::flush(); // this updates the screen
 
