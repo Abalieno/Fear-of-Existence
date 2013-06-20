@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 #include "libtcod.hpp"
-#include <windows.h> // for Sleep()
+#include <windows.h> // for Sleep() and not currently used
 
 // #include <process.h> //used for threading?
 
@@ -38,6 +38,10 @@ const int no_turn = 2;
 const int dead = 99;
 
 int stance_pos = 1;
+int stance_pos2 = 0; // for in sight widget_1
+
+int insto_rows = 3; // rows in in sight UI
+
 
 int bigg = 0; // sets 16x16 font
 int bigg2 = 0; // is in minimap
@@ -71,7 +75,7 @@ int off_xx = 0;
 
 TCODColor color_light_wall(0, 0, 100);
 TCODColor color_light_ground(50, 50, 150);
-TCODColor color_dark_groundF(TCODColor::grey);
+TCODColor color_dark_groundF(TCODColor::darkGrey);
 TCODColor color_dark_wallF(0, 0, 50);
 //TCODColor color_light_ground(200, 180, 50);
 
@@ -91,21 +95,27 @@ TCODConsole *con_mini = new TCODConsole(MAP_WIDTH+2, MAP_HEIGHT+2);
 TCODConsole *con_tini = new TCODConsole(MAP_WIDTH_AREA+2, MAP_HEIGHT_AREA+2); // for tinymap
 TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
 TCODConsole *load = new TCODConsole(win_x, win_y);  // load screen
-TCODConsole *widget_1 = new TCODConsole(4, 1);
+TCODConsole *widget_1 = new TCODConsole(4, 1);  // UI numbers mapmodes
+TCODConsole *widget_2 = new TCODConsole(8, 1);  // UI top widget for objects in sight
+TCODConsole *widget_2_p = new TCODConsole(80, MAP_HEIGHT-10); // UI pop up object widget
 
-TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT_AREA));  // combat UI panel
+TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT_AREA));  // combat UI panel (includes Message Log)
 TCODConsole *r_panel = new TCODConsole((win_x - MAP_WIDTH_AREA), MAP_HEIGHT_AREA); // panel on right of map 
 // 30, 46 message log
 int BAR_WIDTH = 20;
 int MSG_X = 30; // BAR_WIDTH + 2;
-int MSG_WIDTH = 63; // SCREEN_WIDTH - BAR_WIDTH - 2
-int MSG_HEIGHT = 12;// PANEL_HEIGHT - 1
+int MSG_WIDTH = 93; // SCREEN_WIDTH - BAR_WIDTH - 2 |was 63!
+unsigned int MSG_HEIGHT = 15;// PANEL_HEIGHT - 1 | was 12!
 
 TCODMap * fov_map = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 TCODMap * fov_map_mons = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 
-struct msg_log { char message [50]; TCODColor color1; TCODColor color2; TCODColor color3; TCODColor color4; TCODColor
-    color5;};
+// bool used for background color presence
+struct msg_log { char message [94]; TCODColor color1; TCODColor color2; TCODColor color3; TCODColor color4; TCODColor
+    color5; TCODColor color6; TCODColor color7; TCODColor color8; TCODColor color9; TCODColor color10; bool c1;
+    bool c2; bool c3; bool c4; bool c5; bool c6; bool c7; bool c8; bool c9; bool c10;
+    TCODColor bcolor1; TCODColor bcolor2; TCODColor bcolor3; TCODColor bcolor4; TCODColor bcolor5; TCODColor bcolor6;
+    TCODColor bcolor7; TCODColor bcolor8; TCODColor bcolor9; TCODColor bcolor10;};
 
 std::vector<msg_log> msg_log_list;
 
@@ -144,6 +154,11 @@ void map_16x16_tile(){
     TCODConsole::mapAsciiCodeToFont(607,15,18);
     TCODConsole::mapAsciiCodeToFont(707,14,19);
     TCODConsole::mapAsciiCodeToFont(807,15,19); // tile #7 wall
+
+    TCODConsole::mapAsciiCodeToFont(508,14,20);
+    TCODConsole::mapAsciiCodeToFont(608,15,20);
+    TCODConsole::mapAsciiCodeToFont(708,14,21);
+    TCODConsole::mapAsciiCodeToFont(808,15,21); // tile #8 door
 }
 
 void map_8x16_font(){
@@ -274,6 +289,25 @@ class Object_monster;
 
 class Object_player;
 
+class Weapon_use {
+public:
+    char wpn_type[15];
+
+    int wpn_AC;
+    int wpn_DC;
+
+    int wpn_B;
+    int wpn_E;
+    int wpn_P;
+
+    int wpn_aspect;
+
+    Weapon_use(){    
+    }
+
+};    
+
+// used both on monsters & players
 class Fighter {
 public:
     int speed;
@@ -281,6 +315,10 @@ public:
     int hp;
     int defense;
     int power;
+
+    int ML;
+
+    Weapon_use wpn1;
 
     Fighter(int inithp, int defval, int powval, int speedval){
         max_hp = inithp;
@@ -345,7 +383,7 @@ public: // public should be moved down, but I keep it here for debug messages
        
     
     void draw(bool uh) {
-        con->setDefaultForeground(color);
+        //con->setDefaultForeground(color);
         if (!uh){
             if(bigg){
                 colorb = con->getCharBackground((x*2), (y*2));
@@ -377,6 +415,7 @@ public: // public should be moved down, but I keep it here for debug messages
                     con->putChar((x*2)+1, (y*2)+1, 806, TCOD_BKGND_SET);
                 } 
             } else {
+                con->setDefaultForeground(color);
                 con->putChar(x, y, selfchar, TCOD_BKGND_SET);
             }
         }
@@ -471,41 +510,41 @@ public:
     int SPP;
     int SPS;
 
-    Statistics(int a){
-       M = 0;
-     P= 0;
-   S= 0;
+    Statistics(int a){ // player characteristics
+        M = 0;
+        P = 0;
+        S = 0;
 
-     MM= 0;
-     MR= 0;
-     PM= 0;
-    PN= 0;
-    SM= 0;
-     SP= 0;
+        MM = 0;
+        MR = 0;
+        PM = 0;
+        PN = 0;
+        SM = 0;
+        SP = 0;
 
-     MMC= 0;
-   MMP= 0;
-     MMS= 0;
+        MMC = 0;
+        MMP = 0;
+        MMS = 0;
 
-     MRC= 0;
-    MRP= 0;
-    MRS= 0;
+        MRC = 0;
+        MRP = 0;
+        MRS = 0;
 
-    PMC= 0;
-     PMP= 0;
-     PMS= 0;
+        PMC = 0;
+        PMP = 0;
+        PMS = 0;
 
-     PNC= 0;
-     PNP= 0;
-     PNS= 0;
+        PNC = 0;
+        PNP = 0;
+        PNS = 0;
 
-     SMC= 0;
-    SMP= 0;
-    SMS= 0;
+        SMC = 0;
+        SMP = 0;
+        SMS = 0;
 
-    SPC= 0;
-     SPP= 0;
-    SPS= 0;
+        SPC = 0;
+        SPP = 0;
+        SPS = 0;
     }
 
 };
@@ -679,8 +718,173 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
 
     int damage = 0;
 
-    if (who){        
+    if (who){       
 
+        // calculate AML
+        int p_AML = monster.stats.ML; // basic skill
+        p_AML += monster.stats.wpn1.wpn_AC; // adding weapon Attack class
+        // should check for walls here
+        int m_DML = player.stats.ML; // basic monster skill
+        m_DML += player.stats.wpn1.wpn_AC; // adding weapon Attack class
+
+        TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
+        short int p_d100 = wtf->getInt(1, 100, 0);
+        short int m_d100 = wtf->getInt(1, 100, 0);
+
+        short int p_success_level = 0;
+        short int crit_val = p_d100 % 10;
+
+        char sstri1[3];
+        char sstri2[3];    
+        if (p_d100 <= p_AML){
+            if ( crit_val == 0 || crit_val == 5 ){
+                p_success_level = 0; // CS Critical Success
+                strcpy(sstri1, "CS");
+            } else {    
+                p_success_level = 1; // MS Marginal Success
+                strcpy(sstri1, "MS");
+            }    
+        } else if (p_d100 > p_AML){
+            if ( crit_val == 0 || crit_val == 5){
+                p_success_level = 3; // CF Critical Failure
+                strcpy(sstri1, "CF");
+            } else {
+                p_success_level = 2; // MF Marginal Failure
+                strcpy(sstri1, "MF");
+            }
+        }
+
+        short int m_success_level = 0;
+        crit_val = m_d100 % 10;
+        if (m_d100 <= m_DML){
+            if ( crit_val == 0 || crit_val == 5 ){
+                m_success_level = 0; // CS Critical Success
+                strcpy(sstri2, "CS");
+            } else {    
+                m_success_level = 1; // MS Marginal Success
+                strcpy(sstri2, "MS");
+            }    
+        } else if (m_d100 > m_DML){
+            if ( crit_val == 0 || crit_val == 5){
+                m_success_level = 3; // CF Critical Failure
+                strcpy(sstri2, "CF");
+            } else {
+                m_success_level = 2; // MF Marginal Failure
+                strcpy(sstri2, "MF");
+            }
+        }
+
+        const int melee_res[4][4] = 
+        {
+            { 4, 5, 6, 7, },
+            { 4, 4, 5, 6, },
+            { 2, 4, 4, 3, },
+            { 2, 2, 2, 1, }
+        };
+
+        std::cout << "pML: " << monster.stats.ML << " p_AML: " << p_AML << " p_d100: " << p_d100 << std::endl;
+        std::cout << "mML: " << player.stats.ML << " m_DML: " << m_DML << " m_d100: " << m_d100 << std::endl;
+        std::cout << "P Success Level: " << p_success_level << std::endl;
+        std::cout << "M Success Level: " << m_success_level << std::endl;
+        std::cout << "Melee Result: " << melee_res[p_success_level][m_success_level] << std::endl;
+
+        msg_log msgd;
+        sprintf(msgd.message, "%c*%cMonster's skill(%c%d%c) %c1d100%c(%c%d%c) VS Player's defense(%c%d%c) %c1d100%c(%c%d%c)",
+                TCOD_COLCTRL_5, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, p_AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_3, p_d100, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, m_DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_4, m_d100, TCOD_COLCTRL_STOP);
+        msgd.color1 = TCODColor::cyan;
+        msgd.color2 = TCODColor::yellow;
+        msgd.color5 = TCODColor::red;
+        switch(p_success_level){
+            case 0:
+                msgd.c3 = 1;
+                msgd.color3 = TCODColor::white;
+                msgd.bcolor3 = TCODColor::blue;
+                break;
+            case 1:
+                msgd.color3 = TCODColor::lighterBlue;
+                break;
+            case 2:
+                msgd.color3 = TCODColor::red;
+                break;
+            case 3:
+                msgd.c3 = 1;
+                msgd.color3 = TCODColor::white;
+                msgd.bcolor3 = TCODColor::red;
+                break;
+        }        
+        switch(m_success_level){
+            case 0:
+                msgd.c4 = 1;
+                msgd.color4 = TCODColor::white;
+                msgd.bcolor4 = TCODColor::blue;
+                break;
+            case 1:
+                msgd.color4 = TCODColor::lighterBlue;
+                break;
+            case 2:
+                msgd.color4 = TCODColor::red;
+                break;
+            case 3:
+                msgd.c4 = 1;
+                msgd.color4 = TCODColor::white;
+                msgd.bcolor4 = TCODColor::red;
+                break;
+        }
+        msg_log_list.push_back(msgd);        
+
+        msg_log msg1;
+        switch(melee_res[p_success_level][m_success_level]){
+            case 1:
+                monster.stats.hp -= 1;
+                player.stats.hp -= 1;
+                std::cout << "[CF] Both you and your enemy fumble! -1 to HP for both." << std::endl;
+                sprintf(msg1.message, "%c*%cBoth your enemy and you fumble! %c-1%c to HP for both.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 2:
+                monster.stats.hp -= 1;
+                std::cout << "[CF] You fumble the attack! -1 to HP." <<std::endl;
+                sprintf(msg1.message, "%c*%cThe monster fumbles the attack! %c-1%c to HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 3:
+                player.stats.hp -= 1;
+                std::cout << "[MF] You fail the attack, but the monster fumbles and hits himself! -1 to monster HP." 
+                    << std::endl;
+                sprintf(msg1.message, "%c*%cThe monster misses, but you fumble the parry and hurt yourself! %c-1%c to HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 4:
+                std::cout << "You try to attack, but the monster defends itself!" << std::endl;
+                sprintf(msg1.message, "%c*%cThe monster swings his weapon, but you parry.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 5:
+                player.stats.hp -= monster.stats.power;
+                std::cout << "Your attack does standard damage." << std::endl;
+                sprintf(msg1.message, "%c*%cThe monster hits you for %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, monster.stats.power, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 6:
+                player.stats.hp -= monster.stats.power * 2;
+                std::cout << "You attack does double damage!" << std::endl;
+                sprintf(msg1.message, "%c*%cCritial attack! %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (monster.stats.power * 2), TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 7:
+                player.stats.hp -= monster.stats.power * 3;
+                std::cout << "Your attack does triple damage!" << std::endl;
+                sprintf(msg1.message, "%c*%cTriple damage! %c%d%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (monster.stats.power * 3), TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+        }
+        msg_log_list.push_back(msg1);
+
+        /* old combat 
         damage = monster.stats.power - player.stats.defense;
 
         if (damage > 0){
@@ -696,6 +900,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
                 msg_log_list.push_back(msg1);
 
         } else std::cout << monster.name << " attacks " << player.name << " but it has no effect!" << std::endl;
+        */
         
     } else {
         damage = player.stats.power - monster.stats.defense;
@@ -864,7 +1069,7 @@ void place_objects(Rect room){
         y = wtf->getInt((room.y1+1), (room.y2-1), 0);
         if (!is_blocked(x,y)){
         if ( wtf->getInt(0, 100, 0) < 80){
-            Fighter fighter_component(10, 0, 3, 2); // hp, defense, power, speed
+            Fighter fighter_component(10, 0, 2, 2); // hp, defense, power, speed
             monster.x = x;
             monster.y = y;
             monster.selfchar= 'o';
@@ -885,7 +1090,15 @@ void place_objects(Rect room){
             monster.combat_move = 6;
             monster.c_mode = false;
             monster.speed = 4; // for initiative
-            }
+
+            monster.stats.wpn1.wpn_AC = 12;
+            monster.stats.wpn1.wpn_DC = 4;
+            monster.stats.wpn1.wpn_B = 3;
+            monster.stats.wpn1.wpn_aspect = 1;
+
+            monster.stats.ML = 35;
+          
+        }
         else {
             Fighter fighter_component(12, 1, 4, 4); // hp, defense, power, speed
             monster.x = x;
@@ -908,11 +1121,19 @@ void place_objects(Rect room){
             monster.combat_move = 10;
             monster.c_mode = false;
             monster.speed = 8;
+
+            monster.stats.wpn1.wpn_AC = 15;
+            monster.stats.wpn1.wpn_DC = 5;
+            monster.stats.wpn1.wpn_B = 4;
+            monster.stats.wpn1.wpn_aspect = 1;
+
+            monster.stats.ML = 50;
+
         }  
         monvector.push_back(monster);
         }
      }
-    
+ 
     std::cout << " Monster array: " << myvector.size() << std::endl;
    // }
 }
@@ -1422,6 +1643,11 @@ void I_am_moused(){
     } else {
         bigg3 = 0;
     }
+    if( (mousez.cx >= 6 && mousez.cx < 14) && mousez.cy == 0) {
+        stance_pos2 = 1;
+    } else {
+        stance_pos2 = 0;
+    }
 
     //std::cout << "MOUSE " << x << " " << y << std::endl;
 
@@ -1525,6 +1751,11 @@ void I_am_moused2(){ // doubled because of main loop, changes where messages are
         bigg3 = 1;
     } else {
         bigg3 = 0;
+    }
+    if( (mousez.cx >= 6 && mousez.cx < 14) && mousez.cy == 0) {
+        stance_pos2 = 1;
+    } else {
+        stance_pos2 = 0;
     }
 
     //std::cout << "MOUSE " << x << " " << y << std::endl;
@@ -1660,6 +1891,10 @@ void render_bar_s2(int x, int y, int total_width, const char *name,
     panel->print((x + total_width +1), y, "%s[%c%d%c/%d]",name ,TCOD_COLCTRL_1, value,TCOD_COLCTRL_STOP, maximum);
     panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
 
+}
+
+int draw_obj_list(){
+return 0;
 }
 
 void render_all (){
@@ -1838,13 +2073,13 @@ void render_all (){
 
                             con->setCharForeground((l*2), (i*2), TCODColor::white);
                             con->setCharForeground((l*2)+1, (i*2), TCODColor::white);
-                            con->setCharForeground((l*2), (i*2)+1, TCODColor::white);
-                            con->setCharForeground((l*2)+1, (i*2)+1, TCODColor::white);
+                            //con->setCharForeground((l*2), (i*2)+1, TCODColor::white);
+                            //con->setCharForeground((l*2)+1, (i*2)+1, TCODColor::white);
 
-                            con->setCharBackground((l*2), (i*2), color_light_ground, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2)+1, (i*2), color_light_ground, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2), (i*2)+1, color_light_ground, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2)+1, (i*2)+1, color_light_ground, TCOD_BKGND_SET);
+                            //con->setCharBackground((l*2), (i*2), color_light_ground, TCOD_BKGND_SET);
+                            //con->setCharBackground((l*2)+1, (i*2), color_light_ground, TCOD_BKGND_SET);
+                            //con->setCharBackground((l*2), (i*2)+1, color_light_ground, TCOD_BKGND_SET);
+                            //con->setCharBackground((l*2)+1, (i*2)+1, color_light_ground, TCOD_BKGND_SET);
                         } else {
                             con->putChar(l, i, '.', TCOD_BKGND_SET);
                             con->setCharForeground(l, i, TCODColor::white);
@@ -1884,25 +2119,40 @@ void render_all (){
     fov_recompute = false;
     }
 
-    
+    // draw doors
     for (unsigned int i = 0; i<doors.size(); ++i){
         if(fov_map->isInFov(doors[i].x,doors[i].y)){
-        con->putChar(doors[i].x, doors[i].y, TCOD_CHAR_CROSS, TCOD_BKGND_SET);
-        con->setCharBackground(doors[i].x, doors[i].y, door_c, TCOD_BKGND_SET);
-        con->setCharForeground(doors[i].x, doors[i].y, TCODColor::black);
+            if(bigg){
+                con->putChar(doors[i].x*2,doors[i].y*2, 508, TCOD_BKGND_SET);
+                con->putChar((doors[i].x*2)+1,doors[i].y*2, 608, TCOD_BKGND_SET);
+                con->putChar(doors[i].x*2,(doors[i].y*2)+1, 708, TCOD_BKGND_SET);
+                con->putChar((doors[i].x*2)+1,(doors[i].y*2)+1, 808, TCOD_BKGND_SET);
+
+                con->setCharBackground((doors[i].x*2), (doors[i].y*2), door_c, TCOD_BKGND_SET);
+                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2), door_c, TCOD_BKGND_SET);
+                con->setCharBackground((doors[i].x*2), (doors[i].y*2)+1, door_c, TCOD_BKGND_SET);
+                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2)+1, door_c, TCOD_BKGND_SET);
+
+                con->setCharForeground((doors[i].x*2), (doors[i].y*2), TCODColor::black);
+                con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2), TCODColor::black);
+                con->setCharForeground((doors[i].x*2), (doors[i].y*2)+1, TCODColor::black);
+                con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2)+1, TCODColor::black);
+            } else {    
+                con->putChar(doors[i].x, doors[i].y, TCOD_CHAR_CROSS, TCOD_BKGND_SET);
+                con->setCharBackground(doors[i].x, doors[i].y, door_c, TCOD_BKGND_SET);
+                con->setCharForeground(doors[i].x, doors[i].y, TCODColor::black);
+            }    
         }
     }
     
     for (unsigned int i = 0; i<monvector.size(); ++i) {
         if (monvector[i].selfchar == '%')
         monvector[i].draw(0); // first draws dead bodies
-
     }
 
     for (unsigned int i = 0; i<monvector.size(); ++i) {
         if (monvector[i].selfchar != '%')
         monvector[i].draw(0); // then draws monsters still alive
-
     }
 
 
@@ -2052,6 +2302,7 @@ void render_all (){
         TCODConsole::blit(con_tini,0,0,0,0,TCODConsole::root,0,0); // minimap layer
     } // end bigg3 tinimap
 
+    // map modes
     switch(stance_pos){
         case 1:
             TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::red);
@@ -2070,11 +2321,39 @@ void render_all (){
             TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::red);
             break;
     }
+
     widget_1->setBackgroundFlag(TCOD_BKGND_SET);
     widget_1->print(0, 0, "%c1%c%c2%c%c34%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
             TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
     //widget_1->print(10, 0, "Hello.");
     TCODConsole::blit(widget_1,0,0,0,0,TCODConsole::root,0,0);
+
+    // object-list pop up window
+    if(stance_pos2 == 1){
+        widget_2_p->clear();
+        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::red);
+        widget_2_p->setDefaultForeground(TCODColor::white);
+        int obj_line;
+        obj_line = 0;
+        for (unsigned int i = 0; i<monvector.size(); ++i) {
+            if (fov_map->isInFov(monvector[i].x,monvector[i].y)){
+                obj_line += 1;
+                TCODConsole::setColorControl(TCOD_COLCTRL_2,monvector[i].color,TCODColor::black);     
+                widget_2_p->print(0, obj_line, "%c%c%c> This is one %c%s%c.", 
+                        TCOD_COLCTRL_2, monvector[i].selfchar, TCOD_COLCTRL_STOP, 
+                        TCOD_COLCTRL_2, monvector[i].name, TCOD_COLCTRL_STOP);
+            }    
+            //if (monvector[i].selfchar == '%')
+            //monvector[i].draw(0); // first draws dead bodies
+        }    
+        TCODConsole::blit(widget_2_p,0,0,50,obj_line+2,TCODConsole::root,6,1);  
+    } else {
+        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+    }   
+    widget_2->setBackgroundFlag(TCOD_BKGND_SET);
+    widget_2->print(0, 0, "%cIn Sight%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::blit(widget_2,0,0,0,0,TCODConsole::root,6,0);
+    
 
     // fps count
         int fpscount = TCODSystem::getFps();
@@ -2214,13 +2493,178 @@ void player_move_attack(int dx, int dy){
     for (unsigned int i = 0; i<monvector.size(); ++i){ // checks if monster is in next cell
         if (monvector[i].x == x && monvector[i].y == y){
             //*target = &monvector[i];
-            if (monvector[i].alive == true){target = i;
-            is_it = true;}
+            if (monvector[i].alive == true){
+                target = i;
+                is_it = true;
+            }
         }
     }
 
     if (is_it && monvector[target].alive && player.combat_move >= 4){
-        player.stats.attack(player, monvector[target], 0);
+
+        // calculate AML
+        int p_AML = player.stats.ML; // basic skill
+        p_AML += player.stats.wpn1.wpn_AC; // adding weapon Attack class
+        // should check for walls here
+        int m_DML = monvector[target].stats.ML; // basic monster skill
+        m_DML += monvector[target].stats.wpn1.wpn_AC; // adding weapon Attack class
+
+        TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
+        short int p_d100 = wtf->getInt(1, 100, 0);
+        short int m_d100 = wtf->getInt(1, 100, 0);
+
+        short int p_success_level = 0;
+        short int crit_val = p_d100 % 10;
+
+        char sstri1[3];
+        char sstri2[3];    
+        if (p_d100 <= p_AML){
+            if ( crit_val == 0 || crit_val == 5 ){
+                p_success_level = 0; // CS Critical Success
+                strcpy(sstri1, "CS");
+            } else {    
+                p_success_level = 1; // MS Marginal Success
+                strcpy(sstri1, "MS");
+            }    
+        } else if (p_d100 > p_AML){
+            if ( crit_val == 0 || crit_val == 5){
+                p_success_level = 3; // CF Critical Failure
+                strcpy(sstri1, "CF");
+            } else {
+                p_success_level = 2; // MF Marginal Failure
+                strcpy(sstri1, "MF");
+            }
+        }
+
+        short int m_success_level = 0;
+        crit_val = m_d100 % 10;
+        if (m_d100 <= m_DML){
+            if ( crit_val == 0 || crit_val == 5 ){
+                m_success_level = 0; // CS Critical Success
+                strcpy(sstri2, "CS");
+            } else {    
+                m_success_level = 1; // MS Marginal Success
+                strcpy(sstri2, "MS");
+            }    
+        } else if (m_d100 > m_DML){
+            if ( crit_val == 0 || crit_val == 5){
+                m_success_level = 3; // CF Critical Failure
+                strcpy(sstri2, "CF");
+            } else {
+                m_success_level = 2; // MF Marginal Failure
+                strcpy(sstri2, "MF");
+            }
+        }
+
+        const int melee_res[4][4] = 
+        {
+            { 4, 5, 6, 7, },
+            { 4, 4, 5, 6, },
+            { 2, 4, 4, 3, },
+            { 2, 2, 2, 1, }
+        };
+
+        std::cout << "pML: " << player.stats.ML << " p_AML: " << p_AML << " p_d100: " << p_d100 << std::endl;
+        std::cout << "mML: " << monvector[target].stats.ML << " m_DML: " << m_DML << " m_d100: " << m_d100 << std::endl;
+        std::cout << "P Success Level: " << p_success_level << std::endl;
+        std::cout << "M Success Level: " << m_success_level << std::endl;
+        std::cout << "Melee Result: " << melee_res[p_success_level][m_success_level] << std::endl;
+
+        msg_log msgd;
+        sprintf(msgd.message, "Player's skill(%c%d%c) %c1d100%c(%c%d%c) VS Enemy's defense(%c%d%c) %c1d100%c(%c%d%c)",
+                TCOD_COLCTRL_1, p_AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_3, p_d100, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, m_DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_4, m_d100, TCOD_COLCTRL_STOP);
+        msgd.color1 = TCODColor::cyan;
+        msgd.color2 = TCODColor::yellow;
+        switch(p_success_level){
+            case 0:
+                msgd.c3 = 1;
+                msgd.color3 = TCODColor::white;
+                msgd.bcolor3 = TCODColor::blue;
+                break;
+            case 1:
+                msgd.color3 = TCODColor::lighterBlue;
+                break;
+            case 2:
+                msgd.color3 = TCODColor::red;
+                break;
+            case 3:
+                msgd.c3 = 1;
+                msgd.color3 = TCODColor::white;
+                msgd.bcolor3 = TCODColor::red;
+                break;
+        }        
+        switch(m_success_level){
+            case 0:
+                msgd.c4 = 1;
+                msgd.color4 = TCODColor::white;
+                msgd.bcolor4 = TCODColor::blue;
+                break;
+            case 1:
+                msgd.color4 = TCODColor::lighterBlue;
+                break;
+            case 2:
+                msgd.color4 = TCODColor::red;
+                break;
+            case 3:
+                msgd.c4 = 1;
+                msgd.color4 = TCODColor::white;
+                msgd.bcolor4 = TCODColor::red;
+                break;
+        }
+        msg_log_list.push_back(msgd);        
+
+        msg_log msg1;
+        switch(melee_res[p_success_level][m_success_level]){
+            case 1:
+                player.stats.hp -= 1;
+                monvector[target].stats.hp -= 1;
+                std::cout << "[CF] Both you and your enemy fumble! -1 to HP for both." << std::endl;
+                sprintf(msg1.message, "Both you and your enemy fumble! %c-1%c to HP for both.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 2:
+                player.stats.hp -= 1;
+                std::cout << "[CF] You fumble the attack! -1 to HP." <<std::endl;
+                sprintf(msg1.message, "You fumble the attack! %c-1%c to HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 3:
+                monvector[target].stats.hp -= 1;
+                std::cout << "[MF] You fail the attack, but the monster fumbles and hits himself! -1 to monster HP." 
+                    << std::endl;
+                sprintf(msg1.message, "You miss, but your enemy fumbles and hurts himself! %c-1%c to HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 4:
+                std::cout << "You try to attack, but the monster defends itself!" << std::endl;
+                sprintf(msg1.message, "You swing your weapon, but the enemy parries.");
+                break;
+            case 5:
+                monvector[target].stats.hp -= 5;
+                std::cout << "Your attack does standard damage." << std::endl;
+                sprintf(msg1.message, "You hit your enemy for %c5%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 6:
+                monvector[target].stats.hp -= 10;
+                std::cout << "You attack does double damage!" << std::endl;
+                sprintf(msg1.message, "Critial attack! %c10%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+            case 7:
+                monvector[target].stats.hp -= 15;
+                std::cout << "Your attack does triple damage!" << std::endl;
+                sprintf(msg1.message, "Triple damage! %c-15%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;
+        }
+        msg_log_list.push_back(msg1);
+
+        //player.stats.attack(player, monvector[target], 0); // attack
+
         if(!no_combat)player.combat_move -= 4; // decrease combat movement only if in combat mode
         if (monvector[target].stats.hp < 1){
                 //monvector.erase (target); 
@@ -2228,6 +2672,7 @@ void player_move_attack(int dx, int dy){
                 bloodsplat(monvector[target]);
                 bloodycount = 5;
 
+                /* 
                 msg_log msg1;
                 if (monvector[target].name[0] == 'O'){
                     sprintf(msg1.message, "You've %ckilled%c an %c%s%c!", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
@@ -2239,6 +2684,7 @@ void player_move_attack(int dx, int dy){
                 msg1.color1 = TCODColor::red;
                 msg1.color2 = monvector[target].color;
                 msg_log_list.push_back(msg1);
+                */
 
                 monvector[target].selfchar = '%';
                 monvector[target].color = monsterdead;
@@ -2288,11 +2734,13 @@ void player_move_attack(int dx, int dy){
                 mesg->setDefaultForeground(TCODColor::yellow);
                 mesg->setDefaultBackground(TCODColor::black);
                 mesg->print(1, 1, "Hit!");
+                /* 
                 msg_log msg1;
                 sprintf(msg1.message, "You've hit a %c%s%c!",TCOD_COLCTRL_1, monvector[target].name, TCOD_COLCTRL_STOP);
                 msg1.color1 = monvector[target].color;
                 //if(msg_log_list.size() > 0) msg_log_list.pop_back();
                 msg_log_list.push_back(msg1);
+                */
                 if(!(player.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
                 else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
                
@@ -2300,7 +2748,6 @@ void player_move_attack(int dx, int dy){
                 m_x = 0;
                 m_y = 0;
             }
-        std::cout << "The " << monvector[target].name << " laughs of your attack!" << std::endl;
     } else { 
         //std::cout << "TIMES INTO move loop"  << std::endl;
         //player.move(dx, dy, monvector);
@@ -2719,8 +3166,9 @@ void player_death(){
 void Message_Log(){
     if(msg_log_list.size() > 0){
         panel->setDefaultForeground(TCODColor::white);
+        panel->setBackgroundFlag(TCOD_BKGND_SET);
         panel->print(34, 2, ">");
-         while(msg_log_list.size() > 12){
+         while(msg_log_list.size() > MSG_HEIGHT){
             msg_log_list.erase(msg_log_list.begin(),msg_log_list.begin()+1);
         }
         //int i = msg_log_list.size() + 1
@@ -2728,23 +3176,43 @@ void Message_Log(){
          int first = 1;
         for(int i = (msg_log_list.size()-1); i >= 0 ; i--){
             if (first){
+                if (!msg_log_list[i].c1)
                 TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,TCODColor::black);
+                else TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,msg_log_list[i].bcolor1);
+                if (!msg_log_list[i].c2)
                 TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,TCODColor::black);
+                else TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,msg_log_list[i].bcolor2);
+                if (!msg_log_list[i].c3)
                 TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,TCODColor::black);
+                else TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,msg_log_list[i].bcolor3);
+                if (!msg_log_list[i].c4)
                 TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,TCODColor::black);
+                else TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,msg_log_list[i].bcolor4);
+                if (!msg_log_list[i].c5)
                 TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,TCODColor::black);
+                else TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,msg_log_list[i].bcolor5);
         panel->print(35, a, msg_log_list[i].message,TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
             TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP,TCOD_COLCTRL_4,
             TCOD_COLCTRL_STOP,TCOD_COLCTRL_5, TCOD_COLCTRL_STOP );
         a++;
         first = 0;
             } else{
-        TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,TCODColor::black);
-        TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,TCODColor::black);
-        TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,TCODColor::black);
-        TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,TCODColor::black);
-        TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,TCODColor::black);
-        panel->print(35, a+1, msg_log_list[i].message,TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
+            if (!msg_log_list[i].c1)
+                TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,TCODColor::black);
+                else TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,msg_log_list[i].bcolor1);
+                if (!msg_log_list[i].c2)
+                TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,TCODColor::black);
+                else TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,msg_log_list[i].bcolor2);
+                if (!msg_log_list[i].c3)
+                TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,TCODColor::black);
+                else TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,msg_log_list[i].bcolor3);
+                if (!msg_log_list[i].c4)
+                TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,TCODColor::black);
+                else TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,msg_log_list[i].bcolor4);
+                if (!msg_log_list[i].c5)
+                TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,TCODColor::black);
+                else TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,msg_log_list[i].bcolor5);
+            panel->print(35, a+1, msg_log_list[i].message,TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
             TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP,TCOD_COLCTRL_4,
             TCOD_COLCTRL_STOP,TCOD_COLCTRL_5, TCOD_COLCTRL_STOP );
         a++;
@@ -2877,7 +3345,7 @@ void draw_frame(const char *title1, const char *title2){
     TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::white, TCODColor::black);
     TCODConsole::root->print(win_x/2, 0, "[ %c%s%c - %c%s%c ]", TCOD_COLCTRL_1, title1, TCOD_COLCTRL_STOP,
             TCOD_COLCTRL_2, title2, TCOD_COLCTRL_STOP);
-    
+
 }
 
 // just adds dots to the statistics UI
@@ -3405,19 +3873,19 @@ void draw_menu_2(int state, int pickone, int sel, int rolled, int pick, Statisti
     }
     if(!pick && rolled1ce){
         TCODConsole::root->setDefaultForeground(TCODColor::lightGreen);
-    TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total);
-    TCODConsole::root->print(10, 26, "%d", tempnumbers[1].total);
-    TCODConsole::root->print(15, 26, "%d", tempnumbers[2].total);
-    TCODConsole::root->print(20, 26, "%d", tempnumbers[3].total);
-    TCODConsole::root->print(25, 26, "%d", tempnumbers[4].total);
-    TCODConsole::root->print(30, 26, "%d", tempnumbers[5].total);
+	    TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total);
+	    TCODConsole::root->print(10, 26, "%d", tempnumbers[1].total);
+	    TCODConsole::root->print(15, 26, "%d", tempnumbers[2].total);
+	    TCODConsole::root->print(20, 26, "%d", tempnumbers[3].total);
+	    TCODConsole::root->print(25, 26, "%d", tempnumbers[4].total);
+	    TCODConsole::root->print(30, 26, "%d", tempnumbers[5].total);
     }
    
     if (pick == 2){
         TCODConsole::root->print(0, 0, "DONE");
     }
 
-    
+ 
 
     TCODConsole::root->setDefaultForeground(TCODColor::white);
     TCODConsole::root->print(3, 3, "TRAITS");
@@ -3427,85 +3895,85 @@ void draw_menu_2(int state, int pickone, int sel, int rolled, int pick, Statisti
     TCODConsole::root->print(47, 5, "(S)Spiritual");
 
     TCODConsole::root->setDefaultForeground(TCODColor::white);
-       TCODConsole::root->print(3, 7, "CATEGORIES"); 
-       TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
-       TCODConsole::root->print(5, 9, "(MM)Mnemonic");
-       TCODConsole::root->print(5, 10, "(MR)Reasoning");
-       TCODConsole::root->print(26, 9, "(PM)Muscular");
-       TCODConsole::root->print(26, 10, "(PN)Neural");
-       TCODConsole::root->print(47, 9, "(SM)Metaphysical");
-       TCODConsole::root->print(47, 10, "(SP)Psychic");
+	TCODConsole::root->print(3, 7, "CATEGORIES"); 
+	TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+	TCODConsole::root->print(5, 9, "(MM)Mnemonic");
+	TCODConsole::root->print(5, 10, "(MR)Reasoning");
+	TCODConsole::root->print(26, 9, "(PM)Muscular");
+	TCODConsole::root->print(26, 10, "(PN)Neural");
+	TCODConsole::root->print(47, 9, "(SM)Metaphysical");
+	TCODConsole::root->print(47, 10, "(SP)Psychic");
 
-       TCODConsole::root->setDefaultForeground(TCODColor::white);
-       TCODConsole::root->print(3, 12, "ATTRIBUTES");
-       TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
-       TCODConsole::root->print(5, 14, "(MMC)Capacity");
-       TCODConsole::root->print(5, 15, "(MMP)Power");
-       TCODConsole::root->print(5, 16, "(MMS)Speed");
+	TCODConsole::root->setDefaultForeground(TCODColor::white);
+	TCODConsole::root->print(3, 12, "ATTRIBUTES");
+	TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+	TCODConsole::root->print(5, 14, "(MMC)Capacity");
+	TCODConsole::root->print(5, 15, "(MMP)Power");
+	TCODConsole::root->print(5, 16, "(MMS)Speed");
 
-       TCODConsole::root->print(5, 18, "(MRC)Capacity");
-       TCODConsole::root->print(5, 19, "(MRP)Power");
-       TCODConsole::root->print(5, 20, "(MRS)Speed");
+	TCODConsole::root->print(5, 18, "(MRC)Capacity");
+	TCODConsole::root->print(5, 19, "(MRP)Power");
+	TCODConsole::root->print(5, 20, "(MRS)Speed");
 
-       TCODConsole::root->print(26, 14, "(PMC)Capacity");
-       TCODConsole::root->print(26, 15, "(PMP)Power");
-       TCODConsole::root->print(26, 16, "(PMS)Speed");
+	TCODConsole::root->print(26, 14, "(PMC)Capacity");
+	TCODConsole::root->print(26, 15, "(PMP)Power");
+	TCODConsole::root->print(26, 16, "(PMS)Speed");
 
-       TCODConsole::root->print(26, 18, "(PNC)Capacity");
-       TCODConsole::root->print(26, 19, "(PNP)Power");
-       TCODConsole::root->print(26, 20, "(PNS)Speed");
+	TCODConsole::root->print(26, 18, "(PNC)Capacity");
+	TCODConsole::root->print(26, 19, "(PNP)Power");
+	TCODConsole::root->print(26, 20, "(PNS)Speed");
 
-       TCODConsole::root->print(47, 14, "(SMC)Capacity");
-       TCODConsole::root->print(47, 15, "(SMP)Power");
-       TCODConsole::root->print(47, 16, "(SMS)Speed");
+	TCODConsole::root->print(47, 14, "(SMC)Capacity");
+	TCODConsole::root->print(47, 15, "(SMP)Power");
+	TCODConsole::root->print(47, 16, "(SMS)Speed");
 
-       TCODConsole::root->print(47, 18, "(SPC)Capacity");
-       TCODConsole::root->print(47, 19, "(SPP)Power");
-       TCODConsole::root->print(47, 20, "(SPS)Speed");
+	TCODConsole::root->print(47, 18, "(SPC)Capacity");
+	TCODConsole::root->print(47, 19, "(SPP)Power");
+	TCODConsole::root->print(47, 20, "(SPS)Speed");
 
-       TCODConsole::root->setAlignment(TCOD_RIGHT);
-       TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+	TCODConsole::root->setAlignment(TCOD_RIGHT);
+	TCODConsole::root->setDefaultForeground(TCODColor::yellow);
 
-       TCODConsole::root->print(23, 5, "%d", (player.sts.M));
-       TCODConsole::root->print(44, 5, "%d", (player.sts.P));
-       TCODConsole::root->print(65, 5, "%d", (player.sts.S));
+	TCODConsole::root->print(23, 5, "%d", (player.sts.M));
+	TCODConsole::root->print(44, 5, "%d", (player.sts.P));
+	TCODConsole::root->print(65, 5, "%d", (player.sts.S));
 
-       TCODConsole::root->setDefaultForeground(TCODColor::lighterCyan);
-       TCODConsole::root->print(23, 9, "%d", (player.sts.MM));
-       TCODConsole::root->print(23, 10, "%d", (player.sts.MR));
-       TCODConsole::root->print(44, 9, "%d", (player.sts.PM));
-       TCODConsole::root->print(44, 10, "%d", (player.sts.PN));
-       TCODConsole::root->print(65, 9, "%d", (player.sts.SM));
-       TCODConsole::root->print(65, 10, "%d", (player.sts.SP));
+	TCODConsole::root->setDefaultForeground(TCODColor::lighterCyan);
+	TCODConsole::root->print(23, 9, "%d", (player.sts.MM));
+	TCODConsole::root->print(23, 10, "%d", (player.sts.MR));
+	TCODConsole::root->print(44, 9, "%d", (player.sts.PM));
+	TCODConsole::root->print(44, 10, "%d", (player.sts.PN));
+	TCODConsole::root->print(65, 9, "%d", (player.sts.SM));
+	TCODConsole::root->print(65, 10, "%d", (player.sts.SP));
 
-       TCODConsole::root->setDefaultForeground(TCODColor::yellow);
-       TCODConsole::root->print(23, 14, "%d", (player.sts.MMC));
-       TCODConsole::root->print(23, 15, "%d", (player.sts.MMP));
-       TCODConsole::root->print(23, 16, "%d", (player.sts.MMS));
+	TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+	TCODConsole::root->print(23, 14, "%d", (player.sts.MMC));
+	TCODConsole::root->print(23, 15, "%d", (player.sts.MMP));
+	TCODConsole::root->print(23, 16, "%d", (player.sts.MMS));
 
-       TCODConsole::root->print(23, 18, "%d", (player.sts.MRC));
-       TCODConsole::root->print(23, 19, "%d", (player.sts.MRP));
-       TCODConsole::root->print(23, 20, "%d", (player.sts.MRS));
+	TCODConsole::root->print(23, 18, "%d", (player.sts.MRC));
+	TCODConsole::root->print(23, 19, "%d", (player.sts.MRP));
+	TCODConsole::root->print(23, 20, "%d", (player.sts.MRS));
 
-       TCODConsole::root->print(44, 14, "%d", (player.sts.PMC));
-       TCODConsole::root->print(44, 15, "%d", (player.sts.PMP));
-       TCODConsole::root->print(44, 16, "%d", (player.sts.PMS));
+	TCODConsole::root->print(44, 14, "%d", (player.sts.PMC));
+	TCODConsole::root->print(44, 15, "%d", (player.sts.PMP));
+	TCODConsole::root->print(44, 16, "%d", (player.sts.PMS));
 
-       TCODConsole::root->print(44, 18, "%d", (player.sts.PNC));
-       TCODConsole::root->print(44, 19, "%d", (player.sts.PNP));
-       TCODConsole::root->print(44, 20, "%d", (player.sts.PNS));
+	TCODConsole::root->print(44, 18, "%d", (player.sts.PNC));
+	TCODConsole::root->print(44, 19, "%d", (player.sts.PNP));
+	TCODConsole::root->print(44, 20, "%d", (player.sts.PNS));
 
-       TCODConsole::root->print(65, 14, "%d", (player.sts.SMC));
-       TCODConsole::root->print(65, 15, "%d", (player.sts.SMP));
-       TCODConsole::root->print(65, 16, "%d", (player.sts.SMS));
+	TCODConsole::root->print(65, 14, "%d", (player.sts.SMC));
+	TCODConsole::root->print(65, 15, "%d", (player.sts.SMP));
+	TCODConsole::root->print(65, 16, "%d", (player.sts.SMS));
 
-       TCODConsole::root->print(65, 18, "%d", (player.sts.SPC));
-       TCODConsole::root->print(65, 19, "%d", (player.sts.SPP));
-       TCODConsole::root->print(65, 20, "%d", (player.sts.SPS));
-            
-        draw_frame("Character Creation", "Choose Attributes");
+	TCODConsole::root->print(65, 18, "%d", (player.sts.SPC));
+	TCODConsole::root->print(65, 19, "%d", (player.sts.SPP));
+	TCODConsole::root->print(65, 20, "%d", (player.sts.SPS));
 
-        TCODConsole::root->setAlignment(TCOD_LEFT);
+	draw_frame("Character Creation", "Choose Attributes");
+
+	TCODConsole::root->setAlignment(TCOD_LEFT);
 
         for (int n = 0; n < 15; ++n){
         TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
@@ -3589,8 +4057,19 @@ int main() {
     TCODConsole::initRoot(win_x, win_y, "FoE", false);
 
     game_state = playing;
-    player.combat_move = 8;
+    player.combat_move = 8; // movement points
     player.speed = 6;
+
+    // wrapon setup
+    player.stats.wpn1.wpn_AC = 15;
+    player.stats.wpn1.wpn_DC = 10;
+    player.stats.wpn1.wpn_B = 3;
+    player.stats.wpn1.wpn_E = 5;
+    player.stats.wpn1.wpn_P = 3;
+    player.stats.wpn1.wpn_aspect = 2;
+
+    player.stats.ML = 60;
+
     bool quit_now = false;
 
     //bool loped = false; // used for threading?
@@ -3880,16 +4359,18 @@ int main() {
             con->clear();
             TCODConsole::root->clear(); 
 
+            /* 
             TCODConsole::root->setAlignment(TCOD_CENTER);
             TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
             TCODConsole::root->print(win_x/2,win_y-5,"%cNEW COMBAT TURN, Press any key%c",
                     TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+            */        
                
             fov_recompute = true;
             render_all();
             TCODConsole::flush(); // this updates the screen
                 
-            TCODConsole::waitForKeypress(true);
+            //TCODConsole::waitForKeypress(true);
 
             bool break_combat = true;
             TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
@@ -3917,7 +4398,8 @@ int main() {
                     monsters.push_back(tempm);
 
                     msg_log msg1;
-                    sprintf(msg1.message, "%s initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
+                    sprintf(msg1.message, "%c>%c%s initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
+                            TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
                         monvector[i].name, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
                         *tempm.speed, monvector[i].initiative);        
                     //    monvector[i].name, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
@@ -3943,7 +4425,8 @@ int main() {
             monsters.push_back(tempm);
 
             msg_log msg1;
-            sprintf(msg1.message, "Player initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
+            sprintf(msg1.message, "%c>%cPlayer initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
+                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
                 TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, 
                 player.speed, player.initiative);
             msg1.color1 = TCODColor::yellow;
@@ -4144,6 +4627,22 @@ TCODConsole::flush(); // this updates the screen
                     }
                     // PLAYER BLOCK
                     // PLAYER BLOCK
+
+                    //con->clear();
+                    //TCODConsole::root->clear(); 
+
+             
+            TCODConsole::root->setAlignment(TCOD_CENTER);
+            TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+            TCODConsole::root->print(win_x/2,win_y-21,"%cpress any key to END Player's turn%c",
+                    TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                    
+               
+            fov_recompute = true;
+            render_all();
+            TCODConsole::flush(); // this updates the screen
+                
+            TCODConsole::waitForKeypress(true);
 
                     player.combat_move = 8; // player turn ends, so resets the movement points
                 } else {
