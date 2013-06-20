@@ -1515,6 +1515,7 @@ int main() {
     while (! TCODConsole::isWindowClosed()) {
 
         jump:
+        std::cout << "MAIN LOOP" << std::endl;
 
         int player_action = 0;
         //TCODConsole::root->putChar( 10,10, 0x2500 );
@@ -1585,62 +1586,27 @@ int main() {
         //player.combat_move = 8; // 1 cost for movement, 4 for attack
         while (combat_mode){
 
-            std::cout << "LOOP" << std::endl;
-
-            
             if (alreadydead) break;
             
-            con->clear();
-            TCODConsole::root->clear();
+         
 
-            //block for combat UI
-            TCODConsole::root->setAlignment(TCOD_RIGHT);
-            TCODConsole::root->print(win_x-1, 0, "Mode-C");
-            if (player.stats.hp < 7) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
-            else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-            TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
-            TCODConsole::root->print(win_x-2, MAP_HEIGHT+1, "HP: %c%d%c/%d",TCOD_COLCTRL_1, 
-                    player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
-            if (player.combat_move < 4) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
-            else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-            TCODConsole::root->print(win_x-2, MAP_HEIGHT+2, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
-                    player.combat_move,TCOD_COLCTRL_STOP);
+            std::vector<Monster> monsters; // vector used for initiative juggling
+
+         
+           con->clear();
+            TCODConsole::root->clear(); 
+                        
 
             TCODConsole::root->setAlignment(TCOD_CENTER);
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
-                TCODConsole::root->print(win_x/2,win_y-5,"%cPLAYER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+            TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+            TCODConsole::root->print(win_x/2,win_y-5,"%cEND COMBAT TURN, Press any key%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
 
+               
+            
             fov_recompute = true;
             render_all();
             TCODConsole::flush(); // this updates the screen
-
-            std::vector<Monster> monsters;
-
-            
-
-            player_action = handle_combat(player);
-
-            if (player_action == quit){
-                Sleep(100);
-                combat_mode = false;
-                goto jump;
-                break;
-            }  
-            if (player_action == quit2){
-                quit_now = true;
-                break;
-            }
-
-
-            if ((m_x != 0 || m_y != 0) && player.combat_move > 0){
-                player.move(m_x, m_y, monvector);
-                --player.combat_move;
-                //std::cout << "Combat move:" << player.combat_move << std::endl;
-                //std::cout << "Player:" << player.x << m_x << player.y << m_y << std::endl;
-            }
-
-            fov_recompute = true;
-            render_all();
+            TCOD_key_t key = TCODConsole::waitForKeypress(true);
 
             bool break_combat = true;
             TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
@@ -1654,7 +1620,8 @@ int main() {
                     monvector[i].bored = 400;
                     monvector[i].boren = false;
                     monvector[i].stuck = false;
-                    break_combat = false;
+
+                    break_combat = false; // set flag, so that if this cycle never entered, combat is interrupted
 
                     int roll = 0;
                     roll = wtf->getInt(1, 10, 0);
@@ -1669,14 +1636,17 @@ int main() {
             }
             if (break_combat) break; // break combat mode if monsters all dead or out of FoV
 
+            con->clear();
+            TCODConsole::root->clear();
+
             int myroll = 0;
             myroll = wtf->getInt(1, 10, 0);
             player.initiative = player.speed + myroll;
 
             Monster tempm;
-                    tempm.initiative = &player.initiative;
-                    tempm.speed = &player.speed;
-                    monsters.push_back(tempm);
+            tempm.initiative = &player.initiative;
+            tempm.speed = &player.speed;
+            monsters.push_back(tempm);
 
             std::cout << "Player initiative: 1D10 (" << myroll <<  ") + SPD (" << player.speed << ") Total: " << player.initiative << std::endl;
             
@@ -1684,49 +1654,180 @@ int main() {
             for (unsigned int i = 0; i<monsters.size(); ++i) {
                 std::cout << "ORDER: " << *(monsters[i].initiative) << std::endl;
                 *(monsters[i].initiative) = i+1;
-            }   
+            }  
+
+            TCODConsole::root->setAlignment(TCOD_RIGHT);
+            TCODConsole::root->print(win_x-1, 3, "Initiative list");
+
+
+            std::cout << std::endl;
+            unsigned int player_own = player.initiative;
 
             for (unsigned int i = 0; i<monsters.size(); ++i) {
-                std::cout << "ORDER: " << *(monsters[i].initiative) << std::endl;
-                //*(monsters[i].initiative) = i+1;
-            }
+                if (i == (player_own - 1)){
+                TCODConsole::root->print(win_x-2, 5+ (i), "Player <");
 
-            std::cout << "Player initiative position: " << player.initiative << std::endl;
-            
-            if (player.combat_move == 0){
-                TCODConsole::root->setAlignment(TCOD_CENTER);
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::yellow);
-                TCODConsole::root->print(win_x/2,win_y-4,"%cMONSTER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                    } else {
+                    for (unsigned int b = 0; b<monvector.size(); ++b) {
+                        unsigned int monster_ini =  monvector[b].initiative;
 
-                TCODConsole::root->clear();
-                fov_recompute = true;
-                render_all();
-                TCODConsole::flush(); // this block to update player rendering before monster turn
+                        // MONSTER BLOCK
+                        // MONSTER BLOCK
+                        if ((i+1) == monster_ini){
+                            TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+                TCODConsole::root->print(win_x-2, 5+ (i), "%s",monvector[b].name);
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                        }
+                    }
+                    }
+            }    
 
-                for (unsigned int i = 0; i<monvector.size(); ++i) { 
-                    if (monvector[i].alive){
-                        if (monvector[i].c_mode){
+            TCODConsole::root->setAlignment(TCOD_CENTER);
+            TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+            TCODConsole::root->print(win_x/2,win_y-5,"%cSTART COMBAT TURN, Press any key%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+
+            fov_recompute = true;
+            render_all();
+            TCODConsole::flush(); // this updates the screen
+            TCOD_key_t key2 = TCODConsole::waitForKeypress(true);
+
+            // TURN SEQUENCE 
+            for (unsigned int i = 0; i<monsters.size(); ++i) {
+                if (i == (player_own - 1)){ // -1 because vector starts at 0
+                    std::cout << "Player initiative position: " << player.initiative << std::endl;
+                    con->clear();
+                        TCODConsole::root->clear();
+
+                        fov_recompute = true;
+                        render_all();
+
+                        //block for combat UI
+                        TCODConsole::root->setAlignment(TCOD_RIGHT);
+                        TCODConsole::root->print(win_x-1, 0, "Mode-C");
+                        if (player.stats.hp < 7) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
+                        else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+                        TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
+                        TCODConsole::root->print(win_x-2, MAP_HEIGHT+1, "HP: %c%d%c/%d",TCOD_COLCTRL_1, 
+                            player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
+                        if (player.combat_move < 4) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
+                        else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+                        TCODConsole::root->print(win_x-2, MAP_HEIGHT+2, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
+                            player.combat_move,TCOD_COLCTRL_STOP);
+
+                        TCODConsole::root->setAlignment(TCOD_CENTER);
+                        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+                        TCODConsole::root->print(win_x/2,win_y-5,"%cPLAYER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+
+                        
+
+                        TCODConsole::flush(); // this updates the screen
+
+                    // PLAYER BLOCK
+                    // PLAYER BLOCK
+                    while (player.combat_move >= 1){
+
+                        player_action = handle_combat(player);
+
+                        if (player_action == quit){
+                            Sleep(100);
+                            combat_mode = false;
+                            goto jump;
+                            break;
+                        } // exits combat? 
+                        if (player_action == quit2){
+                        quit_now = true;
+                        goto end;
+                        } // exits program
+
+                        if ((m_x != 0 || m_y != 0) && player.combat_move > 0){
+                            player.move(m_x, m_y, monvector);
+                            --player.combat_move;
+                        } // player action
+
+                        con->clear();
+                        TCODConsole::root->clear();
+
+                        fov_recompute = true;
+                        render_all();
+
+                        
+                        for (unsigned int n = 0; n<monvector.size(); ++n) {
+                            in_sight = fov_map->isInFov(monvector[n].x,monvector[n].y);
+                            if(in_sight && monvector[n].alive == true){
+                                monvector[n].c_mode = true;
+                                monvector[n].pl_x = player.x; // if player in sight, store player pos
+                                monvector[n].pl_y = player.y;
+                                monvector[n].chase = 1;
+                                monvector[n].bored = 400;
+                                monvector[n].boren = false;
+                                monvector[n].stuck = false;
+                            }
+                        }
+
+                        
+
+                        //block for combat UI
+                        TCODConsole::root->setAlignment(TCOD_RIGHT);
+                        TCODConsole::root->print(win_x-1, 0, "Mode-C");
+                        if (player.stats.hp < 7) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
+                        else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+                        TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
+                        TCODConsole::root->print(win_x-2, MAP_HEIGHT+1, "HP: %c%d%c/%d",TCOD_COLCTRL_1, 
+                            player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
+                        if (player.combat_move < 4) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
+                        else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+                        TCODConsole::root->print(win_x-2, MAP_HEIGHT+2, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
+                            player.combat_move,TCOD_COLCTRL_STOP);
+
+                        TCODConsole::root->setAlignment(TCOD_CENTER);
+                        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+                        TCODConsole::root->print(win_x/2,win_y-5,"%cPLAYER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+
+                        TCODConsole::root->setAlignment(TCOD_CENTER);
+                        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+                        TCODConsole::root->print(win_x/2,win_y-5,"%cPLAYER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+
+                        TCODConsole::flush(); // this updates the screen
+                    }
+                    // PLAYER BLOCK
+                    // PLAYER BLOCK
+
+                    player.combat_move = 8; // player turn ends, so resets the movement points
+                } else {
+                    std::cout << "Monster position: " << *(monsters[i].initiative) << std::endl;
+                    for (unsigned int b = 0; b<monvector.size(); ++b) {
+                        unsigned int monster_ini =  monvector[b].initiative;
+
+                        // MONSTER BLOCK
+                        // MONSTER BLOCK
+                        if ((i+1) == monster_ini && monvector[b].alive){
+
+                            TCODConsole::root->setAlignment(TCOD_CENTER);
+                            TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::yellow);
+                            TCODConsole::root->print(win_x/2,win_y-4,"%cMONSTER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+
+                            TCODConsole::root->clear();
+                            fov_recompute = true;
+                            render_all();
+                            TCODConsole::flush(); // this block to update player rendering before monster TURN
+
                             bool seehere = false;
-                            seehere = fov_map->isInFov(monvector[i].x,monvector[i].y);
-                            //if (seehere){
-                            //    monvector[i].pl_x = player.x; // if player in sight, store player pos
-                            //    monvector[i].pl_y = player.y;
-                            //} // if in fov, monster updates player location, otherwise uses the last one
+                            seehere = fov_map->isInFov(monvector[b].x,monvector[b].y);
                             std::cout << "monster doing something" << std::endl;
                             int ctl = 0;
-                            while (monvector[i].combat_move > 0){
-                                if (monvector[i].myai->take_turn(monvector[i], player, monvector[i].pl_x,
-                                        monvector[i].pl_y,seehere) ) render_all();
+                            while (monvector[b].combat_move > 0){
+                                if (monvector[b].myai->take_turn(monvector[b], player, monvector[b].pl_x,
+                                        monvector[b].pl_y,seehere) ) render_all();
+
                                 if (player.stats.hp < 1 && !alreadydead ){
-                            player_death();
-                            alreadydead = 1;
-                            goto jump;
-                        } else {
-                            //player.move(m_x, m_y, monvector);
-                            fov_recompute = true;
-                            
-                        }
-                                
+                                    player_death();
+                                    alreadydead = 1;
+                                    goto jump;
+                                } else {
+                                    //player.move(m_x, m_y, monvector);
+                                    fov_recompute = true;
+                                }
+
                                 if (ctl > 1){
                                     con->clear();
                                     fov_recompute = true;
@@ -1738,26 +1839,29 @@ int main() {
                                 TCODConsole::flush();
                                 Sleep(100);
                                 ++ctl;
-                                
-                            } // while
-                        if(monvector[i].color == orc) monvector[i].combat_move = 6;
-                        else monvector[i].combat_move = 10;
-                        
-                        } // monster flagged for combat   
-                    } // monster alive
-                } // for monster cycle 
+                            }
+                            if(monvector[b].color == orc) monvector[b].combat_move = 6;
+                            else monvector[b].combat_move = 10;
+                        } // if
+                        // MONSTER BLOCK
+                        // MONSTER BLOCK
+
+                    } // for
+                } // else
             }
-            if (player.combat_move == 0){ 
-                player.combat_move = 8;
-                std::cout << "END COMBAT TURN" << std::endl;
-            }    
+
+            
+            std::cout << "END COMBAT TURN" << std::endl;
+            std::cout << std::endl;
             
         } // while combat_move
 
         } else { // no combat
             player.combat_move = 8; // for attack when debug disables combat
-        } // reset list if combat didn't happen 
+        } // reset list if combat didn't happen
 
+
+        end:
         if (quit_now) break;
 
 
