@@ -45,7 +45,7 @@ int ROOM_MAX_SIZE = 10;
 int ROOM_MIN_SIZE = 6;
 int MAX_ROOMS = 30;
 int MAX_ROOM_MONSTERS = 3;
-unsigned int MAX_TOTAL_MONSTERS = 20;
+unsigned int MAX_TOTAL_MONSTERS = 80;
 
 TCOD_fov_algorithm_t FOV_ALGO = FOV_BASIC; //default FOV algorithm
 bool FOV_LIGHT_WALLS = true;
@@ -1408,6 +1408,7 @@ void render_all (){
 
     if (fov_recompute){
         fov_map->computeFov(player.x,player.y, TORCH_RADIUS, FOV_LIGHT_WALLS,FOV_ALGO);
+        
 
         for (int i = 0; i < MAP_HEIGHT ;++i){ // i = column
             for (int l = 0; l < MAP_WIDTH ;++l) { // l = row
@@ -1498,8 +1499,6 @@ void render_all (){
                             con_mini->setCharForeground(l+1, i+1, color_dark_groundF);
                             con_mini->setCharBackground(l+1, i+1, color_dark_ground, TCOD_BKGND_SET);
                         }
-                        
-                        
                     }
                                         }
                 } else {
@@ -3467,6 +3466,9 @@ int main() {
          
     }
     }
+
+    uint32 timin1 = 0;
+    uint32 timin2 = 0;  
     
     while (! TCODConsole::isWindowClosed()) {
 
@@ -3491,8 +3493,16 @@ int main() {
         TCODConsole::root->clear();
         }
         fov_recompute = true;
-        render_all();
+
         
+        render_all();
+      
+        
+        
+
+        
+
+
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->print(1, MAP_HEIGHT+2, "Use arrows to move");
@@ -3526,11 +3536,17 @@ int main() {
                 TCOD_COLCTRL_1,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP,TCOD_COLCTRL_3,TCOD_COLCTRL_STOP);
         }
         else TCODConsole::root->print(win_x/2,win_y-1,"%cALL KILLED!%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+
+        
+        
        
         I_am_moused2();
+
+        
         //TCODConsole::root->putChar( 10,10, 0x2500 );
         TCODConsole::flush(); // this updates the screen
 
+        
         for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->clear(); // player array, clar previous
 
         //int pla_x = player.x;
@@ -3540,6 +3556,8 @@ int main() {
 
         bool in_sight;
 
+        
+
         if (!no_combat){ // debug flag
 
         for (unsigned int i = 0; i<monvector.size(); ++i) {
@@ -3548,6 +3566,8 @@ int main() {
                 combat_mode = true; // trigger combat mode, if monster is sighted
             }    
         } // activates combat mode as soon a monster is in sight, deactivates on subsequent loops
+
+        
 
         //player.combat_move = 8; // 1 cost for movement, 4 for attack
         while (combat_mode){
@@ -3941,6 +3961,7 @@ TCODConsole::flush(); // this updates the screen
         end:
         if (quit_now) break;
 
+        
 
         // maybe needed for death
         player.move(0, 0, monvector);
@@ -3957,7 +3978,11 @@ TCODConsole::flush(); // this updates the screen
         TCODConsole::root->print(win_x-1, 0, "Mode-N");
         player_action = handle_keys(player);
 
+        
+
         if (player_action == quit) break; // break main while loop to exit program
+
+        
 
         if (game_state == playing && player_action != no_turn){
             for (unsigned int i = 0; i<monvector.size(); ++i) { 
@@ -3965,7 +3990,7 @@ TCODConsole::flush(); // this updates the screen
 
                     bool in_sight;
                     fov_recompute = true;
-                    render_all(); // maybe helps for fov
+                    //render_all(); // maybe helps for fov
 
                     // take turn for monster in sight OR monster chasing and not bored
                     in_sight = fov_map->isInFov(monvector[i].x,monvector[i].y);
@@ -4036,6 +4061,8 @@ TCODConsole::flush(); // this updates the screen
                 } // vector end cycle
             } // game state cycle
 
+
+
         //std::cout << "END MONSTER TURN" << std::endl;
 
         for (unsigned int i = 0; i<monvector.size(); ++i) {
@@ -4053,6 +4080,8 @@ TCODConsole::flush(); // this updates the screen
 
         } // game state
 
+        
+
         // recuperates turns off combat
         for (unsigned int i = 0; i<monvector.size(); ++i) {
             if (monvector[i].alive){
@@ -4065,6 +4094,13 @@ TCODConsole::flush(); // this updates the screen
     } // main while cycle END
     return 0;
 }
+
+/*
+timin1 = TCODSystem::getElapsedMilli();
+timin2 = TCODSystem::getElapsedMilli();
+std::cout << "UI block: " << timin2 - timin1 << std::endl;
+*/
+      
 
 /* 
                       TCODLine::init(monvector[i].x,monvector[i].y,player.x,player.y);
