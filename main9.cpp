@@ -14,15 +14,16 @@ float whattime = 0;
 
 bool revealdungeon = 0;
 
-const int MAP_WIDTH = 110;
-const int MAP_HEIGHT = 70;
+const int MAP_WIDTH = 220;
+const int MAP_HEIGHT = 140;
 // 16map 55 35
 
 const int MAP_WIDTH_AREA = 110;
 const int MAP_HEIGHT_AREA = 70;
+// visible area
 
-const int   win_x   = (MAP_WIDTH) + 15 +3; // window width in cells 128 1024
-const int   win_y   = (MAP_HEIGHT)+ 18 +3; // window height in cells 91 728
+const int   win_x   = (MAP_WIDTH_AREA) + 15 +3; // window width in cells 128 1024
+const int   win_y   = (MAP_HEIGHT_AREA)+ 18 +3; // window height in cells 91 728
 const int   LIMIT_FPS = 20;
 
 const int quit = 1;
@@ -41,11 +42,11 @@ int bigg2 = 0; // is in minimap
 int bigg3 = 0; // is in tinymap
 
 //parameters for dungeon generator
-int ROOM_MAX_SIZE = 10;
+int ROOM_MAX_SIZE = 18;
 int ROOM_MIN_SIZE = 6;
 int MAX_ROOMS = 30;
 int MAX_ROOM_MONSTERS = 3;
-unsigned int MAX_TOTAL_MONSTERS = 80;
+unsigned int MAX_TOTAL_MONSTERS = 40;
 
 TCOD_fov_algorithm_t FOV_ALGO = FOV_BASIC; //default FOV algorithm
 bool FOV_LIGHT_WALLS = true;
@@ -81,16 +82,16 @@ bool debug = false; // shows all monsters on map, when set
 bool no_combat = false; // disable combat mode
 
 
-TCODConsole *con = new TCODConsole(220, 140);
+TCODConsole *con = new TCODConsole(440, 280);
 TCODConsole *con_mini = new TCODConsole(MAP_WIDTH+2, MAP_HEIGHT+2);
 
-TCODConsole *con_tini = new TCODConsole(MAP_WIDTH+2, MAP_HEIGHT+2); // for tinymap
+TCODConsole *con_tini = new TCODConsole(MAP_WIDTH_AREA+2, MAP_HEIGHT_AREA+2); // for tinymap
 TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
 TCODConsole *load = new TCODConsole(win_x, win_y);  // load screen
 TCODConsole *widget_1 = new TCODConsole(4, 1);
 
-TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT));  // combat UI panel
-TCODConsole *r_panel = new TCODConsole((win_x - MAP_WIDTH), MAP_HEIGHT); // panel on right of map 
+TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT_AREA));  // combat UI panel
+TCODConsole *r_panel = new TCODConsole((win_x - MAP_WIDTH_AREA), MAP_HEIGHT_AREA); // panel on right of map 
 // 30, 46 message log
 int BAR_WIDTH = 20;
 int MSG_X = 30; // BAR_WIDTH + 2;
@@ -637,11 +638,11 @@ public:
                 if(!(player.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
                 else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
 
-                if(!bigg2 && !bigg){
-                    TCODConsole::blit(con,0,0,110,70,TCODConsole::root,0,0);
-                } else if(bigg){
+                //if(!bigg2 && !bigg){
+                //    TCODConsole::blit(con,0,0,110,70,TCODConsole::root,0,0);
+                //} else if(bigg){
                     TCODConsole::blit(con,off_xx,off_yy,110,70,TCODConsole::root,0,0);
-                }
+                //}
 
                 //TCODConsole::blit(con,0,0,0,0,TCODConsole::root,0,0);
                 TCODConsole::flush();
@@ -1411,7 +1412,6 @@ void render_all (){
 
     if (fov_recompute){
         fov_map->computeFov(player.x,player.y, TORCH_RADIUS, FOV_LIGHT_WALLS,FOV_ALGO);
-        
 
         for (int i = 0; i < MAP_HEIGHT ;++i){ // i = column
             for (int l = 0; l < MAP_WIDTH ;++l) { // l = row
@@ -1668,8 +1668,13 @@ void render_all (){
     int off_x = 0;
     int off_y = 0;
 
-    off_x = (player.x * 2) - 55; 
-    off_y = (player.y * 2) - 35;
+    if (bigg){
+        off_x = (player.x * 2) - 55; // centered 
+        off_y = (player.y * 2) - 35;
+    } else {
+        off_x = player.x - 55; // centered 
+        off_y = player.y - 35;
+    }    
     if (off_x < 0) off_x = 0;
     if (off_y < 0) off_y = 0;
 
@@ -1677,52 +1682,68 @@ void render_all (){
     off_yy = off_y;
     
     if(!bigg){
-        TCODConsole::blit(con,0,0,110,70,TCODConsole::root,0,0);
+        TCODConsole::blit(con,off_x,off_y,110,70,TCODConsole::root,0,0);
     } else {
+        // bigg: 
         TCODConsole::blit(con,off_x,off_y,110,70,TCODConsole::root,0,0);
     }
-    
+   
+    // draws frame of map small
     if(bigg2){
-        for (int n = 0; n < MAP_HEIGHT+1; ++n){
         con_mini->setDefaultForeground(TCODColor::lighterGrey);
-        con_mini->setDefaultBackground(TCODColor::black);
-        con_mini->print(0, n, "%c", TCOD_CHAR_VLINE);
-        con_mini->print(MAP_WIDTH+1, n, "%c", TCOD_CHAR_VLINE);
-    }
-    for (int n = 0; n < MAP_WIDTH+1; ++n){
-        con_mini->setDefaultForeground(TCODColor::lighterGrey);
-        con_mini->setDefaultBackground(TCODColor::black);
-        con_mini->print(n, 0, "%c", TCOD_CHAR_HLINE);
-        con_mini->print(n, MAP_HEIGHT+1, "%c", TCOD_CHAR_HLINE);
-    }
-    con_mini->print(0, 0, "%c", TCOD_CHAR_NW);
-    con_mini->print(MAP_WIDTH+1, 0, "%c", TCOD_CHAR_NE);
-    con_mini->print(0, MAP_HEIGHT+1, "%c", TCOD_CHAR_SW);
-    con_mini->print(MAP_WIDTH+1, MAP_HEIGHT+1, "%c", TCOD_CHAR_SE);
-        TCODConsole::blit(con_mini,0,0,0,0,TCODConsole::root,0,0); // minimap layer
+        off_x = player.x - 55; // centered 
+        off_y = player.y - 35;
+        if (off_x < 0) off_x = 0;
+        if (off_y < 0) off_y = 0;
+        if ((off_x+110) > MAP_WIDTH) off_x = MAP_WIDTH-110;
+        if ((off_y+70) > MAP_HEIGHT) off_y = MAP_HEIGHT-70;
+        for (int n = 0; n < (MAP_HEIGHT_AREA+1); ++n){ // vertical
+            //con_mini->setDefaultBackground(TCODColor::black);
+            con_mini->setCharForeground(0+off_x, n+off_y, TCODColor::lighterGrey);
+            con_mini->setCharBackground(0+off_x, n+off_y, TCODColor::black, TCOD_BKGND_SET);
+            con_mini->setCharForeground((MAP_WIDTH_AREA+1)+off_x, n+off_y, TCODColor::lighterGrey);
+            con_mini->setCharBackground((MAP_WIDTH_AREA+1)+off_x, n+off_y, TCODColor::black, TCOD_BKGND_SET);
+            con_mini->print(0+off_x, n+off_y, "%c", TCOD_CHAR_VLINE);
+            con_mini->print((MAP_WIDTH_AREA+1)+off_x, n+off_y, "%c", TCOD_CHAR_VLINE);
+        }
+        for (int n = 0; n < MAP_WIDTH_AREA+1; ++n){
+            //con_mini->setDefaultBackground(TCODColor::black);
+            con_mini->setCharForeground(n+off_x, 0+off_y, TCODColor::lighterGrey);
+            con_mini->setCharBackground(n+off_x, 0+off_y, TCODColor::black, TCOD_BKGND_SET);
+            con_mini->setCharForeground(n+off_x, (MAP_HEIGHT_AREA+1)+off_y, TCODColor::lighterGrey);
+            con_mini->setCharBackground(n+off_x, (MAP_HEIGHT_AREA+1)+off_y, TCODColor::black, TCOD_BKGND_SET);
+            con_mini->print(n+off_x, 0+off_y, "%c", TCOD_CHAR_HLINE);
+            con_mini->print(n+off_x, (MAP_HEIGHT_AREA+1)+off_y, "%c", TCOD_CHAR_HLINE);
+        }
+        con_mini->print(0+off_x, 0+off_y, "%c", TCOD_CHAR_NW);
+        con_mini->print((MAP_WIDTH_AREA+1)+off_x, 0+off_y, "%c", TCOD_CHAR_NE);
+        con_mini->print(0+off_x, (MAP_HEIGHT_AREA+1)+off_y, "%c", TCOD_CHAR_SW);
+        con_mini->print((MAP_WIDTH_AREA+1)+off_x, (MAP_HEIGHT_AREA+1)+off_y, "%c", TCOD_CHAR_SE);
+        //TCODConsole::blit(con,0,0,111,71,TCODConsole::root,0,0); // minimap layer
+        TCODConsole::blit(con_mini,off_x,off_y,112,72,TCODConsole::root,0,0); // minimap layer
         //con_mini->clear();
     }
 
-    
-if(bigg3){
-    for (int n = 0; n < (MAP_HEIGHT/2)+1; ++n){
+  
+    // draws frame of map tiny    
+    if(bigg3){
         con_tini->setDefaultForeground(TCODColor::lighterGrey);
         con_tini->setDefaultBackground(TCODColor::black);
-        con_tini->print(0, n, "%c", TCOD_CHAR_VLINE);
-        con_tini->print((MAP_WIDTH/2)+1, n, "%c", TCOD_CHAR_VLINE);
-    }
-    for (int n = 0; n < (MAP_WIDTH/2)+1; ++n){
-        con_tini->setDefaultForeground(TCODColor::lighterGrey);
-        con_tini->setDefaultBackground(TCODColor::black);
-        con_tini->print(n, 0, "%c", TCOD_CHAR_HLINE);
-        con_tini->print(n, (MAP_HEIGHT/2), "%c", TCOD_CHAR_HLINE);
-    }
-    con_tini->print(0, 0, "%c", TCOD_CHAR_NW);
-    con_tini->print((MAP_WIDTH/2)+1, 0, "%c", TCOD_CHAR_NE);
-    con_tini->print(0, (MAP_HEIGHT/2), "%c", TCOD_CHAR_SW);
-    con_tini->print((MAP_WIDTH/2)+1, (MAP_HEIGHT/2), "%c", TCOD_CHAR_SE);
-    // draws tinymap, 2 steps at once, tinyblock goes 0-15 for all subcell
-    for (int i = 0; i < (MAP_HEIGHT-2) ;i += 2){ // i = column
+        for (int n = 0; n < MAP_HEIGHT_AREA+1; ++n){
+            con_tini->print(0, n, "%c", TCOD_CHAR_VLINE);
+            con_tini->print(MAP_WIDTH_AREA+1, n, "%c", TCOD_CHAR_VLINE);
+        }
+        for (int n = 0; n < MAP_WIDTH_AREA+1; ++n){
+            con_tini->print(n, 0, "%c", TCOD_CHAR_HLINE);
+            con_tini->print(n, MAP_HEIGHT_AREA+1, "%c", TCOD_CHAR_HLINE);
+        }
+        con_tini->print(0, 0, "%c", TCOD_CHAR_NW);
+        con_tini->print(MAP_WIDTH_AREA+1, 0, "%c", TCOD_CHAR_NE);
+        con_tini->print(0, MAP_HEIGHT_AREA+1, "%c", TCOD_CHAR_SW);
+        con_tini->print(MAP_WIDTH_AREA+1, MAP_HEIGHT_AREA+1, "%c", TCOD_CHAR_SE);
+
+        // draws tinymap, 2 steps at once, tinyblock goes 0-15 for all subcell
+        for (int i = 0; i < (MAP_HEIGHT-2) ;i += 2){ // i = column
             for (int l = 0; l < MAP_WIDTH ;l += 2) { // l = row
                 int tinyblock = map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked | 
                     ( map_array[(i * MAP_WIDTH + (l+1))+ MAP_WIDTH].blocked << 1 ) |
@@ -1733,10 +1754,10 @@ if(bigg3){
                 con_tini->setCharForeground((l/2)+1, (i/2)+1, TCODColor::black);
                 con_tini->setCharBackground((l/2)+1, (i/2)+1, color_light_ground, TCOD_BKGND_SET);
             }
-    }  
-    con_tini->putChar((player.x)/2+1, (player.y)/2+1, 400, TCOD_BKGND_SET);
-    con_tini->setCharForeground((player.x)/2+1, (player.y)/2+1, TCODColor::black);
-    con_tini->setCharBackground((player.x)/2+1, (player.y)/2+1, TCODColor::white, TCOD_BKGND_SET);
+        }  
+        con_tini->putChar((player.x)/2+1, (player.y)/2+1, 400, TCOD_BKGND_SET);
+        con_tini->setCharForeground((player.x)/2+1, (player.y)/2+1, TCODColor::black);
+        con_tini->setCharBackground((player.x)/2+1, (player.y)/2+1, TCODColor::white, TCOD_BKGND_SET);
 
     //TCODImage *pix = new TCODImage(TCODConsole::root);
    // if(imageinit){
@@ -1764,8 +1785,8 @@ if(bigg3){
         //con_tini->clear();
         delete pix; 
     } */ 
-TCODConsole::blit(con_tini,0,0,0,0,TCODConsole::root,0,0); // minimap layer
-    }
+        TCODConsole::blit(con_tini,0,0,0,0,TCODConsole::root,0,0); // minimap layer
+    } // end bigg3 tinimap
 
     switch(stance_pos){
         case 1:
@@ -1978,11 +1999,11 @@ void player_move_attack(int dx, int dy){
                     player.draw(1);
                     monvector[target].draw(1);
 
-                    if (!bigg){    
-                        TCODConsole::blit(con,0,0,110,70,TCODConsole::root,0,0);
-                    } else {
+                    //if (!bigg){    
+                    //    TCODConsole::blit(con,0,0,110,70,TCODConsole::root,0,0);
+                    //} else {
                         TCODConsole::blit(con,off_xx,off_yy,110,70,TCODConsole::root,0,0);
-                    }
+                    //}
 
                     //TCODConsole::blit(con,0,0,0,0,TCODConsole::root,0,0);
                     TCODConsole::flush();
@@ -3508,24 +3529,24 @@ int main() {
 
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->print(1, MAP_HEIGHT+2, "Use arrows to move");
+        TCODConsole::root->print(1, MAP_HEIGHT_AREA+2, "Use arrows to move");
         TCODConsole::root->print(1, win_y-3, "Press 'q' to quit");
         
         TCODConsole::root->setAlignment(TCOD_RIGHT);
         if (player.stats.hp < 7) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
         else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
         TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
-            TCODConsole::root->print(win_x-2, MAP_HEIGHT+2, "HP: %c%d%c/%d",TCOD_COLCTRL_1, player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
+            TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+2, "HP: %c%d%c/%d",TCOD_COLCTRL_1, player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
             if (player.combat_move < 4) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
             else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-            TCODConsole::root->print(win_x-2, MAP_HEIGHT+3, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
+            TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+3, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
                     player.combat_move,TCOD_COLCTRL_STOP);
         //TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->print(win_x-2, MAP_HEIGHT+5, "Press 'p' to punch walls");
-        TCODConsole::root->print(win_x-2, MAP_HEIGHT+6, "Press 'r' to regenerate layout/revive player");
-        TCODConsole::root->print(win_x-2, MAP_HEIGHT+8, "Press 'd' for DEBUG");
+        TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+5, "Press 'p' to punch walls");
+        TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+6, "Press 'r' to regenerate layout/revive player");
+        TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+8, "Press 'd' for DEBUG");
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::yellow,TCODColor::black);
-        if (debug) TCODConsole::root->print(win_x-2, MAP_HEIGHT+9, "%cMonster count%c: %d",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, killall);
+        if (debug) TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+9, "%cMonster count%c: %d",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, killall);
 
         TCODConsole::root->print(win_x-1, 0, "Mode-N");
 
@@ -3662,7 +3683,7 @@ int main() {
             }  
 
             r_panel->setAlignment(TCOD_RIGHT);
-            r_panel->print((win_x-MAP_WIDTH)-1, 3, "Initiative list");
+            r_panel->print((win_x-MAP_WIDTH_AREA)-1, 3, "Initiative list");
 
             unsigned int player_own = player.initiative;
 
@@ -3672,13 +3693,13 @@ int main() {
             TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lightAmber,TCODColor::black);
             for (unsigned int i = 0; i<monsters.size(); ++i) {
                 if (i == (player_own - 1)){
-                    r_panel->print((win_x-MAP_WIDTH)-2, 5+(i), "[%c%d%c] Player <", TCOD_COLCTRL_1, 
+                    r_panel->print((win_x-MAP_WIDTH_AREA)-2, 5+(i), "[%c%d%c] Player <", TCOD_COLCTRL_1, 
                             player.temp_init, TCOD_COLCTRL_STOP);
                 } else {
                     for (unsigned int b = 0; b<monvector.size(); ++b) {
                         unsigned int monster_ini =  monvector[b].initiative;
                         if ((i+1) == monster_ini){
-                            r_panel->print((win_x-MAP_WIDTH)-2, 5+ (i), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
+                            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 5+ (i), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
                                     monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
                                     monvector[b].name, TCOD_COLCTRL_STOP);
                         }
@@ -3691,40 +3712,40 @@ int main() {
             TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::lighterGreen, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::darkGreen, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::darkGreen, TCODColor::darkestRed);
-            r_panel->print((win_x-MAP_WIDTH)-2, 16, "%cAF%c%cAF%c%cA*%c%cA*%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 16, "%cAF%c%cAF%c%cA*%c%cA*%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
-            r_panel->print((win_x-MAP_WIDTH)-2, 17, "%cDF%c%cD*%c%cDA%c%cDA%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 17, "%cDF%c%cD*%c%cDA%c%cDA%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
             TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lighterRed, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::lighterGreen, TCODColor::black);
             TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::lightYellow, TCODColor::black);
             TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::darkGreen, TCODColor::darkestRed);
-            r_panel->print((win_x-MAP_WIDTH)-2, 18, "%cA*%c%c**%c%c**%c%cA*%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 18, "%cA*%c%c**%c%c**%c%cA*%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
-            r_panel->print((win_x-MAP_WIDTH)-2, 19, "%cDF%c%cDB%c%c**%c%cDA%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 19, "%cDF%c%cDB%c%c**%c%cDA%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
             TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::red, TCODColor::black);
             TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::lighterGreen, TCODColor::black);
             TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::lightYellow, TCODColor::darkestRed);
-            r_panel->print((win_x-MAP_WIDTH)-2, 20, "%cA2%c%cA1%c%c**%c%c**%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 20, "%cA2%c%cA1%c%c**%c%c**%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
-            r_panel->print((win_x-MAP_WIDTH)-2, 21, "%cD*%c%cD*%c%cDB%c%c**%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 21, "%cD*%c%cD*%c%cDB%c%c**%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
             TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::red, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::red, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::lighterGreen, TCODColor::darkestRed);
-            r_panel->print((win_x-MAP_WIDTH)-2, 22, "%cA3%c%cA2%c%cA1%c%c**%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 22, "%cA3%c%cA2%c%cA1%c%c**%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
-            r_panel->print((win_x-MAP_WIDTH)-2, 23, "%cD*%c%cD*%c%cD*%c%cDB%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 23, "%cD*%c%cD*%c%cD*%c%cDB%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
 
@@ -3739,7 +3760,7 @@ int main() {
             
             fov_recompute = true;
             render_all();
-            TCODConsole::blit(r_panel,0,0,0,0,TCODConsole::root,MAP_WIDTH, 0);
+            TCODConsole::blit(r_panel,0,0,0,0,TCODConsole::root,MAP_WIDTH_AREA, 0);
 TCODConsole::flush(); // this updates the screen
             //TCOD_key_t key2 = 
                 TCODConsole::waitForKeypress(true); // to start combat
@@ -3844,7 +3865,7 @@ TCODConsole::flush(); // this updates the screen
                         if(msg_log_list.size() > 0){
                             Message_Log();
                         }
-                        TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT+2);
+                        TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT_AREA+2);
 
                         TCODConsole::flush(); // this updates the screen
                     }
