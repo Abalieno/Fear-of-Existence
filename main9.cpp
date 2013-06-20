@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include "libtcod.hpp"
-#include <windows.h>
+#include <windows.h> // for Sleep()
 
 const int   win_x   =   80; // window width in cells
 const int   win_y   =   50; // window height in cells
@@ -89,13 +89,21 @@ void create_room(Rect inroom){
 
 void create_h_tunnel(int x1, int x2, int y){
 
-    for (int l = y * MAP_WIDTH + x1 + 1; l < y * MAP_WIDTH + x2 ;++l) {
+    if (x1 < x2){ // to carve tunnel in the right direction, left to right
+        for (int l = y * MAP_WIDTH + x1 ; l <= (y * MAP_WIDTH + x2) ;++l){
+            map_array[l] = Tile(0,0);
+        }
+    } else for (int l = y * MAP_WIDTH + x2 ; l <= (y * MAP_WIDTH + x1) ;++l){
         map_array[l] = Tile(0,0);
     }
 }
 
 void create_v_tunnel(int y1, int y2, int x){
-    for (int l = y1 * MAP_WIDTH + x; l < y2 * MAP_WIDTH + x ; l = l + MAP_WIDTH) {
+    if (y1 < y2){
+        for (int l = y1 * MAP_WIDTH + x; l <= (y2 * MAP_WIDTH + x) ; l = l + MAP_WIDTH){
+            map_array[l] = Tile(0,0);
+        }
+    } else for (int l = y2 * MAP_WIDTH + x; l <= (y1 * MAP_WIDTH + x) ; l = l + MAP_WIDTH){
         map_array[l] = Tile(0,0);
     }
 }
@@ -130,13 +138,12 @@ public: // public should be moved down, but I keep it here for debug messages
         tempy = y + dy;
         
         if (!map_array[tempy*MAP_WIDTH+tempx].blocked){
-        x += dx;
-        y += dy;
-        if (bloody > 0){
-            if (bloody >= map_array[y * MAP_WIDTH + x].bloodyt)
-            map_array[y * MAP_WIDTH + x].bloodyt = bloody;
-        }
-        
+            x += dx;
+            y += dy;
+            if (bloody > 0){
+                if (bloody >= map_array[y * MAP_WIDTH + x].bloodyt)
+                map_array[y * MAP_WIDTH + x].bloodyt = bloody;
+            }
         } else std::cout << "Fuck, it's blocked. " << std::endl;
 
         if (x >= MAP_WIDTH) {x = MAP_WIDTH-1;std::cout << "No, I'm not stepping into the void." << std::endl;}
@@ -146,13 +153,12 @@ public: // public should be moved down, but I keep it here for debug messages
 
         bloody = (map_array[y * MAP_WIDTH + x].bloodyt);
         if (map_array[y * MAP_WIDTH + x].bloodyt > 1) --map_array[y * MAP_WIDTH + x].bloodyt;
-        std::cout <<  map_array[y * MAP_WIDTH + x].bloodyt << std::endl;
     } 
 
     bool attack(Object &foe){
         foe.h = foe.h - 1;
         if (foe.h == 0) {std::cout << "Killed a foe." << std::endl; return 1;}// killed!
-        return 0;
+        return 0; // not killed
     }
 
     void draw(bool uh) {
@@ -193,12 +199,8 @@ void make_map(Object &duh){
     int prev_x = 0;
     int prev_y = 0;
 
-//Rect new_room(1, 1, 1, 1);
-//rooms.push_back(&new_room);
+    for (int r = 0; r < MAX_ROOMS; ++r){
 
-    while (num_rooms <= MAX_ROOMS){
-        bool failed;
-Sleep(550);
         std::cout << "num_rooms: " << num_rooms << std::endl;
         std::cout << "Rooms array: " << rooms.size() << std::endl;
 
@@ -218,22 +220,18 @@ Sleep(550);
 
         //Rect *new_room = new Rect(x, y, w, h);
         Rect new_room(x, y, w, h);
-std::cout << "new room x y w h: " << x << " " << y << " "  << w << " " << h << std::endl;
+        
+        std::cout << "new room x y w h: " << x << " " << y << " "  << w << " " << h << std::endl;
 
-
+        bool failed;
         failed = false;
         
         for (unsigned int i = 0; i<rooms.size(); ++i){
-std::cout << "i: " << i  << std::endl;
-
             if ( new_room.intersect(rooms[i]) ){ 
                 failed = true;
-                
-                std::cout << "failed?: " << failed  << std::endl;
-
-                break;}
-                    }  
-       // Sleep(3550);
+                break;
+            }
+        }  
 
         if (!failed){
             create_room(new_room);
@@ -243,28 +241,30 @@ std::cout << "i: " << i  << std::endl;
             } else {
                 npc.x = new_room.center_x;
                 npc.y = new_room.center_y; // new npc coordinates from whatever room
-                
-                prev_x = rooms[num_rooms].center_x;
-                prev_y = rooms[num_rooms].center_y;
+               
+                prev_x = rooms[num_rooms-1].center_x;
+                prev_y = rooms[num_rooms-1].center_y;
 
                 if (wtf->getInt(0, 1, 0) == 1){
-                    create_h_tunnel(prev_x, rooms[num_rooms].center_x, prev_y);
-                    create_v_tunnel(prev_y, rooms[num_rooms].center_y, rooms[num_rooms].center_x);
+                    create_h_tunnel(prev_x, new_room.center_x, prev_y);
+                    create_v_tunnel(prev_y, new_room.center_y, new_room.center_x);
                 } else {
-                    create_v_tunnel(prev_y, rooms[num_rooms].center_y, prev_x);
-                    create_h_tunnel(prev_x, rooms[num_rooms].center_x, rooms[num_rooms].center_y);
+                    create_v_tunnel(prev_y, new_room.center_y, prev_x);
+                    create_h_tunnel(prev_x, new_room.center_x, new_room.center_y);
                 }
             }
             num_rooms = num_rooms + 1; // add room to counter
             rooms.push_back(new_room); // add room to array
         }
-           
     }
 
-    npc.h = npc.h +2;
+    npc.h = npc.h +2; // increases health for every map regeneration
     npc.bloody = 0;
     myvector.push_back(&npc); // resurrects '%'
 
+  //  create_h_tunnel(prev_x, new_room.center_x, prev_y);
+  //                  create_v_tunnel(prev_y, new_room.center_y, new_room.center_x);
+//
   //  Rect room1(20, 13, 10, 15);
   //  Rect room2(50, 18, 10, 15);
   //  create_room(room1);
@@ -402,12 +402,9 @@ void bloodsplat(Object &cobj){
         }
         --fly;
     }
-       
-
 }
 
 short int bloodycount = 0;
-
 
 bool handle_keys(Object &duh) {
 
@@ -416,16 +413,13 @@ bool handle_keys(Object &duh) {
     
     TCOD_key_t key = TCODConsole::waitForKeypress(true); 
 
-    //if (bloodycount == 0) duh.bloody = false;
     if (bloodycount < 0) bloodycount = 0; // if ... change color 
   
-    if ( key.c == 'q' )  return true;
+    if ( key.c == 'q' ) return true;
 
     if ( key.c == 'r' ){
         make_map(duh);
         duh.bloody = 0;
-
-
     }
 
     if ( key.c == 'p' ){
@@ -504,11 +498,11 @@ bool handle_keys(Object &duh) {
                 con->clear();
             }
         }
-    else  {
-        --bloodycount;
-        --duh.bloody;  
-        duh.move(0, -1);
-    }
+        else {
+            --bloodycount;
+            --duh.bloody;  
+            duh.move(0, -1);
+        }
     }
 
     // end KEY UP cycle
@@ -612,13 +606,13 @@ bool handle_keys(Object &duh) {
                 con->clear();
            }
         }
-        else  {
+        else {
             --bloodycount; 
             --duh.bloody; 
             duh.move(1, 0);
         }
-    }
-
+    } 
+    
     // end KEY RIGHT cycle
 
     std::cout << "player.x: " << duh.x << " player.y: " << duh.y << std::endl; 
@@ -631,7 +625,6 @@ int main() {
     TCODSystem::setFps(LIMIT_FPS);
 
     Object player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5);
-    
     
     myvector.push_back(&player);
     myvector.push_back(&npc);
@@ -662,8 +655,12 @@ int main() {
         TCODConsole::root->print(78, 47, "Press 'r' to regenerate layout");
         
         TCODConsole::root->setAlignment(TCOD_CENTER);
-        TCODConsole::root->print(40,49,"%c%c%c%c%c%c%c%cKILL%c the '%'",
-        TCOD_COLCTRL_FORE_RGB,255,1,1,TCOD_COLCTRL_BACK_RGB,1,1,255,TCOD_COLCTRL_STOP);
+        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
+        TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::yellow,TCODColor::white);
+        if (npc.h > 0)
+            TCODConsole::root->print(39,49,"%cKILL%c the '%c%%%c'",
+                TCOD_COLCTRL_1,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP);
+        else TCODConsole::root->print(39,49,"%cKILLED!%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
        
         TCODConsole::flush(); // this updates the screen
 
