@@ -15,16 +15,28 @@ int ROOM_MAX_SIZE = 10;
 int ROOM_MIN_SIZE = 6;
 int MAX_ROOMS = 30;
 
-TCODColor color_dark_wall(0, 0, 100);
-TCODColor color_dark_ground(50, 50, 150);
+TCOD_fov_algorithm_t FOV_ALGO = FOV_BASIC; //default FOV algorithm
+bool FOV_LIGHT_WALLS = true;
+int TORCH_RADIUS = 10;
+
+TCODColor color_dark_wall(0, 0, 50);
+TCODColor color_dark_ground(15, 15, 80);
 TCODColor blood(255, 0, 0);
 TCODColor blood1(200, 0, 0);
 TCODColor blood2(160, 0, 0);
 TCODColor blood3(120, 0, 0);
 TCODColor blood4(100, 0, 0);
 
+TCODColor color_light_wall(0, 0, 100);
+TCODColor color_light_ground(50, 50, 150);
+
+bool fov_recompute;
+
 TCODConsole *con = new TCODConsole(80, 45);
 TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
+
+TCODMap * fov_map = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
+
 
 class Tile {
 
@@ -32,7 +44,8 @@ public:
 
     bool blocked;
     bool block_sight;
-    int bloodyt; // amount of blood on tile
+    int bloodyt; // amount of blood on Tile
+    int explored;
 
     Tile() { blocked = false; block_sight = false; bloodyt = 0; }
 
@@ -41,6 +54,7 @@ public:
         blocked = isblocked;
         block_sight = isblock_sight;
         if (blocked) block_sight = true;
+        explored = false;
     }
 };
 
@@ -165,10 +179,12 @@ public: // public should be moved down, but I keep it here for debug messages
         con->setDefaultForeground(color);
         if (!uh) colorb = con->getCharBackground(x, y);
         con->setDefaultBackground(colorb);
+        if (fov_map->isInFov(x,y))
         con->putChar(x, y, selfchar, TCOD_BKGND_SET);
     }
 
     void clear() {
+        if (fov_map->isInFov(x,y))
         con->putChar(x, y, ' ', TCOD_BKGND_NONE);
     }
 
@@ -176,6 +192,8 @@ public: // public should be moved down, but I keep it here for debug messages
 };
 
 Object npc(25, 26, '%', TCODColor::yellow, TCODColor::black, 3);
+Object player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5);
+
 std::vector<Object*> myvector;
 
 void make_map(Object &duh){
@@ -289,17 +307,78 @@ void make_map(Object &duh){
     //map_array[1790-MAP_WIDTH*2].block_sight = 1;
 }
 
+void set_black(){
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            con->putChar(l, i, ' ', TCOD_BKGND_SET);
+                        con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
+                        con->setCharForeground(l, i, TCODColor::black);
+            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+        }
+    } 
+}
+
 void render_all (std::vector<Object*> &invector){
 
-    bool wall = 0;
+    bool wall = false;
+    bool visible = false;
     int isbloody = 0;
 
-    int row = 0;
+    if (fov_recompute){
+        fov_map->computeFov(player.x,player.y, TORCH_RADIUS, FOV_LIGHT_WALLS,FOV_ALGO);
 
-    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int i = 0; i < MAP_HEIGHT ;++i){
+            for (int l = 0; l < MAP_WIDTH ;++l) {
+                visible = fov_map->isInFov(l,i);
+                wall = map_array[i * MAP_WIDTH + l].blocked;
+                isbloody = map_array[i * MAP_WIDTH + l].bloodyt;
+                con->putChar(l, i, ' ', TCOD_BKGND_SET);
+                        con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
+                        con->setCharForeground(l, i, TCODColor::black);
+
+                if (!visible){
+                    if (map_array[i * MAP_WIDTH + l].explored){
+                    if (wall){
+                        con->putChar(l, i, '#', TCOD_BKGND_SET);
+                        con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
+                        con->setCharForeground(l, i, color_dark_wall);
+                    }
+                    else {
+                        con->putChar(l, i, '.', TCOD_BKGND_SET);
+                        con->setCharForeground(l, i, TCODColor::white);
+                        con->setCharBackground(l, i, color_dark_ground, TCOD_BKGND_SET);
+                    }
+                                        }
+                } else {
+                    if (wall){
+                        con->putChar(l, i, '#', TCOD_BKGND_SET);
+                        con->setCharBackground(l, i, color_light_wall, TCOD_BKGND_SET);
+                        con->setCharForeground(l, i, color_light_wall);
+                    }
+                    else {
+                        con->putChar(l, i, '.', TCOD_BKGND_SET);
+                        con->setCharForeground(l, i, TCODColor::white);
+                        con->setCharBackground(l, i, color_light_ground, TCOD_BKGND_SET);
+                    }
+                    if (isbloody > 0){
+                if (isbloody >= 4) blood = blood1;
+                if (isbloody == 3) blood = blood2;
+                if (isbloody == 2) blood = blood3;
+                if (isbloody < 2) blood = blood4;
+                con->setCharBackground(l, i, blood, TCOD_BKGND_SET);
+            }
+                    map_array[i * MAP_WIDTH + l].explored = true;
+                    
+                }
+                //fov_map->setProperties(l, i, map_array[i * MAP_WIDTH + l].block_sight, map_array[i * MAP_WIDTH + l].blocked);
+                
+            }
+        }
+
+   /*   for (int i = 0; i < MAP_HEIGHT ;++i){
         for (int l = 0; l < MAP_WIDTH ;++l){
-            wall = map_array[row * MAP_WIDTH + l].blocked;
-            isbloody = map_array[row * MAP_WIDTH + l].bloodyt;
+            wall = map_array[i * MAP_WIDTH + l].blocked;
+            isbloody = map_array[i * MAP_WIDTH + l].bloodyt;
             if (wall){             
                 con->putChar(l, i, '#', TCOD_BKGND_SET);
                 con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
@@ -318,7 +397,9 @@ void render_all (std::vector<Object*> &invector){
                 con->setCharBackground(l, i, blood, TCOD_BKGND_SET);
             }
         }
-        ++row;
+    } */
+
+    fov_recompute = false;
     }
 
     for (unsigned int i = 0; i<invector.size(); ++i) invector[i]->draw(0);
@@ -420,6 +501,15 @@ bool handle_keys(Object &duh) {
     if ( key.c == 'r' ){
         make_map(duh);
         duh.bloody = 0;
+        for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+        }
+    }
+        fov_recompute = true;
+        set_black();
     }
 
     if ( key.c == 'p' ){
@@ -430,8 +520,8 @@ bool handle_keys(Object &duh) {
         mesg->print(1, 1, "Give a direction to dig dungeon");
         myvector[1]->draw(0);
        
-        if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
-        else TCODConsole::blit(mesg,0,0,33,3,con,46,1);
+        if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
+        else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-4,1);
 
         TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
 
@@ -443,6 +533,15 @@ bool handle_keys(Object &duh) {
                 map_array[(duh.y - 1)*MAP_WIDTH +duh.x].blocked = 0;
                 map_array[(duh.y - 1)*MAP_WIDTH +duh.x].block_sight = 0;
                 mesg->clear();
+                for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+        }
+    }
+
+                fov_recompute = true;
                 return false;
             }
             if (TCODConsole::isKeyPressed(TCODK_DOWN)){ 
@@ -450,6 +549,15 @@ bool handle_keys(Object &duh) {
                 map_array[(duh.y + 1)*MAP_WIDTH +duh.x].blocked = 0;
                 map_array[(duh.y + 1)*MAP_WIDTH +duh.x].block_sight = 0;
                 mesg->clear();
+                for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+        }
+    }
+
+                fov_recompute = true;
                 return false; 
             }
             if (TCODConsole::isKeyPressed(TCODK_LEFT)){
@@ -457,6 +565,15 @@ bool handle_keys(Object &duh) {
                 map_array[duh.y*MAP_WIDTH +(duh.x -1)].blocked = 0;
                 map_array[duh.y*MAP_WIDTH +(duh.x -1)].block_sight = 0;
                 mesg->clear();
+                for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+        }
+    }
+
+                fov_recompute = true;
                 return false;
             }
             if (TCODConsole::isKeyPressed(TCODK_RIGHT)){ 
@@ -464,6 +581,15 @@ bool handle_keys(Object &duh) {
                 map_array[duh.y*MAP_WIDTH +(duh.x + 1)].blocked = 0;
                 map_array[duh.y*MAP_WIDTH +(duh.x + 1)].block_sight = 0;
                 mesg->clear();
+                for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+        }
+    }
+
+                fov_recompute = true;
                 return false;
             }
         }
@@ -480,6 +606,9 @@ bool handle_keys(Object &duh) {
                 npc.x=-365;
                 npc.y=-365; // teleport out of map   
                 duh.move(0, 0); // updates player position so feet get bloody
+                fov_recompute = true;
+                render_all(myvector);
+                TCODConsole::flush();
             }
             else {
                 TCODConsole::root->clear();
@@ -495,13 +624,19 @@ bool handle_keys(Object &duh) {
                 TCODConsole::flush();
                 Sleep(200); // shitty way for attack "animation", uses windows.h
                 npc.colorb = color_dark_ground;
+                npc.draw(0);
                 con->clear();
+                fov_recompute = true;
+                render_all(myvector);
+                TCODConsole::flush();
+
             }
         }
         else {
             --bloodycount;
             --duh.bloody;  
             duh.move(0, -1);
+            fov_recompute = true;
         }
     }
 
@@ -516,6 +651,9 @@ bool handle_keys(Object &duh) {
                 npc.x=-365;
                 npc.y=-365;
                 duh.move(0, 0);
+                fov_recompute = true;
+                render_all(myvector);
+                TCODConsole::flush();
             }
             else {
                 TCODConsole::root->clear();
@@ -532,12 +670,16 @@ bool handle_keys(Object &duh) {
                 Sleep(200);
                 npc.colorb = color_dark_ground;
                 con->clear();
+                fov_recompute = true;
+                render_all(myvector);
+                TCODConsole::flush();
             }
         }
         else { 
             --bloodycount;
             --duh.bloody; 
             duh.move(0, 1);
+            fov_recompute = true;
         }
     }
 
@@ -552,6 +694,9 @@ bool handle_keys(Object &duh) {
                 npc.x=-365;
                 npc.y=-365;
                 duh.move(0, 0);
+                fov_recompute = true;
+                render_all(myvector);
+                TCODConsole::flush();
             }
             else {
                 TCODConsole::root->clear();
@@ -568,12 +713,16 @@ bool handle_keys(Object &duh) {
                 Sleep(200);
                 npc.colorb = color_dark_ground;
                 con->clear();
+                fov_recompute = true;
+                render_all(myvector);
+                TCODConsole::flush();
             }
         }
         else {
             --bloodycount;
             --duh.bloody;   
             duh.move(-1, 0);
+            fov_recompute = true;
         }
     }
 
@@ -588,6 +737,9 @@ bool handle_keys(Object &duh) {
                 npc.x=-365;
                 npc.y=-365;
                 duh.move(0, 0);
+                fov_recompute = true;
+                render_all(myvector);
+                TCODConsole::flush();
             }
             else {
                 TCODConsole::root->clear();
@@ -604,12 +756,17 @@ bool handle_keys(Object &duh) {
                 Sleep(200);
                 npc.colorb = color_dark_ground;
                 con->clear();
+                fov_recompute = true;
+                render_all(myvector);
+                TCODConsole::flush();
+
            }
         }
         else {
             --bloodycount; 
             --duh.bloody; 
             duh.move(1, 0);
+            fov_recompute = true; 
         }
     } 
     
@@ -624,18 +781,34 @@ int main() {
     TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE);
     TCODSystem::setFps(LIMIT_FPS);
 
-    Object player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5);
-    
+        
     myvector.push_back(&player);
     myvector.push_back(&npc);
    
     make_map(player);
+
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+        }
+    } 
+
+    //fov_map->setProperties(10,10,true,true);
+
+   // fov_map = libtcod.map_new(MAP_WIDTH, MAP_HEIGHT)
+//for y in range(MAP_HEIGHT):
+   // for x in range(MAP_WIDTH):
+     //   libtcod.map_set_properties(fov_map, x, y, not map[x][y].block_sight, not map[x][y].blocked)
 
     player.colorb = con->getCharBackground(player.x, player.y);
     npc.colorb = con->getCharBackground(npc.x, npc.y);
 
     player.colorb = color_dark_ground;
     npc.colorb = color_dark_ground;
+
+    fov_recompute = true;
 
     TCODConsole::initRoot(win_x, win_y, "windowname", false);
     
@@ -646,7 +819,7 @@ int main() {
         render_all(myvector);
         
         TCODConsole::root->setAlignment(TCOD_LEFT);
-        TCODConsole::root->setDefaultBackground(TCODColor::black);
+        //TCODConsole::root->setDefaultBackground(TCODColor::black);
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->print(1, 46, "Use arrows to move");
         TCODConsole::root->print(1, 47, "Press 'q' to quit");
