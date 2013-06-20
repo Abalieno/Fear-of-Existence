@@ -14,11 +14,13 @@ const int MAP_HEIGHT = 45;
 const int quit = 1;
 const int playing = 1;
 const int no_turn = 2;
+const int dead = 99;
+
 
 //parameters for dungeon generator
 int ROOM_MAX_SIZE = 10;
 int ROOM_MIN_SIZE = 6;
-int MAX_ROOMS = 32;
+int MAX_ROOMS = 30;
 int MAX_ROOM_MONSTERS = 3;
 
 TCOD_fov_algorithm_t FOV_ALGO = FOV_BASIC; //default FOV algorithm
@@ -39,6 +41,7 @@ TCODColor color_light_ground(50, 50, 150);
 
 TCODColor orc(0, 200, 0);
 TCODColor troll(0, 255, 0);
+TCODColor monsterdead(TCODColor::darkGreen);
 
 bool fov_recompute;
 
@@ -177,6 +180,7 @@ public: // public should be moved down, but I keep it here for debug messages
     bool blocks;
     Fighter stats;
     AI * myai;
+    bool alive;
 
     Object_monster(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
         x = a;
@@ -245,33 +249,12 @@ public: // public should be moved down, but I keep it here for debug messages
 
 class AI {
 public:
-     virtual void take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y) {std::cout << "WHAT" ;} 
+     virtual bool take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y) {std::cout << "WHAT" ;} 
 
 };
 
 
-class BasicMonster : public AI {
-public:
 
-    BasicMonster(){
-
-    }
-
-    virtual void take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y){
-        float dist = 0;
- 
-        if (fov_map->isInFov(monster.x,monster.y)){
-            std::cout << "The " << monster.name << " in view! " << std::endl;
-dist = monster.distance_to(p_x, p_y);
-            if (monster.distance_to(p_x, p_y) >= 2){
-                monster.move_towards(p_x, p_y);
-                std::cout << "The " << monster.name << " is moving." << std::endl;
-            } else  monster.stats.attack(player, monster, 1) ;  
-        }
-        //else std::cout << "The " << monster.name << " lurks in the dark! " ;
-        
-    }    
-};
 
 
 
@@ -307,9 +290,10 @@ public: // public should be moved down, but I keep it here for debug messages
       */ 
 
     bool attack(Object_monster &foe){
-        foe.stats.hp = foe.stats.hp - 1;
+        /*foe.stats.hp = foe.stats.hp - 1;
         if (foe.stats.hp == 0) {std::cout << "Killed a foe." << std::endl; return 1;}// killed!
         return 0; // not killed
+        */
     }
 
     void draw(bool uh) {
@@ -326,6 +310,60 @@ public: // public should be moved down, but I keep it here for debug messages
     }
 
     ~Object_player(){} // ?
+};
+
+
+std::vector<Object_player*> myvector; // player vector object
+
+class BasicMonster : public AI {
+public:
+
+    BasicMonster(){
+
+    }
+
+    virtual bool take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y){
+       // float dist = 0;
+ 
+        if (fov_map->isInFov(monster.x,monster.y)){
+            std::cout << "The " << monster.name << " in view! " << std::endl;
+//dist = monster.distance_to(p_x, p_y);
+            if (monster.distance_to(p_x, p_y) >= 2){
+                monster.move_towards(p_x, p_y);
+                std::cout << "The " << monster.name << " is moving." << std::endl;
+                return false;
+            } else {
+            TCODConsole::root->clear();
+                mesg->setAlignment(TCOD_LEFT);
+                mesg->setDefaultForeground(TCODColor::yellow);
+                mesg->setDefaultBackground(TCODColor::black);
+                player.colorb = TCODColor::red;
+                monster.colorb = TCODColor::black;
+                player.selfchar = '/';
+                player.draw(1);
+                monster.draw(1);
+                mesg->print(1, 1, "Hit!");
+                if(!(player.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
+                else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
+                TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
+                TCODConsole::flush();
+                Sleep(200); // shitty way for attack "animation", uses windows.h
+                player.colorb = color_dark_ground;
+                monster.colorb = color_dark_ground;
+                player.selfchar = '@';
+                player.draw(0);
+                monster.draw(0);
+                con->clear();
+                fov_recompute = true;
+                //render_all();
+                TCODConsole::flush();
+            monster.stats.attack(player, monster, 1) ;
+            return true;
+            }
+        }
+        //else std::cout << "The " << monster.name << " lurks in the dark! " ;
+       return false; 
+    }    
 };
 
 
@@ -369,7 +407,7 @@ Object_player player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 
 //strcpy(player.name, "Playername");
 //strcpy(monster.name, "orc");
 
-std::vector<Object_player*> myvector; // player vector object
+
 std::vector<Object_monster> monvector;
 
 bool is_blocked(int x, int y){
@@ -504,9 +542,10 @@ void place_objects(Rect room){
             strcpy(monster.name, "Orc");
             monster.stats = fighter_component;
             monster.myai = &orc_ai;
+            monster.alive = true;
             }
         else {
-            Fighter fighter_component(16, 1, 4); // hp, defense, power
+            Fighter fighter_component(12, 1, 4); // hp, defense, power
             monster.x = x;
             monster.y = y;
             monster.selfchar= 'T';
@@ -518,6 +557,7 @@ void place_objects(Rect room){
             strcpy(monster.name, "Troll");
             monster.stats = fighter_component;
             monster.myai = &orc_ai;
+            monster.alive = true;
         }  
         monvector.push_back(monster);
     }
@@ -622,7 +662,7 @@ void set_black(){
     } 
 } // fill "con" with black
 
-void render_all (std::vector<Object_player*> &invector){
+void render_all (){
 
     bool wall = false;
     bool visible = false;
@@ -682,8 +722,21 @@ void render_all (std::vector<Object_player*> &invector){
     fov_recompute = false;
     }
 
-    for (unsigned int i = 0; i<invector.size(); ++i) invector[i]->draw(0); // player vector
-    for (unsigned int i = 0; i<monvector.size(); ++i) monvector[i].draw(0); //monster vector
+    
+    for (unsigned int i = 0; i<monvector.size(); ++i) {
+        if (monvector[i].selfchar == '%')
+        monvector[i].draw(0); //monster vector
+
+    }
+
+    for (unsigned int i = 0; i<monvector.size(); ++i) {
+        if (monvector[i].selfchar != '%')
+        monvector[i].draw(0); //monster vector
+
+    }
+
+
+    for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->draw(0); // player vector
     
     TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
     //std::cout << "player hp: " << player.stats.max_hp << std::endl;
@@ -820,30 +873,37 @@ void player_move_attack(int dx, int dy){
     for (unsigned int i = 0; i<monvector.size(); ++i){ // checks if monster is in next cell
         if (monvector[i].x == x && monvector[i].y == y){
             //*target = &monvector[i];
-            target = i;
-            is_it = true;
+            if (monvector[i].alive == true){target = i;
+            is_it = true;}
         }
     }
 
-    if (is_it){
-        if (player.attack(monvector[target])){
+    if (is_it && monvector[target].alive){
+        player.stats.attack(player, monvector[target], 0);
+        if (monvector[target].stats.hp < 1){
                 //monvector.erase (target); 
                 --killall;
                 bloodsplat(monvector[target]);
                 bloodycount = 5;
-                monvector[target].x=-365;
-                monvector[target].y=-365; // teleport out of map   
+                monvector[target].selfchar = '%';
+                monvector[target].color = monsterdead;
+                monvector[target].blocks = false;
+                monvector[target].alive = false;
+                //monvector[target].x=-365;
+                //monvector[target].y=-365; // teleport out of map   
                 player.move(0, 0, monvector); // updates player position so feet get bloody
                 fov_recompute = true;
-                render_all(myvector);
+                render_all();
                 TCODConsole::flush();
             }
             else {
+                char tchar = monvector[target].selfchar;
                 TCODConsole::root->clear();
                 mesg->setAlignment(TCOD_LEFT);
                 mesg->setDefaultForeground(TCODColor::yellow);
                 mesg->setDefaultBackground(TCODColor::black);
                 monvector[target].colorb = TCODColor::red;
+                monvector[target].selfchar = '-';
                 monvector[target].draw(1);
                 mesg->print(1, 1, "Hit!");
                 if(!(player.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
@@ -852,10 +912,11 @@ void player_move_attack(int dx, int dy){
                 TCODConsole::flush();
                 Sleep(200); // shitty way for attack "animation", uses windows.h
                 monvector[target].colorb = color_dark_ground;
+                monvector[target].selfchar = tchar;
                 monvector[target].draw(0);
                 con->clear();
                 fov_recompute = true;
-                render_all(myvector);
+                render_all();
                 TCODConsole::flush();
                 std::cout << "monster target hp: " << monvector[target].stats.hp << std::endl;
             }
@@ -866,6 +927,8 @@ void player_move_attack(int dx, int dy){
         fov_recompute = true;
     }    
 }
+
+int alreadydead = 0;
 
 int handle_keys(Object_player &duh) {
 
@@ -896,7 +959,11 @@ int handle_keys(Object_player &duh) {
             }
         }
         fov_recompute = true;
+        player.stats.hp = 30;
+        player.selfchar = '@';
+        game_state = playing;
         set_black();
+        alreadydead = 0;
     }
 
     if (game_state == playing) {
@@ -1021,6 +1088,22 @@ int handle_keys(Object_player &duh) {
     return 0;
 }    
 
+void player_death(){
+    Fighter fighter_component(0, 0, 0);
+    Object_monster monster(player.x, player.y, 'i', TCODColor::black, TCODColor::black, 0, fighter_component);
+    game_state = dead;
+    player.selfchar = 'X';
+            bloodsplat(monster);
+        bloodsplat(monster);
+        bloodsplat(monster);
+        bloodsplat(monster);
+      
+    TCODConsole::root->setAlignment(TCOD_CENTER);
+    TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
+    TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+    TCODConsole::root->print(win_x/2,win_y-5,"%cYour DEAD!!1ONE!%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+}
+
 int main() {
         
     TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE); 
@@ -1051,16 +1134,20 @@ int main() {
     TCODConsole::initRoot(win_x, win_y, "windowname", false);
 
     game_state = playing;
+
+    
+    
     
     while (! TCODConsole::isWindowClosed()) {
 
         int player_action = 0;
 
+        if (!alreadydead){
         con->clear();
         TCODConsole::root->clear();
-       
+        }
         fov_recompute = true;
-        render_all(myvector);
+        render_all();
         
         TCODConsole::root->setAlignment(TCOD_LEFT);
         //TCODConsole::root->setDefaultBackground(TCODColor::black);
@@ -1068,8 +1155,15 @@ int main() {
         TCODConsole::root->print(1, win_y-4, "Use arrows to move");
         TCODConsole::root->print(1, win_y-3, "Press 'q' to quit");
         TCODConsole::root->setAlignment(TCOD_RIGHT);
+        if (player.stats.hp < 7) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
+        else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+        TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
+            TCODConsole::root->print(win_x-2, win_y-5, "HP: %c%d%c/%d",TCOD_COLCTRL_1, player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
+        //TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->print(win_x-2, win_y-4, "Press 'p' to punch walls");
-        TCODConsole::root->print(win_x-2, win_y-3, "Press 'r' to regenerate layout");
+        TCODConsole::root->print(win_x-2, win_y-3, "Press 'r' to regenerate layout/revive player");
+
+        
         
         TCODConsole::root->setAlignment(TCOD_CENTER);
         TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
@@ -1077,7 +1171,7 @@ int main() {
         TCODConsole::setColorControl(TCOD_COLCTRL_2,troll,color_light_ground);
         TCODConsole::setColorControl(TCOD_COLCTRL_3,orc,color_light_ground);
         if (killall > 0){
-            TCODConsole::root->print(win_x/2,win_y-1,"%cKILL%c all the '%ctrolls%c' and '%corcs%c'",
+            TCODConsole::root->print(win_x/2,win_y-1,"%cKILL%c all the '%c(T)rolls%c' and '%c(o)rcs%c'",
                 TCOD_COLCTRL_1,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP,TCOD_COLCTRL_3,TCOD_COLCTRL_STOP);
         }
         else TCODConsole::root->print(win_x/2,win_y-1,"%cALL KILLED!%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
@@ -1091,13 +1185,22 @@ int main() {
         if (player_action == quit) break;
         if (game_state == playing && player_action != no_turn){
             for (unsigned int i = 0; i<monvector.size(); ++i) { 
-                monvector[i].myai->take_turn(monvector[i], player, player.x, player.y); //std::cout << "The " << monvector[i].name << " growls!" << std::endl; 
-                
+                if (monvector[i].alive)
+                if (
+                monvector[i].myai->take_turn(monvector[i], player, player.x, player.y))
+                    render_all();
+                    //std::cout << "The " << monvector[i].name << " growls!" << std::endl; 
+                //render_all(myvector);
+                //TCODConsole::flush();
             }  
         std::cout << "END MONSTER TURN" << std::endl;    
           //  --playerb.stats.max_hp;
         //std::cout << "DEBUG: " << playera.stats.max_hp << std::endl;
         //std::cout << "DEBUG: " << playerb.stats.max_hp << std::endl;
+        if (player.stats.hp < 1 && !alreadydead ){
+            player_death();
+            alreadydead = 1;
+        }
 
         }
 
