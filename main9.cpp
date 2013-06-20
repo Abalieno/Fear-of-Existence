@@ -5,6 +5,8 @@
 #include "libtcod.hpp"
 #include <windows.h> // for Sleep()
 
+#include <process.h>
+
 const int   win_x   =   95; // window width in cells
 const int   win_y   =   60; // window height in cells
 const int   LIMIT_FPS = 20;
@@ -56,6 +58,7 @@ bool no_combat = false; // disable combat mode
 TCODConsole *con = new TCODConsole(MAP_WIDTH, MAP_HEIGHT);
 TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
 TCODConsole *load = new TCODConsole(win_x, win_y);  // load screen
+
 TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT));  // combat UI panel
 int BAR_WIDTH = 20;
 
@@ -805,6 +808,152 @@ void set_black(){
     } 
 } // fill "con" with black
 
+TCOD_key_t keyz;
+    TCOD_mouse_t mousez;
+    TCOD_event_t ev;
+
+void threadm( void* pParams )
+    {
+
+        std::cout << "MOUSE ";
+        int l = 0;
+        for (;;) {
+            int n = l;
+            int i = TCODSystem::getElapsedMilli();
+            l = i - n;
+            if ( l > 50){
+                //ev = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&keyz,&mousez);
+            } else {
+                TCODSystem::sleepMilli(1);
+            }
+        }
+       // int     rinon;
+       // for (;;) {
+       //     if (al_poll_duh(dp) || closed)
+		//	break;
+
+        //    rinon = rand()%(101);
+         //   if (rinon < 80)
+         //       {
+          //      YIELD();
+          //      }
+      //  }
+    }
+
+void I_am_moused(){
+    //TCOD_key_t key;
+    //TCOD_mouse_t mouse;
+    //TCOD_event_t ev = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+    mousez = TCODMouse::getStatus();
+    int x = mousez.cx;
+    int y = mousez.cy;
+
+    char *whatis;
+
+    //std::cout << "MOUSE " << x << " " << y << std::endl;
+
+    bool found = false;
+    TCODColor col_obj; // color of object
+
+    if (x == player.x && y == player.y){
+        panel->setDefaultForeground(TCODColor::white);
+        panel->setAlignment(TCOD_LEFT);
+        panel->print(1, 5, "Mouse on: Player At: %d %d", x, y);
+        panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+    } else {
+        for (unsigned int n = 0; n<monvector.size(); ++n) {
+            if( (x == monvector[n].x && y == monvector[n].y) && !(monvector[n].alive) 
+                    && fov_map->isInFov(monvector[n].x,monvector[n].y)){
+                whatis = &(monvector[n].name[0]);
+                panel->setDefaultForeground(TCODColor::white);
+                panel->setAlignment(TCOD_LEFT);
+                col_obj = monvector[n].color;
+                TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
+                panel->print(1, 5, "Mouse on: dead %c%s%c At: %d %d",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y); 
+                panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+                found = true;
+            }
+        }
+        for (unsigned int n = 0; n<monvector.size(); ++n) {
+            if( (x == monvector[n].x && y == monvector[n].y && monvector[n].alive) 
+                    && fov_map->isInFov(monvector[n].x,monvector[n].y)){
+                whatis = &(monvector[n].name[0]);
+                panel->setDefaultForeground(TCODColor::white);
+                panel->setAlignment(TCOD_LEFT);
+                col_obj = monvector[n].color;
+                TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
+                panel->print(1, 5, "Mouse on: %c%s%c At: %d %d",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
+                panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+                found = true;
+            }
+        }
+        if (!found){
+            panel->setDefaultForeground(TCODColor::white);
+            panel->setAlignment(TCOD_LEFT);
+            panel->print(1, 5, "Mouse on: Nothing At: %d %d", x, y);
+            panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+            found = false;
+        }
+    }
+}
+
+void I_am_moused2(){ // doubled because of main loop
+    //TCOD_key_t key;
+    //TCOD_mouse_t mouse;
+    //TCOD_event_t ev = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+    mousez = TCODMouse::getStatus();
+    int x = mousez.cx;
+    int y = mousez.cy;
+
+    char *whatis;
+
+    //std::cout << "MOUSE " << x << " " << y << std::endl;
+
+    bool found = false;
+    TCODColor col_obj; // color of object
+
+    if (x == player.x && y == player.y){
+        TCODConsole::root->setDefaultForeground(TCODColor::white);
+        TCODConsole::root->setAlignment(TCOD_LEFT);
+        TCODConsole::root->print(1, win_y-5, "Mouse on: Player At: %d %d", x, y);
+        TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+    } else {
+        for (unsigned int n = 0; n<monvector.size(); ++n) {
+        if( (x == monvector[n].x && y == monvector[n].y) && !(monvector[n].alive)
+                && fov_map->isInFov(monvector[n].x,monvector[n].y)){
+            whatis = &(monvector[n].name[0]);
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setAlignment(TCOD_LEFT);
+            col_obj = monvector[n].color;
+            TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
+            TCODConsole::root->print(1, win_y-5, "Mouse on: dead %c%s%c At: %d %d",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
+            TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+            found = true;
+        } 
+    }
+    for (unsigned int n = 0; n<monvector.size(); ++n) {
+        if( (x == monvector[n].x && y == monvector[n].y) && monvector[n].alive
+                && fov_map->isInFov(monvector[n].x,monvector[n].y)){
+            whatis = &(monvector[n].name[0]);
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setAlignment(TCOD_LEFT);
+            col_obj = monvector[n].color;
+            TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
+            TCODConsole::root->print(1, win_y-5, "Mouse on: %c%s%c At: %d %d",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
+            TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+            found = true;
+        } 
+    }
+    if (!found){
+        TCODConsole::root->setDefaultForeground(TCODColor::white);
+        TCODConsole::root->setAlignment(TCOD_LEFT);
+        TCODConsole::root->print(1, win_y-5, "Mouse on: Nothing At: %d %d", x, y);
+        TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+        found = false;
+    }
+    }
+}
+
 //def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
 void render_bar(int x, int y, int total_width, const char *name, 
         int value, int maximum, TCODColor bar_color, TCODColor back_color){
@@ -1108,16 +1257,19 @@ int handle_keys(Object_player &duh) {
 
     bool mycase_p;
     mycase_p = 0;
-    
-    TCOD_key_t key = TCODConsole::waitForKeypress(true); 
+   
+    TCOD_key_t keyr;
+    TCOD_mouse_t mouser;
+    //TCOD_key_t key = TCODConsole::waitForKeypress(true);
+    TCOD_event_t eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&keyr,&mouser);
 
     if (bloodycount < 0) bloodycount = 0; // if ... change color 
   
-    if ( key.c == 'q' ) return quit;
+    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'q' ) return quit;
 
-    if ( key.c == 'd' ){ if (debug) debug = false; else debug = true; Sleep (100);}
+    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'd' ){ if (debug) debug = false; else debug = true; Sleep (100);}
 
-    if ( key.c == 'r' ){
+    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'r' ){
 
         m_x = 0;
         m_y = 0;
@@ -1160,7 +1312,7 @@ int handle_keys(Object_player &duh) {
 
     if (game_state == playing) {
 
-    if ( key.c == 'p' ){
+    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'p' ){
         m_x = 0;
         m_y = 0;
         TCODConsole::root->clear();
@@ -1243,7 +1395,7 @@ int handle_keys(Object_player &duh) {
 
     // end of KEY DIG cycle
 
-    if (TCODConsole::isKeyPressed(TCODK_UP)){
+    if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_UP ){
         --bloodycount;
         --duh.bloody;  
         player_move_attack(0, -1);
@@ -1252,7 +1404,7 @@ int handle_keys(Object_player &duh) {
 
     // end KEY UP cycle
 
-    else if (TCODConsole::isKeyPressed(TCODK_DOWN)){
+    else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_DOWN){
         --bloodycount;
         --duh.bloody; 
         player_move_attack(0, 1);
@@ -1260,7 +1412,7 @@ int handle_keys(Object_player &duh) {
 
     // end KEY DOWN cycle
 
-    else if (TCODConsole::isKeyPressed(TCODK_LEFT)){
+    else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_LEFT){
         --bloodycount;
         --duh.bloody;   
         player_move_attack(-1, 0);
@@ -1268,7 +1420,7 @@ int handle_keys(Object_player &duh) {
 
     // end KEY LEFT cycle
 
-    else if (TCODConsole::isKeyPressed(TCODK_RIGHT)){
+    else if ( eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_RIGHT){
         --bloodycount; 
         --duh.bloody; 
         player_move_attack(1, 0);
@@ -1290,18 +1442,23 @@ int handle_combat(Object_player &duh) {
 
     bool mycase_p;
     mycase_p = 0;
+
+    TCOD_key_t keyr;
+    TCOD_mouse_t mouser;
+    //TCOD_key_t key = TCODConsole::waitForKeypress(true);
+    TCOD_event_t eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&keyr,&mouser);
     
-    TCOD_key_t key = TCODConsole::waitForKeypress(true); 
+    //TCOD_key_t key = TCODConsole::waitForKeypress(true); 
 
     if (bloodycount < 0) bloodycount = 0; // if ... change color 
   
-    if ( key.c == 'x' ) return quit; // quit combat
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'x' ) return quit; // quit combat
 
-    if ( key.c == 'q' ) return quit2;
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'q' ) return quit2;
 
-    if ( key.c == 'd' ){ if (debug) debug = false; else debug = true; Sleep (100);}
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'd' ){ if (debug) debug = false; else debug = true; Sleep (100);}
 
-    if ( key.c == 'r' ){
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'r' ){
 
         m_x = 0;
         m_y = 0;
@@ -1345,7 +1502,7 @@ int handle_combat(Object_player &duh) {
 
     if (game_state == playing) {
 
-    if ( key.c == 'p' ){
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'p' ){
         m_x = 0;
         m_y = 0;
         TCODConsole::root->clear();
@@ -1428,7 +1585,7 @@ int handle_combat(Object_player &duh) {
 
     // end of KEY DIG cycle
 
-    if (TCODConsole::isKeyPressed(TCODK_UP)){
+    if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_UP){
         --bloodycount;
         --duh.bloody;  
         player_move_attack(0, -1);
@@ -1437,7 +1594,7 @@ int handle_combat(Object_player &duh) {
 
     // end KEY UP cycle
 
-    else if (TCODConsole::isKeyPressed(TCODK_DOWN)){
+    else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_DOWN){
         --bloodycount;
         --duh.bloody; 
         player_move_attack(0, 1);
@@ -1445,7 +1602,7 @@ int handle_combat(Object_player &duh) {
 
     // end KEY DOWN cycle
 
-    else if (TCODConsole::isKeyPressed(TCODK_LEFT)){
+    else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_LEFT){
         --bloodycount;
         --duh.bloody;   
         player_move_attack(-1, 0);
@@ -1453,7 +1610,7 @@ int handle_combat(Object_player &duh) {
 
     // end KEY LEFT cycle
 
-    else if (TCODConsole::isKeyPressed(TCODK_RIGHT)){
+    else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_RIGHT){
         --bloodycount; 
         --duh.bloody; 
         player_move_attack(1, 0);
@@ -1536,12 +1693,24 @@ int main() {
     player.speed = 6;
     bool quit_now = false;
 
+    bool loped = false;
+
     //TCODConsole::disableKeyboardRepeat(); 
     
     while (! TCODConsole::isWindowClosed()) {
 
+        /* int seco;
+        
+        seco = TCODSystem::getElapsedSeconds();
+        if (seco > 5 && !loped){
+            _beginthread( threadm, 0, NULL );
+            loped = true;
+            std::cout << "LOOPED" << std::endl;
+
+        } */
+
         jump:
-        std::cout << "MAIN LOOP" << std::endl;
+        //std::cout << "MAIN LOOP" << std::endl;
 
         int player_action = 0;
         //TCODConsole::root->putChar( 10,10, 0x2500 );
@@ -1588,6 +1757,7 @@ int main() {
         }
         else TCODConsole::root->print(win_x/2,win_y-1,"%cALL KILLED!%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
        
+        I_am_moused2();
         //TCODConsole::root->putChar( 10,10, 0x2500 );
         TCODConsole::flush(); // this updates the screen
 
@@ -1777,6 +1947,7 @@ int main() {
                         else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
                         panel->print(1, 2, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
                             player.combat_move,TCOD_COLCTRL_STOP);
+                        I_am_moused();
                         TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT);
 
                         TCODConsole::flush(); // this updates the screen
@@ -1876,6 +2047,7 @@ int main() {
                         else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
                         panel->print(1, 2, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
                             player.combat_move,TCOD_COLCTRL_STOP);
+                        I_am_moused();
                         TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT);
                         //TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
 
