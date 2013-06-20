@@ -52,8 +52,10 @@ bool FOV_LIGHT_WALLS = true;
 int TORCH_RADIUS = 10;
 int MON_RADIUS = 8; // used for monster FoV
 
-TCODColor color_dark_wall(0, 0, 50);
-TCODColor color_dark_ground(15, 15, 80);
+//TCODColor color_dark_wall(0, 0, 50);
+//TCODColor color_dark_ground(15, 15, 80);
+TCODColor color_dark_wall(50, 50, 50);
+TCODColor color_dark_ground(15, 15, 15);
 TCODColor blood(255, 0, 0);
 TCODColor blood1(200, 0, 0);
 TCODColor blood2(160, 0, 0);
@@ -66,6 +68,7 @@ int off_xx = 0;
 TCODColor color_light_wall(0, 0, 100);
 TCODColor color_light_ground(50, 50, 150);
 TCODColor color_dark_groundF(TCODColor::grey);
+TCODColor color_dark_wallF(0, 0, 50);
 //TCODColor color_light_ground(200, 180, 50);
 
 TCODColor orc(0, 200, 0);
@@ -1510,10 +1513,10 @@ void render_all (){
                                 con->putChar(l*2,(i*2)+1, 707, TCOD_BKGND_SET);
                                 con->putChar((l*2)+1,(i*2)+1, 807, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_dark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_dark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_dark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_dark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_dark_wallF, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_dark_wallF, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_dark_wallF, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_dark_wallF, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -1539,22 +1542,22 @@ void render_all (){
                             if(!(map_array[(i * MAP_WIDTH + l)-1].blocked) && 
                                     !(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked)){ // isometric walls
                                 con->putChar(l, i, 668, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 con->setCharForeground(l, i, color_light_wall); 
                             } else if( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
                                     (map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked) && 
                                     !(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH-1].blocked) ){
                                 con->putChar(l, i, 669, TCOD_BKGND_SET);
                                 con->setCharBackground(l, i, color_light_wall, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, color_dark_wall);
+                                con->setCharForeground(l, i, color_dark_wallF);
 
                             } else if(!(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked)){
                                 con->putChar(l, i, 666, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 con->setCharForeground(l, i, color_light_wall); 
                             } else if(!(map_array[(i * MAP_WIDTH + l)-1].blocked)){
                                 con->putChar(l, i, 667, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 con->setCharForeground(l, i, color_light_wall);
                             } else {    
                                 con->putChar(l, i, '#', TCOD_BKGND_SET);
