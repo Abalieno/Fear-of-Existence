@@ -12,6 +12,8 @@ int imageinit = 1;
 float whattime = 0;
 //TCODImage *pix;
 
+int mapmode = 0; // changing map routine on regeneration
+
 bool revealdungeon = 0;
 
 const int MAP_WIDTH = 220;
@@ -46,7 +48,7 @@ int ROOM_MAX_SIZE = 18;
 int ROOM_MIN_SIZE = 6;
 int MAX_ROOMS = 30;
 int MAX_ROOM_MONSTERS = 3;
-unsigned int MAX_TOTAL_MONSTERS = 40;
+unsigned int MAX_TOTAL_MONSTERS = 15;
 
 TCOD_fov_algorithm_t FOV_ALGO = FOV_BASIC; //default FOV algorithm
 bool FOV_LIGHT_WALLS = true;
@@ -62,6 +64,7 @@ TCODColor blood1(200, 0, 0);
 TCODColor blood2(160, 0, 0);
 TCODColor blood3(120, 0, 0);
 TCODColor blood4(100, 0, 0);
+TCODColor door_c(222, 136, 0);
 
 int off_xx = 0;
     int off_yy = 0;
@@ -918,6 +921,257 @@ int killall = 0; // monster count
 
 int init = 0;
 
+class Miner {
+
+public:
+    int x;
+    int y;
+    int lifetime;
+
+    Miner(int initx, int inity, int initlifetime){
+        x = initx;
+        y = inity;
+        lifetime = initlifetime;
+    }
+
+};
+
+class Door {
+
+public:
+    int x;
+    int y;
+    int lifetime;
+
+    Door(int initx, int inity, int initlifetime){
+        x = initx;
+        y = inity;
+        lifetime = initlifetime;
+    }
+
+};
+std::vector<Door> doors;
+
+void place_objects2(Rect room){
+
+    if (monvector.size() >= MAX_TOTAL_MONSTERS) return ;
+
+
+}    
+
+void make_map2(Object_player &duh){
+
+    map_array.resize(MAP_HEIGHT * MAP_WIDTH);
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+           map_array[i * MAP_WIDTH + l] = Tile(1,1);
+        }
+    } // fills map with walls
+
+    Miner dig1(110, 70, 0);
+    std::vector<Miner> diggers;
+    diggers.push_back(dig1);
+
+    TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
+
+    int num1 = 0;
+    
+    map_array[70 * MAP_WIDTH + 110] = Tile(0,0);
+
+    for (int i = 0; i < 2260; i++){
+        for (unsigned int l = 0; l < diggers.size(); l++){
+            num1 = wtf->getInt(1, 4, 0); 
+            switch(num1){
+                case 1:
+                    diggers[l].y = diggers[l].y - 1;
+                    if(diggers[l].y < 2) diggers[l].y = 2;
+                    if(diggers[l].y > (MAP_HEIGHT-2)) diggers[l].y = (MAP_HEIGHT-2);
+                    map_array[diggers[l].y * MAP_WIDTH + diggers[l].x] = Tile(0,0);
+                    break;
+                case 2:
+                    diggers[l].x = diggers[l].x + 1;
+                    if(diggers[l].x < 2) diggers[l].x = 2;
+                    if(diggers[l].x > (MAP_WIDTH-2)) diggers[l].x = (MAP_WIDTH-2);
+                    map_array[diggers[l].y * MAP_WIDTH + diggers[l].x] = Tile(0,0);
+                    break;
+                case 3:
+                    diggers[l].y = diggers[l].y + 1;
+                    if(diggers[l].y < 2) diggers[l].y = 2;
+                    if(diggers[l].y > (MAP_HEIGHT-2)) diggers[l].y = (MAP_HEIGHT-2);
+                    map_array[diggers[l].y * MAP_WIDTH + diggers[l].x] = Tile(0,0);
+                    break;
+                case 4:
+                    diggers[l].x = diggers[l].x - 1;
+                    if(diggers[l].x < 2) diggers[l].x = 2;
+                    if(diggers[l].x > (MAP_WIDTH-2)) diggers[l].x = (MAP_WIDTH-2);
+                    map_array[diggers[l].y * MAP_WIDTH + diggers[l].x] = Tile(0,0);
+                    break;
+            }
+            int spawn = 0;
+            spawn = wtf->getInt(1, 50, 0);
+            if(spawn > 20 && diggers.size() < 10){
+                Miner dig2(diggers[l].x, diggers[l].y, 0);
+                diggers.push_back(dig2);
+            }
+        }    
+    }  
+
+    unsigned int max_mon;
+    max_mon = wtf->getInt(8, 16, 0); // sets number of monsters
+
+    while (monvector.size() < max_mon){
+        Object_monster monster(0, 0, 'i', TCODColor::black, TCODColor::black, 0, fighter_component);
+        int x = 0;
+        int y = 0;
+        int switche = 0;
+        switche = wtf->getInt(1,2,0);
+        if (switche > 1){
+            x = wtf->getInt(1, 80, 0);
+        } else {
+            x = wtf->getInt(150, 219, 0);                
+        }   
+        switche = wtf->getInt(1,2,0);
+        if (switche > 1){
+            y = wtf->getInt(1, 50, 0);
+        } else {
+            y = wtf->getInt(90, 139, 0);                
+        }
+        if(!(is_blocked(x,y))){
+            if ( wtf->getInt(0, 100, 0) < 80){
+            Fighter fighter_component(10, 0, 3, 2); // hp, defense, power, speed
+            monster.x = x;
+            monster.y = y;
+            monster.selfchar= 'o';
+            monster.color = orc;
+            monster.colorb = TCODColor::black;
+            monster.h = 4;
+            monster.blocks = true;
+            //monster.name[] = "orc";
+            strcpy(monster.name, "Orc");
+            monster.stats = fighter_component;
+            monster.myai = &orc_ai;
+            monster.alive = true;
+            monster.chase = 0;
+            monster.stuck = 0;
+            monster.bored = 500;
+            monster.boren = false;
+            monster.in_sight = false;
+            monster.combat_move = 6;
+            monster.c_mode = false;
+            monster.speed = 4; // for initiative
+            monvector.push_back(monster);
+            } else {
+                Fighter fighter_component(12, 1, 4, 4); // hp, defense, power, speed
+            monster.x = x;
+            monster.y = y;
+            monster.selfchar= 'T';
+            monster.color = troll;
+            monster.colorb = TCODColor::black;
+            monster.h = 5;  
+            monster.blocks = true;
+            //monster.name[] = "troll";
+            strcpy(monster.name, "Troll");
+            monster.stats = fighter_component;
+            monster.myai = &orc_ai;
+            monster.alive = true;
+            monster.chase = 0;
+            monster.stuck = 0;
+            monster.bored = 500;
+            monster.boren = false;
+            monster.in_sight = false;
+            monster.combat_move = 10;
+            monster.c_mode = false;
+            monster.speed = 8;
+            monvector.push_back(monster);
+            }
+        }
+
+    }
+
+    duh.x = 110; // player set position
+    duh.y = 70;
+    killall = monvector.size();
+}
+
+void place_doors(){
+
+    TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
+
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l){
+            Door door1(l, i, 0);
+            
+            if(wtf->getInt(1, 10, 0) > 5){
+
+            if(!map_array[i * MAP_WIDTH + l].blocked){ // if cell is free
+                if(map_array[i * MAP_WIDTH + (l-1)].blocked && map_array[i * MAP_WIDTH + (l+1)].blocked){ // H walls
+                    if(!map_array[(i+1) * MAP_WIDTH + l].blocked && // S
+                        !map_array[(i+1) * MAP_WIDTH + (l-1)].blocked && // SW
+                        !map_array[(i+2) * MAP_WIDTH + l].blocked && // 2S
+                        !map_array[(i+2) * MAP_WIDTH + (l-1)].blocked ){ // 2SW 
+                        
+                        doors.push_back(door1); // creates the door
+                        map_array[i * MAP_WIDTH + l] = Tile(0,1); // makes cell block LOS
+                    } else if(!map_array[(i+1) * MAP_WIDTH + l].blocked && // S
+                        !map_array[(i+1) * MAP_WIDTH + (l+1)].blocked && // SE
+                        !map_array[(i+2) * MAP_WIDTH + l].blocked && // 2S
+                        !map_array[(i+2) * MAP_WIDTH + (l+1)].blocked){ // 2SE
+                        
+                        doors.push_back(door1);
+                        map_array[i * MAP_WIDTH + l] = Tile(0,1);
+                    } else if(!map_array[(i-1) * MAP_WIDTH + l].blocked && // N
+                        !map_array[(i-1) * MAP_WIDTH + (l-1)].blocked && // NW
+                        !map_array[(i-2) * MAP_WIDTH + l].blocked && // 2N
+                        !map_array[(i-2) * MAP_WIDTH + (l-1)].blocked ){ // 2NW 
+                        
+                        doors.push_back(door1);
+                        map_array[i * MAP_WIDTH + l] = Tile(0,1);
+                    } else if(!map_array[(i-1) * MAP_WIDTH + l].blocked && // N
+                        !map_array[(i-1) * MAP_WIDTH + (l+1)].blocked && // NE
+                        !map_array[(i-2) * MAP_WIDTH + l].blocked && // 2N
+                        !map_array[(i-2) * MAP_WIDTH + (l+1)].blocked){ // 2NE
+                        
+                        doors.push_back(door1);
+                        map_array[i * MAP_WIDTH + l] = Tile(0,1);
+                    }
+                } else if(map_array[(i-1) * MAP_WIDTH + l].blocked && map_array[(i+1) * MAP_WIDTH + l].blocked){ // V walls
+                    if(!map_array[i * MAP_WIDTH + (l+1)].blocked && // E
+                        !map_array[(i+1) * MAP_WIDTH + (l+1)].blocked && // SE
+                        !map_array[i * MAP_WIDTH + (l+2)].blocked && // 2S
+                        !map_array[(i+1) * MAP_WIDTH + (l+2)].blocked ){ // 2SE 
+                        
+                        doors.push_back(door1);
+                        map_array[i * MAP_WIDTH + l] = Tile(0,1);
+                    } else if(!map_array[i * MAP_WIDTH + (l+1)].blocked && // E
+                        !map_array[(i-1) * MAP_WIDTH + (l+1)].blocked && // NE
+                        !map_array[i * MAP_WIDTH + (l+2)].blocked && // 2E
+                        !map_array[(i-1) * MAP_WIDTH + (l+2)].blocked){ // 2NE
+                        
+                        doors.push_back(door1);
+                        map_array[i * MAP_WIDTH + l] = Tile(0,1);
+                    } else if(!map_array[i * MAP_WIDTH + (l-1)].blocked && // W
+                        !map_array[(i+1) * MAP_WIDTH + (l-1)].blocked && // SW
+                        !map_array[i * MAP_WIDTH + (l-2)].blocked && // 2W
+                        !map_array[(i+1) * MAP_WIDTH + (l-2)].blocked ){ // 2SW 
+                        
+                        doors.push_back(door1);
+                        map_array[i * MAP_WIDTH + l] = Tile(0,1);
+                    } else if(!map_array[i * MAP_WIDTH + (l-1)].blocked && // W
+                        !map_array[(i-1) * MAP_WIDTH + (l-1)].blocked && // NW
+                        !map_array[i * MAP_WIDTH + (l-2)].blocked && // 2W
+                        !map_array[(i-1) * MAP_WIDTH + (l-2)].blocked){ // 2NW
+                        
+                        doors.push_back(door1);
+                        map_array[i * MAP_WIDTH + l] = Tile(0,1);
+                    }    
+                }
+            }
+            }
+        }
+    }
+
+}
+
 void make_map(Object_player &duh){
            
     map_array.resize(MAP_HEIGHT * MAP_WIDTH);
@@ -932,6 +1186,8 @@ void make_map(Object_player &duh){
         }
         ++row;
     } // fills map with walls 
+
+    
 
     std::vector<Rect> rooms;
     int num_rooms = 0;
@@ -1085,6 +1341,8 @@ void make_map(Object_player &duh){
 
     killall = monvector.size();
     ++init;
+
+    place_doors();
 }
 
 void set_black(){
@@ -1627,7 +1885,13 @@ void render_all (){
     }
 
     
-
+    for (unsigned int i = 0; i<doors.size(); ++i){
+        if(fov_map->isInFov(doors[i].x,doors[i].y)){
+        con->putChar(doors[i].x, doors[i].y, TCOD_CHAR_CROSS, TCOD_BKGND_SET);
+        con->setCharBackground(doors[i].x, doors[i].y, door_c, TCOD_BKGND_SET);
+        con->setCharForeground(doors[i].x, doors[i].y, TCODColor::black);
+        }
+    }
     
     for (unsigned int i = 0; i<monvector.size(); ++i) {
         if (monvector[i].selfchar == '%')
@@ -2076,8 +2340,17 @@ int handle_keys(Object_player &duh) {
         for (unsigned int i = 0; i < b; ++i) monvector.erase (monvector.begin()+i); // erase monster vector on map regen
         std::cout << " Monster array: " << monvector.size() << std::endl; // 0
 
+        b = doors.size();
+        for (unsigned int i = 0; i < b; ++i) doors.erase (doors.begin()+i); // erase monster vector on map regen
+
         //Sleep(4000);
-        make_map(duh);
+        if (mapmode == 1){
+            make_map(duh);
+            mapmode = 0;
+        } else {
+            make_map2(duh);
+            mapmode = 1;
+        }    
         duh.bloody = 0;
         for (int i = 0; i < MAP_HEIGHT ;++i){
             for (int l = 0; l < MAP_WIDTH ;++l) {
