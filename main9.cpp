@@ -46,7 +46,6 @@ TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "
 
 TCODMap * fov_map = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 
-
 class Tile {
 
 public:
@@ -156,45 +155,11 @@ public: // public should be moved down, but I keep it here for debug messages
         bloody = 0;
     }
 
-/*      bool is_blocked(int x, int y, std::vector<Object> smonvector){
-    if (map_array[y*MAP_WIDTH+x].blocked) return true;
-
-    for (unsigned int i = 0; i<smonvector.size(); ++i){
-        if (smonvector[i].blocks == true && smonvector[i].x == x && smonvector[i].y == y){
-            std::cout << "Monster in the way." << std::endl;
-            return true;
-        }
-       // monvector[i].draw(0);
-    }
-    return false;
-}*/
-
     void move(int dx, int dy, std::vector<Object> smonvector); 
        
-     /*    int tempx = 0;
-        int tempy = 0;
-        tempx = x + dx;
-        tempy = y + dy;
-
-        
-        
-        if (!is_blocked(tempx,tempy,smonvector)){
-            x += dx;
-            y += dy;
-            if (bloody > 0){
-                if (bloody >= map_array[y * MAP_WIDTH + x].bloodyt)
-                map_array[y * MAP_WIDTH + x].bloodyt = bloody;
-            }
-        } else std::cout << "Fuck, it's blocked. " << std::endl;
-
-        if (x >= MAP_WIDTH) {x = MAP_WIDTH-1;std::cout << "No, I'm not stepping into the void." << std::endl;}
-        if (y >= MAP_HEIGHT) {y = MAP_HEIGHT-1;std::cout << "No, I'm not stepping into the void." << std::endl;}
-        if (x <= 0) {x = 0;std::cout << "No, I'm not stepping into the void." << std::endl;}
-        if (y <= 0) {y = 0;std::cout << "No, I'm not stepping into the void." << std::endl;}
-
-        bloody = (map_array[y * MAP_WIDTH + x].bloodyt);
-        if (map_array[y * MAP_WIDTH + x].bloodyt > 1) --map_array[y * MAP_WIDTH + x].bloodyt;
-    }*/ 
+     /* 
+        defined below
+      */ 
 
     bool attack(Object &foe){
         foe.h = foe.h - 1;
@@ -218,14 +183,10 @@ public: // public should be moved down, but I keep it here for debug messages
     ~Object(){} // ?
 };
 
-
-//Object npc(25, 26, '%', TCODColor::yellow, TCODColor::black, 3);
 Object player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5);
 
 std::vector<Object*> myvector;
 std::vector<Object> monvector;
-
-//bool is_blocked(int x, int y, std::vector<Object> smonvector);
 
 bool is_blocked(int x, int y, std::vector<Object> smonvector){
     if (map_array[y*MAP_WIDTH+x].blocked) return true;
@@ -247,8 +208,6 @@ void Object::move(int dx, int dy, std::vector<Object> smonvector) {
         tempx = x + dx;
         tempy = y + dy;
 
-        
-        
         if (!is_blocked(tempx,tempy,smonvector)){
             x += dx;
             y += dy;
@@ -267,7 +226,6 @@ void Object::move(int dx, int dy, std::vector<Object> smonvector) {
         if (map_array[y * MAP_WIDTH + x].bloodyt > 1) --map_array[y * MAP_WIDTH + x].bloodyt;
     }
 
-
 void place_objects(Rect room){
     TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
 
@@ -275,7 +233,6 @@ void place_objects(Rect room){
 
     int x, y;
     Object monster(0, 0, 'i', TCODColor::black, TCODColor::black, 0);
-
 
     for (int i = 0; i < num_mosters; ++i){
         x = wtf->getInt((room.x1+1), (room.x2-1), 0);
@@ -355,8 +312,6 @@ void make_map(Object &duh){
         //Rect *new_room = new Rect(x, y, w, h);
         Rect new_room(x, y, w, h);
 
-        
-        
         std::cout << "new room x y w h: " << x << " " << y << " "  << w << " " << h << std::endl;
 
         bool failed;
@@ -396,36 +351,7 @@ void make_map(Object &duh){
     }
 
     killall = monvector.size();
-
-   // npc.h = npc.h +2; // increases health for every map regeneration
-  //  npc.bloody = 0;
-  //  myvector.push_back(&npc); // resurrects '%'
-
-  //  Rect room1(20, 13, 10, 15);
-  //  Rect room2(50, 18, 10, 15);
-  //  create_room(room1);
-  //  create_room(room2);
-
-  //  create_h_tunnel(25, 55, 23);
-  //  create_v_tunnel(18, 38, 33);
-
-   // duh.x = rooms[0]->center_x;
-   // duh.y = rooms[0]->center_y;
-
-   //npc.x = rooms[6]->center_x;
-   // npc.y = rooms[6]->center_y;
-
-   //  npc.y = 40;
-
-    //map_array[1789].blocked = 1;
-    //map_array[1789].block_sight = 1;
-    //map_array[1790-MAP_WIDTH].blocked = 1;
-    //map_array[1790-MAP_WIDTH].block_sight = 1;
-    //map_array[1790-MAP_WIDTH*2].blocked = 1;
-    //map_array[1790-MAP_WIDTH*2].block_sight = 1;
 }
-
-
 
 void set_black(){
     for (int i = 0; i < MAP_HEIGHT ;++i){
@@ -506,12 +432,43 @@ void render_all (std::vector<Object*> &invector){
 int blx = 0;
 int bly = 0;
 
-// if (map_array[y*MAP_WIDTH+x].blocked) return true;
+int fly_blood_fly_d(int asin, int bsin, int origin, int y, int x){
+    
+    int tile_1 = origin + ((asin*1) * MAP_WIDTH) + (bsin*1);
+    int tile_2 = origin + ((asin*2) * MAP_WIDTH) + (bsin*1);
+    int tile_4 = origin + ((asin*1) * MAP_WIDTH) + (bsin*2);
+    int tile_5 = origin + ((asin*2) * MAP_WIDTH) + (bsin*2);
+    int tile_X = origin + ((asin*y) * MAP_WIDTH) + (bsin*x);
 
-void fly_blood_fly_h(int obx, int oby, int x, int y, int where){
-  }
+    if (map_array[tile_1].blocked || (y == 1 && x == 1)) return tile_1;
+    else if (y < 3 && x < 3) return tile_X;
+    else if ((y == 3 && x == 1) || (y == 3 && x == 2)) 
+        if (map_array[tile_2].blocked) return tile_2;
+        else return tile_X;
+    else if ((y == 1 && x == 3) || (y == 2 && x == 3))
+        if (map_array[tile_4].blocked) return tile_4;
+        else return tile_X;
+    else if (map_array[tile_5].blocked) return tile_5;     
+    else return tile_X;
+}
+
+int fly_blood_fly_h(int asin, int bsin, int origin, int where){
+
+    int tile_B = origin + ((asin*1) * MAP_WIDTH + (bsin*1));
+    int tile_1 = origin + ((asin*2) * MAP_WIDTH + (bsin*2));
+    int tile_2 = origin + ((asin*3) * MAP_WIDTH + (bsin*3));
+    int tile_3 = origin + ((asin*4) * MAP_WIDTH + (bsin*4));
+
+    if (map_array[tile_B].blocked) return tile_B;
+    else if (map_array[tile_1].blocked || where == 1) return tile_1;
+    else if (map_array[tile_2].blocked || where == 2) return tile_2;
+    else return tile_3;
+}
 
 void bloodsplat(Object &cobj){
+
+    int blood = 2;
+
     TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
 
     map_array[cobj.y  * MAP_WIDTH + cobj.x].bloodyt = 6; // center
@@ -536,319 +493,50 @@ void bloodsplat(Object &cobj){
             case 1:
                 sdir = wtf->getInt(1, 3, 0);
                 std::cout << "splat sdir(1-3): " << sdir << std::endl;
-                if ( map_array[(cobj.y-1) * MAP_WIDTH + cobj.x].blocked ){
-                    map_array[(cobj.y-1)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 0 because blocked
-                } else if (map_array[(cobj.y-2) * MAP_WIDTH + cobj.x].blocked){
-                    map_array[(cobj.y-2)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 1 because blocked
-                } else if (sdir == 1){
-                    map_array[(cobj.y-2)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 1 because sdir 1                     
-                } else if (map_array[(cobj.y-3) * MAP_WIDTH + cobj.x].blocked) {
-                    map_array[(cobj.y-3)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 2 because blocked
-                } else if (sdir == 2){
-                    map_array[(cobj.y-3)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 2 because sdir
-                } else {
-                    map_array[(cobj.y-4)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 3 
-                }
-
-
-            
-                                 
-                    
+                map_array[fly_blood_fly_h(-1, 0, (cobj.y*MAP_WIDTH+cobj.x), sdir)]. bloodyt += blood;
+                break;
             case 2:
                 xdir = wtf->getInt(1, 3, 0);
                 ydir = wtf->getInt(1, 3, 0);
                 std::cout << "splat xdir(1-3): " << xdir << " splat ydir(1-3): " << ydir << std::endl;
-
-                if ( map_array[(cobj.y-1) * MAP_WIDTH + (cobj.x+1)].blocked ){
-                    map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                    break; // 1,1 blocked
-                } else if (xdir == 1 && ydir == 1){
-                    map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                    break; // 1,1 defined
-                } else if (xdir < 3 && ydir < 3){
-                    map_array[(cobj.y-ydir)  * MAP_WIDTH + (cobj.x+xdir)].bloodyt += 2;
-                    break; // all 2 cases
-                } else if (ydir == 3 && xdir == 1){ //y vertical
-                    if (map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x+1)].blocked){
-                        map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y-3)  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                        break; // y end
-                    }    
-                } else if (ydir == 1 && xdir == 3){ // x vertical
-                    if (map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x+2)].blocked){
-                        map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x+2)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x+3)].bloodyt += 2;
-                        break; // x end
-                    }    
-                } else if (map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x+2)].blocked){
-                    map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x+2)].bloodyt += 2;
-                    break;
-                } else if (ydir == 3 && xdir == 3){
-                    map_array[(cobj.y-3)  * MAP_WIDTH + (cobj.x+3)].bloodyt += 2;
-                    break; // diagonal end
-                } else if (ydir == 3 && xdir == 2){
-                    if(map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x+1)].blocked){
-                        map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y-3)  * MAP_WIDTH + (cobj.x+2)].bloodyt += 2;
-                        break; // left
-                    }
-                } else if (ydir == 2 && xdir == 3){
-                    if(map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x+2)].blocked){
-                        map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x+2)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x+3)].bloodyt += 2;
-                        break; // right
-                    }
-                }
-                    
-                
-
-
-
-                
-                //map_array[(cobj.y-ydir)  * MAP_WIDTH + (cobj.x+xdir)].bloodyt += 2;
-                //break;
+                map_array[fly_blood_fly_d(-1, 1, (cobj.y*MAP_WIDTH+cobj.x), ydir, xdir)]. bloodyt += blood;
+                break;
             case 3:
                 sdir = wtf->getInt(1, 3, 0);
                 std::cout << "splat sdir(1-3): " << sdir << std::endl;
-                if ( map_array[cobj.y * MAP_WIDTH + (cobj.x+1)].blocked ){
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                    break; // goes to 0 because blocked
-                } else if (map_array[cobj.y * MAP_WIDTH + (cobj.x+2)].blocked){
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x+2)].bloodyt += 2;
-                    break; // goes to 1 because blocked
-                } else if (sdir == 1){
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x+2)].bloodyt += 2;
-                    break; // goes to 1 because sdir 1                     
-                } else if (map_array[cobj.y * MAP_WIDTH + (cobj.x+3)].blocked) {
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x+3)].bloodyt += 2;
-                    break; // goes to 2 because blocked
-                } else if (sdir == 2){
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x+3)].bloodyt += 2;
-                    break; // goes to 2 because sdir
-                } else {
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x+4)].bloodyt += 2;
-                    break; // goes to 3 
-                }
+                map_array[fly_blood_fly_h(0, 1, (cobj.y*MAP_WIDTH+cobj.x), sdir)]. bloodyt += blood;
+                break;
             case 4: 
                 xdir = wtf->getInt(1, 3, 0);
                 ydir = wtf->getInt(1, 3, 0);
                 std::cout << "splat xdir(1-3): " << xdir << " splat ydir(1-3): " << ydir << std::endl;
-
-                if ( map_array[(cobj.y+1) * MAP_WIDTH + (cobj.x+1)].blocked ){
-                    map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                    break; // 1,1 blocked
-                } else if (xdir == 1 && ydir == 1){
-                    map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                    break; // 1,1 defined
-                } else if (xdir < 3 && ydir < 3){
-                    map_array[(cobj.y+ydir)  * MAP_WIDTH + (cobj.x+xdir)].bloodyt += 2;
-                    break; // all 2 cases
-                } else if (ydir == 3 && xdir == 1){ //y vertical
-                    if (map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x+1)].blocked){
-                        map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y+3)  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                        break; // y end
-                    }    
-                } else if (ydir == 1 && xdir == 3){ // x vertical
-                    if (map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x+2)].blocked){
-                        map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x+2)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x+3)].bloodyt += 2;
-                        break; // x end
-                    }    
-                } else if (map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x+2)].blocked){
-                    map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x+2)].bloodyt += 2;
-                    break;
-                } else if (ydir == 3 && xdir == 3){
-                    map_array[(cobj.y+3)  * MAP_WIDTH + (cobj.x+3)].bloodyt += 2;
-                    break; // diagonal end
-                } else if (ydir == 3 && xdir == 2){
-                    if(map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x+1)].blocked){
-                        map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x+1)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y+3)  * MAP_WIDTH + (cobj.x+2)].bloodyt += 2;
-                        break; // left
-                    }
-                } else if (ydir == 2 && xdir == 3){
-                    if(map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x+2)].blocked){
-                        map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x+2)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x+3)].bloodyt += 2;
-                        break; // right
-                    }
-                }
+                map_array[fly_blood_fly_d(1, 1, (cobj.y*MAP_WIDTH+cobj.x), ydir, xdir)]. bloodyt += blood;
+                break;
             case 5:
                 sdir = wtf->getInt(1, 3, 0);
                 std::cout << "splat sdir(1-3): " << sdir << std::endl;
-                if ( map_array[(cobj.y+1) * MAP_WIDTH + cobj.x].blocked ){
-                    map_array[(cobj.y+1)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 0 because blocked
-                } else if (map_array[(cobj.y+2) * MAP_WIDTH + cobj.x].blocked){
-                    map_array[(cobj.y+2)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 1 because blocked
-                } else if (sdir == 1){
-                    map_array[(cobj.y+2)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 1 because sdir 1                     
-                } else if (map_array[(cobj.y+3) * MAP_WIDTH + cobj.x].blocked) {
-                    map_array[(cobj.y+3)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 2 because blocked
-                } else if (sdir == 2){
-                    map_array[(cobj.y+3)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 2 because sdir
-                } else {
-                    map_array[(cobj.y+4)  * MAP_WIDTH + cobj.x].bloodyt += 2;
-                    break; // goes to 3 
-                }
+                map_array[fly_blood_fly_h(1, 0, (cobj.y*MAP_WIDTH+cobj.x), sdir)]. bloodyt += blood;
+                break;
             case 6:
                 xdir = wtf->getInt(1, 3, 0);
                 ydir = wtf->getInt(1, 3, 0);
                 std::cout << "splat xdir(1-3): " << xdir << " splat ydir(1-3): " << ydir << std::endl;
-
-                if ( map_array[(cobj.y+1) * MAP_WIDTH + (cobj.x-1)].blocked ){
-                    map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                    break; // 1,1 blocked
-                } else if (xdir == 1 && ydir == 1){
-                    map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                    break; // 1,1 defined
-                } else if (xdir < 3 && ydir < 3){
-                    map_array[(cobj.y+ydir)  * MAP_WIDTH + (cobj.x-xdir)].bloodyt += 2;
-                    break; // all 2 cases
-                } else if (ydir == 3 && xdir == 1){ //y vertical
-                    if (map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x-1)].blocked){
-                        map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y+3)  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                        break; // y end
-                    }    
-                } else if (ydir == 1 && xdir == 3){ // x vertical
-                    if (map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x-2)].blocked){
-                        map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x-2)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x-3)].bloodyt += 2;
-                        break; // x end
-                    }    
-                } else if (map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x-2)].blocked){
-                    map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x-2)].bloodyt += 2;
-                    break;
-                } else if (ydir == 3 && xdir == 3){
-                    map_array[(cobj.y+3)  * MAP_WIDTH + (cobj.x-3)].bloodyt += 2;
-                    break; // diagonal end
-                } else if (ydir == 3 && xdir == 2){
-                    if(map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x-1)].blocked){
-                        map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y+3)  * MAP_WIDTH + (cobj.x-2)].bloodyt += 2;
-                        break; // left
-                    }
-                } else if (ydir == 2 && xdir == 3){
-                    if(map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x-2)].blocked){
-                        map_array[(cobj.y+1)  * MAP_WIDTH + (cobj.x-2)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y+2)  * MAP_WIDTH + (cobj.x-3)].bloodyt += 2;
-                        break; // right
-                    }
-                }
+                map_array[fly_blood_fly_d(1, -1, (cobj.y*MAP_WIDTH+cobj.x), ydir, xdir)]. bloodyt += blood;
+                break;
             case 7:
                 sdir = wtf->getInt(1, 3, 0);
                 std::cout << "splat sdir(1-3): " << sdir << std::endl;
-                if ( map_array[cobj.y * MAP_WIDTH + (cobj.x-1)].blocked ){
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                    break; // goes to 0 because blocked
-                } else if (map_array[cobj.y * MAP_WIDTH + (cobj.x-2)].blocked){
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x-2)].bloodyt += 2;
-                    break; // goes to 1 because blocked
-                } else if (sdir == 1){
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x-2)].bloodyt += 2;
-                    break; // goes to 1 because sdir 1                     
-                } else if (map_array[cobj.y * MAP_WIDTH + (cobj.x-3)].blocked) {
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x-3)].bloodyt += 2;
-                    break; // goes to 2 because blocked
-                } else if (sdir == 2){
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x-3)].bloodyt += 2;
-                    break; // goes to 2 because sdir
-                } else {
-                    map_array[cobj.y  * MAP_WIDTH + (cobj.x-4)].bloodyt += 2;
-                    break; // goes to 3 
-                } 
+                map_array[fly_blood_fly_h(0, -1, (cobj.y*MAP_WIDTH+cobj.x), sdir)]. bloodyt += blood;
+                break;
             case 8:
                 xdir = wtf->getInt(1, 3, 0);
                 ydir = wtf->getInt(1, 3, 0);
                 std::cout << "splat xdir(1-3): " << xdir << " splat ydir(1-3): " << ydir << std::endl;
-
-                if ( map_array[(cobj.y-1) * MAP_WIDTH + (cobj.x-1)].blocked ){
-                    map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                    break; // 1,1 blocked
-                } else if (xdir == 1 && ydir == 1){
-                    map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                    break; // 1,1 defined
-                } else if (xdir < 3 && ydir < 3){
-                    map_array[(cobj.y-ydir)  * MAP_WIDTH + (cobj.x-xdir)].bloodyt += 2;
-                    break; // all 2 cases
-                } else if (ydir == 3 && xdir == 1){ //y vertical
-                    if (map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x-1)].blocked){
-                        map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y-3)  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                        break; // y end
-                    }    
-                } else if (ydir == 1 && xdir == 3){ // x vertical
-                    if (map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x-2)].blocked){
-                        map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x-2)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x-3)].bloodyt += 2;
-                        break; // x end
-                    }    
-                } else if (map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x-2)].blocked){
-                    map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x-2)].bloodyt += 2;
-                    break;
-                } else if (ydir == 3 && xdir == 3){
-                    map_array[(cobj.y-3)  * MAP_WIDTH + (cobj.x-3)].bloodyt += 2;
-                    break; // diagonal end
-                } else if (ydir == 3 && xdir == 2){
-                    if(map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x-1)].blocked){
-                        map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x-1)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y-3)  * MAP_WIDTH + (cobj.x-2)].bloodyt += 2;
-                        break; // left
-                    }
-                } else if (ydir == 2 && xdir == 3){
-                    if(map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x-2)].blocked){
-                        map_array[(cobj.y-1)  * MAP_WIDTH + (cobj.x-2)].bloodyt += 2;
-                        break;
-                    } else {
-                        map_array[(cobj.y-2)  * MAP_WIDTH + (cobj.x-3)].bloodyt += 2;
-                        break; // right
-                    }
-                }
-            default:
+                map_array[fly_blood_fly_d(-1, -1, (cobj.y*MAP_WIDTH+cobj.x), ydir, xdir)]. bloodyt += blood;
                 break;
+            default:
                 std::cout << "splat sdir(none): " << dir << std::endl;
+                break;
         }
         --fly;
     }
@@ -857,7 +545,6 @@ void bloodsplat(Object &cobj){
 short int bloodycount = 0;
 int game_state = 0;
 int player_action = 0;
-
 
 void player_move_attack(int dx, int dy){
     
@@ -873,7 +560,7 @@ void player_move_attack(int dx, int dy){
             //*target = &monvector[i];
             target = i;
             is_it = true;
-                    }
+        }
     }
 
     if (is_it){
@@ -939,12 +626,12 @@ int handle_keys(Object &duh) {
         make_map(duh);
         duh.bloody = 0;
         for (int i = 0; i < MAP_HEIGHT ;++i){
-        for (int l = 0; l < MAP_WIDTH ;++l) {
-            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+            for (int l = 0; l < MAP_WIDTH ;++l) {
+                fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
                         l].blocked));
-            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+                //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+            }
         }
-    }
         fov_recompute = true;
         set_black();
     }
@@ -973,13 +660,12 @@ int handle_keys(Object &duh) {
                 map_array[(duh.y - 1)*MAP_WIDTH +duh.x].block_sight = 0;
                 mesg->clear();
                 for (int i = 0; i < MAP_HEIGHT ;++i){
-        for (int l = 0; l < MAP_WIDTH ;++l) {
-            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
-                        l].blocked));
-            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
-        }
-    }
-
+                    for (int l = 0; l < MAP_WIDTH ;++l) {
+                            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                            l].blocked));
+                            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+                    }
+                }
                 fov_recompute = true;
                 return false;
             }
@@ -989,13 +675,12 @@ int handle_keys(Object &duh) {
                 map_array[(duh.y + 1)*MAP_WIDTH +duh.x].block_sight = 0;
                 mesg->clear();
                 for (int i = 0; i < MAP_HEIGHT ;++i){
-        for (int l = 0; l < MAP_WIDTH ;++l) {
-            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                    for (int l = 0; l < MAP_WIDTH ;++l) {
+                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
                         l].blocked));
-            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
-        }
-    }
-
+                        //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+                    }
+                }
                 fov_recompute = true;
                 return false; 
             }
@@ -1005,13 +690,12 @@ int handle_keys(Object &duh) {
                 map_array[duh.y*MAP_WIDTH +(duh.x -1)].block_sight = 0;
                 mesg->clear();
                 for (int i = 0; i < MAP_HEIGHT ;++i){
-        for (int l = 0; l < MAP_WIDTH ;++l) {
-            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                    for (int l = 0; l < MAP_WIDTH ;++l) {
+                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
                         l].blocked));
-            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
-        }
-    }
-
+                        //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+                    }
+                }
                 fov_recompute = true;
                 return false;
             }
@@ -1021,13 +705,12 @@ int handle_keys(Object &duh) {
                 map_array[duh.y*MAP_WIDTH +(duh.x + 1)].block_sight = 0;
                 mesg->clear();
                 for (int i = 0; i < MAP_HEIGHT ;++i){
-        for (int l = 0; l < MAP_WIDTH ;++l) {
-            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                    for (int l = 0; l < MAP_WIDTH ;++l) {
+                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
                         l].blocked));
-            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
-        }
-    }
-
+                        //map_array[row * MAP_WIDTH + l] = Tile(1,1);
+                    }
+                }
                 fov_recompute = true;
                 return false;
             }
@@ -1037,37 +720,35 @@ int handle_keys(Object &duh) {
     // end of KEY DIG cycle
 
     if (TCODConsole::isKeyPressed(TCODK_UP)){
-                   --bloodycount;
-            --duh.bloody;  
-            player_move_attack(0, -1);
-            std::cout << " Monster array: " << myvector.size() << std::endl;
-
-           }
+        --bloodycount;
+        --duh.bloody;  
+        player_move_attack(0, -1);
+        std::cout << " Monster array: " << myvector.size() << std::endl;
+    }
 
     // end KEY UP cycle
 
     else if (TCODConsole::isKeyPressed(TCODK_DOWN)){
-                    --bloodycount;
-            --duh.bloody; 
-            player_move_attack(0, 1);
-        
+        --bloodycount;
+        --duh.bloody; 
+        player_move_attack(0, 1);
     }
 
     // end KEY DOWN cycle
 
     else if (TCODConsole::isKeyPressed(TCODK_LEFT)){
-                   --bloodycount;
-            --duh.bloody;   
-            player_move_attack(-1, 0);
-           }
+        --bloodycount;
+        --duh.bloody;   
+        player_move_attack(-1, 0);
+    }
 
     // end KEY LEFT cycle
 
     else if (TCODConsole::isKeyPressed(TCODK_RIGHT)){
-                   --bloodycount; 
-            --duh.bloody; 
-            player_move_attack(1, 0);
-           }
+        --bloodycount; 
+        --duh.bloody; 
+        player_move_attack(1, 0);
+    }
 
     else return no_turn;
     
@@ -1075,7 +756,6 @@ int handle_keys(Object &duh) {
     }
     std::cout << "player.x: " << duh.x << " player.y: " << duh.y << std::endl; 
     return 0;
-   
 }    
 
 int main() {
@@ -1132,8 +812,6 @@ int main() {
         if (killall > 0){
             TCODConsole::root->print(win_x/2,win_y-1,"%cKILL%c all the '%ctrolls%c' and '%corcs%c'",
                 TCOD_COLCTRL_1,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP,TCOD_COLCTRL_3,TCOD_COLCTRL_STOP);
-        //TCODConsole::root->print(win_x/2,win_y-2,"String with a %c%c%c%c%c%c%c%cred%c word.",
-//         TCOD_COLCTRL_FORE_RGB,255,1,1,TCOD_COLCTRL_BACK_RGB,1,1,255,TCOD_COLCTRL_STOP);
         }
         else TCODConsole::root->print(win_x/2,win_y-1,"%cALL KILLED!%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
        
