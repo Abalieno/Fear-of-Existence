@@ -56,6 +56,8 @@ bool no_combat = false; // disable combat mode
 TCODConsole *con = new TCODConsole(MAP_WIDTH, MAP_HEIGHT);
 TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
 TCODConsole *load = new TCODConsole(win_x, win_y);  // load screen
+TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT));  // combat UI panel
+int BAR_WIDTH = 20;
 
 TCODMap * fov_map = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 TCODMap * fov_map_mons = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
@@ -587,7 +589,7 @@ void place_objects(Rect room){
             monster.in_sight = false;
             monster.combat_move = 6;
             monster.c_mode = false;
-            monster.speed = 4;
+            monster.speed = 4; // for initiative
             }
         else {
             Fighter fighter_component(12, 1, 4, 4); // hp, defense, power, speed
@@ -802,6 +804,30 @@ void set_black(){
         }
     } 
 } // fill "con" with black
+
+//def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
+void render_bar(int x, int y, int total_width, const char *name, 
+        int value, int maximum, TCODColor bar_color, TCODColor back_color){
+
+    int bar_width = int(float(value) / maximum * total_width);
+
+    panel->setDefaultBackground(back_color);
+    panel->rect(x, y, total_width, 1, false,TCOD_BKGND_SET);
+
+    //std::cout << "BAR " << bar_width << std::endl;
+    //std::cout << "value " << value << std::endl;
+    //std::cout << "maximum " << maximum << std::endl;
+    //std::cout << "total_width " << total_width << std::endl;
+    panel->setDefaultBackground(bar_color);
+    if (bar_width > 0) 
+        panel->rect(x, y, bar_width, 1, false,TCOD_BKGND_SET);
+ 
+    panel->setDefaultForeground(TCODColor::white);
+    panel->setAlignment(TCOD_CENTER);
+    panel->print((x + total_width) / 2, y, "%s: %d/%d",name , value, maximum);
+    panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+
+}
 
 void render_all (){
 
@@ -1684,7 +1710,12 @@ int main() {
 
             TCODConsole::root->setAlignment(TCOD_CENTER);
             TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
-            TCODConsole::root->print(win_x/2,win_y-5,"%cSTART COMBAT TURN, Press any key%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+            TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::black);
+            TCODConsole::root->print(win_x/2,win_y-6,"%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",TCOD_COLCTRL_2,TCOD_CHAR_NW,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_NE,TCOD_COLCTRL_STOP);
+            TCODConsole::root->print(win_x/2,win_y-5,"%c%c<%c%cSTART COMBAT TURN, Press any key%c%c>%c%c"
+                    ,TCOD_COLCTRL_2,TCOD_CHAR_VLINE,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_CHAR_VLINE,TCOD_COLCTRL_STOP);
+            TCODConsole::root->print(win_x/2,win_y-4,"%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",TCOD_COLCTRL_2,TCOD_CHAR_SW,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_SE,TCOD_COLCTRL_STOP);
+            
 
             fov_recompute = true;
             render_all();
@@ -1709,16 +1740,44 @@ int main() {
                         TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
                         TCODConsole::root->print(win_x-2, MAP_HEIGHT+1, "HP: %c%d%c/%d",TCOD_COLCTRL_1, 
                             player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
-                        if (player.combat_move < 4) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
-                        else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-                        TCODConsole::root->print(win_x-2, MAP_HEIGHT+2, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
-                            player.combat_move,TCOD_COLCTRL_STOP);
 
                         TCODConsole::root->setAlignment(TCOD_CENTER);
                         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
                         TCODConsole::root->print(win_x/2,win_y-5,"%cPLAYER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
 
-                        
+                        TCODConsole::root->setAlignment(TCOD_RIGHT);
+            TCODConsole::root->print(win_x-1, 3, "Initiative list");
+
+            //unsigned int player_own = player.initiative;
+
+            for (unsigned int f = i; f<monsters.size(); ++f) {
+                if (f == (player_own - 1)){
+                TCODConsole::root->print(win_x-2, 5+ (f), "Player <");
+
+                    } else {
+                    for (unsigned int b = 0; b<monvector.size(); ++b) {
+                        unsigned int monster_ini =  monvector[b].initiative;
+
+                        // MONSTER BLOCK
+                        // MONSTER BLOCK
+                        if ((f+1) == monster_ini){
+                            TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+                TCODConsole::root->print(win_x-2, 5+ (f), "%s",monvector[b].name);
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                        }
+                    }
+                    }
+            }
+
+                        panel->clear();
+                        render_bar(1, 1, BAR_WIDTH, "HP", player.stats.hp, player.stats.max_hp,
+        TCODColor::lightRed, TCODColor::darkerRed);
+                        panel->setAlignment(TCOD_LEFT);
+                        if (player.combat_move < 4) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
+                        else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+                        panel->print(1, 2, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
+                            player.combat_move,TCOD_COLCTRL_STOP);
+                        TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT);
 
                         TCODConsole::flush(); // this updates the screen
 
@@ -1764,8 +1823,6 @@ int main() {
                             }
                         }
 
-                        
-
                         //block for combat UI
                         TCODConsole::root->setAlignment(TCOD_RIGHT);
                         TCODConsole::root->print(win_x-1, 0, "Mode-C");
@@ -1786,6 +1843,41 @@ int main() {
                         TCODConsole::root->setAlignment(TCOD_CENTER);
                         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
                         TCODConsole::root->print(win_x/2,win_y-5,"%cPLAYER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+
+                        TCODConsole::root->setAlignment(TCOD_RIGHT);
+            TCODConsole::root->print(win_x-1, 3, "Initiative list");
+
+            //unsigned int player_own = player.initiative;
+
+            for (unsigned int f = i; f<monsters.size(); ++f) {
+                if (f == (player_own - 1)){
+                TCODConsole::root->print(win_x-2, 5+ (f), "Player <");
+
+                    } else {
+                    for (unsigned int b = 0; b<monvector.size(); ++b) {
+                        unsigned int monster_ini =  monvector[b].initiative;
+
+                        // MONSTER BLOCK
+                        // MONSTER BLOCK
+                        if ((f+1) == monster_ini){
+                            TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+                TCODConsole::root->print(win_x-2, 5+ (f), "%s",monvector[b].name);
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                        }
+                    }
+                    }
+            }
+
+                        panel->clear();
+                        render_bar(1, 1, BAR_WIDTH, "HP", player.stats.hp, player.stats.max_hp,
+        TCODColor::lightRed, TCODColor::darkerRed);
+                        panel->setAlignment(TCOD_LEFT);
+                        if (player.combat_move < 4) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
+                        else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+                        panel->print(1, 2, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
+                            player.combat_move,TCOD_COLCTRL_STOP);
+                        TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT);
+                        //TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
 
                         TCODConsole::flush(); // this updates the screen
                     }
@@ -1816,6 +1908,7 @@ int main() {
                             std::cout << "monster doing something" << std::endl;
                             int ctl = 0;
                             while (monvector[b].combat_move > 0){
+                                std::cout << "monster move: " << monvector[b].combat_move;
                                 if (monvector[b].myai->take_turn(monvector[b], player, monvector[b].pl_x,
                                         monvector[b].pl_y,seehere) ) render_all();
 
@@ -1825,7 +1918,7 @@ int main() {
                                     goto jump;
                                 } else {
                                     //player.move(m_x, m_y, monvector);
-                                    fov_recompute = true;
+                                    //fov_recompute = true; // disables monster trail
                                 }
 
                                 if (ctl > 1){
@@ -1979,8 +2072,8 @@ int main() {
         // recuperates turns off combat
         for (unsigned int i = 0; i<monvector.size(); ++i) {
             if (monvector[i].alive){
-                if(monvector[i].color == orc && monvector[i].combat_move < 6) ++monvector[i].combat_move;
-                else if (monvector[i].combat_move < 10) ++monvector[i].combat_move;
+                if((monvector[i].color == orc) && (monvector[i].combat_move < 6)) ++monvector[i].combat_move;
+                else if (monvector[i].color == troll && monvector[i].combat_move < 10) ++monvector[i].combat_move;
             }    
         }    
         if(player.combat_move < 8) ++player.combat_move; 
