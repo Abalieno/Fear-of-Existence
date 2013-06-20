@@ -13,7 +13,7 @@ const int MAP_HEIGHT = 45;
 //parameters for dungeon generator
 int ROOM_MAX_SIZE = 10;
 int ROOM_MIN_SIZE = 6;
-int MAX_ROOMS = 30;
+int MAX_ROOMS = 45;
 
 TCODColor color_dark_wall(0, 0, 100);
 TCODColor color_dark_ground(50, 50, 150);
@@ -23,24 +23,24 @@ TCODColor blood2(160, 0, 0);
 TCODColor blood3(120, 0, 0);
 TCODColor blood4(100, 0, 0);
 
-TCODConsole *con = new TCODConsole(win_x, win_y);
-TCODConsole *mesg = new TCODConsole(33, 3);
+TCODConsole *con = new TCODConsole(80, 45);
+TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
 
 class Tile {
 
 public:
 
-    int blocked;
-    int block_sight;
-    int bloodyt;
+    bool blocked;
+    bool block_sight;
+    int bloodyt; // amount of blood on tile
 
-    Tile() { blocked = 0; block_sight = 0; bloodyt = 0; }
+    Tile() { blocked = false; block_sight = false; bloodyt = 0; }
 
     Tile(int isblocked, int isblock_sight){
-        bloodyt = false;
+        bloodyt = 0;
         blocked = isblocked;
         block_sight = isblock_sight;
-        if (blocked) block_sight = 1;
+        if (blocked) block_sight = true;
     }
 };
 
@@ -65,7 +65,7 @@ public:
     }    
 
     void center(){
-
+        // already set variables into class
     }
 
     bool intersect(Rect &other){
@@ -128,6 +128,7 @@ public: // public should be moved down, but I keep it here for debug messages
         x += dx;
         y += dy;
         if (bloody > 0){
+            if (bloody >= map_array[y * MAP_WIDTH + x].bloodyt)
             map_array[y * MAP_WIDTH + x].bloodyt = bloody;
         }
         
@@ -163,12 +164,12 @@ public: // public should be moved down, but I keep it here for debug messages
     ~Object(){} // ?
 };
 
-
-
 Object npc(25, 26, '%', TCODColor::yellow, TCODColor::black, 3);
+std::vector<Object*> myvector;
 
 void make_map(Object &duh){
-           map_array.resize(MAP_HEIGHT * MAP_WIDTH);
+           
+    map_array.resize(MAP_HEIGHT * MAP_WIDTH);
         
     int row = 0;
     
@@ -181,14 +182,15 @@ void make_map(Object &duh){
         ++row;
     }
 
-     std::vector<Rect*> rooms;
+    std::vector<Rect*> rooms;
 
+    int s = 0;
 
     for (int r = 0; r <= MAX_ROOMS; ++r){
 
         TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
 
-         //random width and height
+        //random width and height
         int w = wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
         int h = wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
         //random position without going out of the boundaries of the map
@@ -205,12 +207,23 @@ void make_map(Object &duh){
 
         if (!failed){
             create_room(new_room);
+            if (s == 0){
+            duh.x = new_room.center_x;
+            duh.y = new_room.center_y; // new player coordinates from room 0
+            }
+            else    {
+            npc.x = new_room.center_x;
+            npc.y = new_room.center_y; // new npc coordinates from whatever room
+            }
         }
-
+        ++s;
     }
 
-    
-    //  Rect room1(20, 13, 10, 15);
+    npc.h = npc.h +2;
+    npc.bloody = 0;
+    myvector.push_back(&npc); // resurrects '%'
+
+  //  Rect room1(20, 13, 10, 15);
   //  Rect room2(50, 18, 10, 15);
   //  create_room(room1);
   //  create_room(room2);
@@ -218,10 +231,13 @@ void make_map(Object &duh){
   //  create_h_tunnel(25, 55, 23);
   //  create_v_tunnel(18, 38, 33);
 
-    duh.x = 25;
-    duh.y = 23;
+   // duh.x = rooms[0]->center_x;
+   // duh.y = rooms[0]->center_y;
 
-    //  npc.y = 40;
+   //npc.x = rooms[6]->center_x;
+   // npc.y = rooms[6]->center_y;
+
+   //  npc.y = 40;
 
     //map_array[1789].blocked = 1;
     //map_array[1789].block_sight = 1;
@@ -230,8 +246,6 @@ void make_map(Object &duh){
     //map_array[1790-MAP_WIDTH*2].blocked = 1;
     //map_array[1790-MAP_WIDTH*2].block_sight = 1;
 }
-
-std::vector<Object*> myvector;
 
 void render_all (std::vector<Object*> &invector){
 
@@ -244,13 +258,14 @@ void render_all (std::vector<Object*> &invector){
         for (int l = 0; l < MAP_WIDTH ;++l){
             wall = map_array[row * MAP_WIDTH + l].blocked;
             isbloody = map_array[row * MAP_WIDTH + l].bloodyt;
-            if (wall){             con->putChar(l, i, '#', TCOD_BKGND_SET);
-con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
-
+            if (wall){             
+                con->putChar(l, i, '#', TCOD_BKGND_SET);
+                con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
+                con->setCharForeground(l, i, color_dark_wall);
             }
             else {
                 con->putChar(l, i, '.', TCOD_BKGND_SET);
-
+                con->setCharForeground(l, i, TCODColor::white);
                 con->setCharBackground(l, i, color_dark_ground, TCOD_BKGND_SET);
             }
             if (isbloody > 0){
@@ -267,6 +282,86 @@ con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
     for (unsigned int i = 0; i<invector.size(); ++i) invector[i]->draw(0);
     
     TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
+}
+
+void bloodsplat(Object &cobj){
+    TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
+
+    map_array[cobj.y  * MAP_WIDTH + cobj.x].bloodyt = 6; // center
+
+    int notone = wtf->getInt(1, 4, 0);
+    if (notone != 1) map_array[(cobj.y-1)  * MAP_WIDTH + cobj.x].bloodyt = 3;
+    if (notone != 2) map_array[(cobj.y+1)  * MAP_WIDTH + cobj.x].bloodyt = 3;
+    if (notone != 3) map_array[cobj.y  * MAP_WIDTH + (cobj.x+1)].bloodyt = 3;
+    if (notone != 4) map_array[cobj.y  * MAP_WIDTH + (cobj.x-1)].bloodyt = 3; // cross
+
+    short int fly = 0;
+    fly = wtf->getInt(1, 5, 0);
+    std::cout << "splats number(1-5): " << fly << std::endl;
+
+    while (fly > 0){
+        int dir = wtf->getInt(1, 8, 0);
+        std::cout << "splat dir(1-8): " << dir << std::endl;
+        int sdir = 0;
+        int xdir = 0;
+        int ydir = 0;
+        switch (dir){ // flying blood spatter
+            case 1:
+                sdir = wtf->getInt(1, 2, 0);
+                std::cout << "splat sdir(1-2): " << sdir << std::endl;
+                if (sdir == 1) map_array[(cobj.y-2)  * MAP_WIDTH + cobj.x].bloodyt = 2;
+                else map_array[(cobj.y-3)  * MAP_WIDTH + cobj.x].bloodyt = 2;    
+                break;
+            case 2:
+                xdir = wtf->getInt(1, 3, 0);
+                ydir = wtf->getInt(1, 3, 0);
+                std::cout << "splat xdir(1-3): " << xdir << " splat ydir(1-3): " << ydir << std::endl;
+                map_array[(cobj.y-ydir)  * MAP_WIDTH + (cobj.x+xdir)].bloodyt = 2;
+                break;
+            case 3:
+                sdir = wtf->getInt(1, 2, 0);
+                std::cout << "splat sdir(1-2): " << sdir << std::endl;
+                if (sdir == 1) map_array[cobj.y  * MAP_WIDTH + (cobj.x+2)].bloodyt = 2;
+                else map_array[cobj.y  * MAP_WIDTH + (cobj.x+3)].bloodyt = 2;
+                break;
+            case 4: 
+                xdir = wtf->getInt(1, 3, 0);
+                ydir = wtf->getInt(1, 3, 0);
+                std::cout << "splat xdir(1-3): " << xdir << " splat ydir(1-3): " << ydir << std::endl;
+                map_array[(cobj.y+ydir)  * MAP_WIDTH + (cobj.x+xdir)].bloodyt = 2;
+                break;
+            case 5:
+                sdir = wtf->getInt(1, 2, 0);
+                std::cout << "splat sdir(1-2): " << sdir << std::endl;
+                if (sdir == 1) map_array[(cobj.y+2)  * MAP_WIDTH + cobj.x].bloodyt = 2;
+                else map_array[(cobj.y+3)  * MAP_WIDTH + cobj.x].bloodyt = 2;
+                break;
+            case 6:
+                xdir = wtf->getInt(1, 3, 0);
+                ydir = wtf->getInt(1, 3, 0);
+                std::cout << "splat xdir(1-3): " << xdir << " splat ydir(1-3): " << ydir << std::endl;
+                map_array[(cobj.y+ydir)  * MAP_WIDTH + (cobj.x-xdir)].bloodyt = 2;
+                break;
+            case 7:
+                sdir = wtf->getInt(1, 2, 0);
+                std::cout << "splat sdir(1-2): " << sdir << std::endl;
+                if (sdir == 1) map_array[cobj.y  * MAP_WIDTH + (cobj.x-2)].bloodyt = 2;
+                else map_array[cobj.y  * MAP_WIDTH + (cobj.x-3)].bloodyt = 2;
+                break;
+            case 8:
+                xdir = wtf->getInt(1, 3, 0);
+                ydir = wtf->getInt(1, 3, 0);
+                std::cout << "splat xdir(1-3): " << xdir << " splat ydir(1-3): " << ydir << std::endl;
+                map_array[(cobj.y-ydir)  * MAP_WIDTH + (cobj.x-xdir)].bloodyt = 2;
+                break;
+            default:
+                break;
+                std::cout << "splat sdir(none): " << dir << std::endl;
+        }
+        --fly;
+    }
+       
+
 }
 
 short int bloodycount = 0;
@@ -286,53 +381,25 @@ bool handle_keys(Object &duh) {
 
     if ( key.c == 'r' ){
         make_map(duh);
-        std::vector<Rect*> rooms;
-   for (int r = 0; r <= MAX_ROOMS; ++r){
-
-        TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
-
-         //random width and height
-        int w = wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
-        int h = wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
-        //random position without going out of the boundaries of the map
-        int x = wtf->getInt( 0, MAP_WIDTH - w - 1,0);
-        int y = wtf->getInt( 0, MAP_HEIGHT - h - 1,0);
-
-        Rect new_room(x, y, w, h);
-
-        bool failed = false;
-
-        for (unsigned int i = 0; i<rooms.size(); ++i){
-            if (new_room.intersect(*rooms[i])){ failed = true; break;}
-        }   
-
-        if (!failed){
-            create_room(new_room);
-        }
-
-    }
+        duh.bloody = 0;
 
 
     }
 
     if ( key.c == 'p' ){
         TCODConsole::root->clear();
-
-
         mesg->setAlignment(TCOD_LEFT);
         mesg->setDefaultForeground(TCODColor::white);
         mesg->setDefaultBackground(TCODColor::black);
         mesg->print(1, 1, "Give a direction to dig dungeon");
         myvector[1]->draw(0);
        
-        //x1 <= other.x2 && x2 >= other.x1 && y1 <= other.y2 && y2 >= other.y1
-        if(!(duh.y > 39 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
+        if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
         else TCODConsole::blit(mesg,0,0,33,3,con,46,1);
 
-                TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
+        TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
 
         TCODConsole::flush();
-        //Sleep(2000);
         while (!mycase_p){
             TCODConsole::waitForKeypress(true);
             if (TCODConsole::isKeyPressed(TCODK_UP)){ 
@@ -366,28 +433,34 @@ bool handle_keys(Object &duh) {
         }
     }
 
-    // end of KEY P cycle
+    // end of KEY DIG cycle
 
     if (TCODConsole::isKeyPressed(TCODK_UP)){
         if(npc.x == duh.x && npc.y == duh.y - 1) { // checks existence of particular object
             if (duh.attack(npc)){
-                myvector.erase (myvector.begin()); 
-                map_array[npc.y  * MAP_WIDTH + npc.x].bloodyt = 6;
+                myvector.erase (myvector.begin()+1); 
+                bloodsplat(npc);
                 bloodycount = 5;
                 npc.x=-365;
-                npc.y=-365; // teleport out of map        
+                npc.y=-365; // teleport out of map   
+                duh.move(0, 0); // updates player position so feet get bloody
             }
-        else {
-            TCODConsole::root->clear();
-            npc.colorb = TCODColor::red;
-            npc.draw(1);
-            con->print(1, 43, "Hit!");
-            TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
-            TCODConsole::flush();
-            Sleep(200); // shitty way for attack "animation", uses windows.h
-            npc.colorb = color_dark_ground;
-            con->clear();
-        }
+            else {
+                TCODConsole::root->clear();
+                mesg->setAlignment(TCOD_LEFT);
+                mesg->setDefaultForeground(TCODColor::yellow);
+                mesg->setDefaultBackground(TCODColor::black);
+                npc.colorb = TCODColor::red;
+                npc.draw(1);
+                mesg->print(1, 1, "Hit!");
+                if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
+                else TCODConsole::blit(mesg,0,0,33,3,con,46,1);
+                TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
+                TCODConsole::flush();
+                Sleep(200); // shitty way for attack "animation", uses windows.h
+                npc.colorb = color_dark_ground;
+                con->clear();
+            }
         }
     else  {
         --bloodycount;
@@ -401,24 +474,30 @@ bool handle_keys(Object &duh) {
     else if (TCODConsole::isKeyPressed(TCODK_DOWN)){
         if(npc.x == duh.x && npc.y == duh.y + 1){
             if (duh.attack(npc)){ 
-                myvector.erase (myvector.begin()); 
-                map_array[npc.y  * MAP_WIDTH + npc.x].bloodyt = 6;
+                myvector.erase (myvector.begin()+1); 
+                bloodsplat(npc); 
                 bloodycount = 5;
                 npc.x=-365;
                 npc.y=-365;
+                duh.move(0, 0);
             }
             else {
                 TCODConsole::root->clear();
+                mesg->setAlignment(TCOD_LEFT);
+                mesg->setDefaultForeground(TCODColor::yellow);
+                mesg->setDefaultBackground(TCODColor::black);
                 npc.colorb = TCODColor::red;
                 npc.draw(1);
-                con->print(1, 43, "Hit!");
+                mesg->print(1, 1, "Hit!");
+                if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
+                else TCODConsole::blit(mesg,0,0,33,3,con,46,1);
                 TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
                 TCODConsole::flush();
                 Sleep(200);
                 npc.colorb = color_dark_ground;
                 con->clear();
             }
-            }
+        }
         else { 
             --bloodycount;
             --duh.bloody; 
@@ -431,17 +510,23 @@ bool handle_keys(Object &duh) {
     else if (TCODConsole::isKeyPressed(TCODK_LEFT)){
         if(npc.x == duh.x - 1 && npc.y == duh.y ){
             if (duh.attack(npc)){
-                myvector.erase (myvector.begin()); 
-                map_array[npc.y  * MAP_WIDTH + npc.x].bloodyt = 6;
+                myvector.erase (myvector.begin()+1); 
+                bloodsplat(npc);
                 bloodycount = 5;
                 npc.x=-365;
                 npc.y=-365;
+                duh.move(0, 0);
             }
             else {
                 TCODConsole::root->clear();
+                mesg->setAlignment(TCOD_LEFT);
+                mesg->setDefaultForeground(TCODColor::yellow);
+                mesg->setDefaultBackground(TCODColor::black);
                 npc.colorb = TCODColor::red;
                 npc.draw(1);
-                con->print(1, 43, "Hit!");
+                mesg->print(1, 1, "Hit!");
+                if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
+                else TCODConsole::blit(mesg,0,0,33,3,con,46,1);
                 TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
                 TCODConsole::flush();
                 Sleep(200);
@@ -461,17 +546,23 @@ bool handle_keys(Object &duh) {
     else if (TCODConsole::isKeyPressed(TCODK_RIGHT)){
         if(npc.x == duh.x + 1 && npc.y == duh.y ) {
             if (duh.attack(npc)){
-                myvector.erase (myvector.begin()); 
-                map_array[npc.y  * MAP_WIDTH + npc.x].bloodyt = 6;
+                myvector.erase (myvector.begin()+1); 
+                bloodsplat(npc);
                 bloodycount = 5;
                 npc.x=-365;
                 npc.y=-365;
+                duh.move(0, 0);
             }
             else {
                 TCODConsole::root->clear();
+                mesg->setAlignment(TCOD_LEFT);
+                mesg->setDefaultForeground(TCODColor::yellow);
+                mesg->setDefaultBackground(TCODColor::black);
                 npc.colorb = TCODColor::red;
                 npc.draw(1);
-                con->print(1, 43, "Hit!");
+                mesg->print(1, 1, "Hit!");
+                if(!(duh.y > 37 )) TCODConsole::blit(mesg,0,0,33,3,con,1,41);
+                else TCODConsole::blit(mesg,0,0,33,3,con,46,1);
                 TCODConsole::blit(con,0,0,80,45,TCODConsole::root,0,0);
                 TCODConsole::flush();
                 Sleep(200);
@@ -499,8 +590,9 @@ int main() {
 
     Object player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5);
     
-    myvector.push_back(&npc);
+    
     myvector.push_back(&player);
+    myvector.push_back(&npc);
    
     make_map(player);
 
@@ -519,15 +611,17 @@ int main() {
         render_all(myvector);
         
         TCODConsole::root->setAlignment(TCOD_LEFT);
+        TCODConsole::root->setDefaultBackground(TCODColor::black);
+        TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->print(1, 46, "Use arrows to move");
         TCODConsole::root->print(1, 47, "Press 'q' to quit");
         TCODConsole::root->setAlignment(TCOD_RIGHT);
-        TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->setDefaultBackground(TCODColor::black);
         TCODConsole::root->print(78, 46, "Press 'p' to punch walls");
         TCODConsole::root->print(78, 47, "Press 'r' to regenerate layout");
         
-        //TCODConsole::root->print(78, 48, "Press 'q' to quit");
+        TCODConsole::root->setAlignment(TCOD_CENTER);
+        TCODConsole::root->print(40,49,"%c%c%c%c%c%c%c%cKILL%c the '%'",
+        TCOD_COLCTRL_FORE_RGB,255,1,1,TCOD_COLCTRL_BACK_RGB,1,1,255,TCOD_COLCTRL_STOP);
        
         TCODConsole::flush(); // this updates the screen
 
