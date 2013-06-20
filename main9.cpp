@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <math.h>
 #include "libtcod.hpp"
 #include <windows.h> // for Sleep()
 
@@ -130,8 +131,26 @@ void create_v_tunnel(int y1, int y2, int x){
     }
 }
 
+class Fighter {
+public:
+    int max_hp;
+    int hp;
+    int defense;
+    int power;
 
-class Object {
+    Fighter(int inithp, int defval, int powval){
+        max_hp = inithp;
+        hp = inithp;
+        defense = defval;
+        power = powval;
+    }
+};
+
+
+class AI;
+
+
+class Object_monster {
 
 public: // public should be moved down, but I keep it here for debug messages
 
@@ -144,8 +163,119 @@ public: // public should be moved down, but I keep it here for debug messages
     int h; // temp hit points
     int bloody;
     bool blocks;
+    Fighter stats;
+    AI * myai;
 
-    Object(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health) {
+    Object_monster(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
+        x = a;
+        y = b;
+        selfchar = pchar;
+        color = oc;
+        colorb = oc2;
+        h = health;
+        bloody = 0;
+         
+    }
+
+    void move(int dx, int dy, bool p_dir); 
+       
+     /* 
+        defined below
+      */ 
+
+    bool attack(Object_monster &foe){
+        foe.h = foe.h - 1;
+        if (foe.h == 0) {std::cout << "Killed a foe." << std::endl; return 1;}// killed!
+        return 0; // not killed
+    }
+
+    void draw(bool uh) {
+        con->setDefaultForeground(color);
+        if (!uh) colorb = con->getCharBackground(x, y);
+        con->setDefaultBackground(colorb);
+        if (fov_map->isInFov(x,y))
+        con->putChar(x, y, selfchar, TCOD_BKGND_SET);
+    }
+
+    void move_towards(int target_x, int target_y){
+        bool pdir = false;
+        int dx = target_x - x;
+        int dy = target_y - y;
+        float distance = sqrt (pow(dx, 2) + pow(dy, 2));
+
+        
+
+        dx = (int)(round(dx / distance));
+        dy = (int)(round(dy / distance));
+
+        if (dx == 0 && target_x > x) pdir = true;
+        if (dy == 0 && target_y > y) pdir = true;
+
+        move(dx, dy, pdir);
+        //std::cout << "move: " << dx << dy << std::endl;
+    }
+
+    float distance_to(int other_x, int other_y){
+        int dx = other_x - x;
+        int dy = other_y - y;
+        return sqrt (pow(dx, 2) + pow(dy, 2));
+    }
+
+    void clear() {
+        if (fov_map->isInFov(x,y))
+        con->putChar(x, y, ' ', TCOD_BKGND_NONE);
+    }
+
+    ~Object_monster(){} // ?
+};
+
+class AI {
+public:
+     virtual void take_turn(Object_monster &monster, int p_x, int p_y) {std::cout << "WHAT" ;} 
+
+};
+
+
+
+class BasicMonster : public AI {
+public:
+
+    BasicMonster(){
+
+    }
+
+    virtual void take_turn(Object_monster &monster, int p_x, int p_y){
+        float dist = 0;
+ 
+        if (fov_map->isInFov(monster.x,monster.y)){
+            std::cout << "The " << monster.name << " in view! " ;
+dist = monster.distance_to(p_x, p_y);
+            if (monster.distance_to(p_x, p_y) >= 2){
+                monster.move_towards(p_x, p_y);
+                std::cout << "I'm moving! " << dist;
+            } else  std::cout << "Close! " ;  
+        }
+        //else std::cout << "The " << monster.name << " lurks in the dark! " ;
+        
+    }    
+};
+
+class Object_player {
+
+public: // public should be moved down, but I keep it here for debug messages
+
+    char name[20];
+    int x;
+    int y;
+    char selfchar;
+    TCODColor color;
+    TCODColor colorb;
+    int h; // temp hit points
+    int bloody;
+    bool blocks;
+    Fighter stats;
+
+    Object_player(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
         x = a;
         y = b;
         selfchar = pchar;
@@ -155,15 +285,15 @@ public: // public should be moved down, but I keep it here for debug messages
         bloody = 0;
     }
 
-    void move(int dx, int dy, std::vector<Object> smonvector); 
+    void move(int dx, int dy, std::vector<Object_monster> smonvector); 
        
      /* 
         defined below
       */ 
 
-    bool attack(Object &foe){
-        foe.h = foe.h - 1;
-        if (foe.h == 0) {std::cout << "Killed a foe." << std::endl; return 1;}// killed!
+    bool attack(Object_monster &foe){
+        foe.stats.hp = foe.stats.hp - 1;
+        if (foe.stats.hp == 0) {std::cout << "Killed a foe." << std::endl; return 1;}// killed!
         return 0; // not killed
     }
 
@@ -180,19 +310,30 @@ public: // public should be moved down, but I keep it here for debug messages
         con->putChar(x, y, ' ', TCOD_BKGND_NONE);
     }
 
-    ~Object(){} // ?
+    ~Object_player(){} // ?
 };
 
-Object player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5);
+/*  
+player = Object(0, 0, '@', 'player', libtcod.white, blocks=True, NULL)
+Object(int a, int b, char chr, string?, TCODColor color, bool blocks, ai *AI)
 
-std::vector<Object*> myvector;
-std::vector<Object> monvector;
+if(player->ai!=NULL)
+    player->ai->take_turn()
+    */
+Fighter fighter_component(30, 2, 5); // hp, defense, power
+Object_player playera(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
+Object_player playerb(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
 
-bool is_blocked(int x, int y, std::vector<Object> smonvector){
+Object_player player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
+
+std::vector<Object_player*> myvector; // player vector object
+std::vector<Object_monster> monvector;
+
+bool is_blocked(int x, int y){
     if (map_array[y*MAP_WIDTH+x].blocked) return true;
 
-    for (unsigned int i = 0; i<smonvector.size(); ++i){
-        if (smonvector[i].blocks == true && smonvector[i].x == x && smonvector[i].y == y){
+    for (unsigned int i = 0; i<monvector.size(); ++i){
+        if (monvector[i].blocks == true && monvector[i].x == x && monvector[i].y == y){
             std::cout << "Monster in the way." << std::endl;
             return true;
         }
@@ -201,21 +342,87 @@ bool is_blocked(int x, int y, std::vector<Object> smonvector){
     return false;
 }
 
-void Object::move(int dx, int dy, std::vector<Object> smonvector) {
+bool iis_blocked(int x, int y){ // was used by object_monster.move
+    if (map_array[y*MAP_WIDTH+x].blocked) return true;
+
+    for (unsigned int i = 0; i<monvector.size(); ++i){
+        if (monvector[i].blocks == true && monvector[i].x == x && monvector[i].y == y){
+            std::cout << "Monster in the way." << std::endl;
+            return true;
+        }
+    }
+         return false;
+}
+
+void Object_monster::move(int dx, int dy, bool p_dir) {
        
         int tempx = 0;
         int tempy = 0;
         tempx = x + dx;
         tempy = y + dy;
 
-        if (!is_blocked(tempx,tempy,smonvector)){
+        if (!is_blocked(tempx,tempy)){
+            std::cout << "Real moving x1: " << x << " " << dx << std::endl;
+            x += dx;
+            y += dy;
+            std::cout << "Real moving x2: " << x << " " << dx << std::endl;
+            if (bloody > 0){
+                if (bloody >= map_array[y * MAP_WIDTH + x].bloodyt)
+                map_array[y * MAP_WIDTH + x].bloodyt = bloody;
+            }
+        } else { 
+            if (dy == -1 && dx == 0){
+                if (p_dir == false){
+                    if (!is_blocked(tempx-1,y)){x += (dx-1);}
+                }    
+                else if (!is_blocked(tempx+1,y)){x += (dx+1);}
+            } 
+            else if (dx == -1 && dy == 0){
+                if (p_dir == false){
+                    if (!is_blocked(x,tempy-1)){y += (dy-1);}
+                }    
+                else if (!is_blocked(x,tempy+1)){y += (dy+1);}
+            }
+            else if (dy == 1 && dx == 0){
+                if (p_dir == false){
+                    if (!is_blocked(tempx-1,y)){x += (dx-1);}
+                }    
+                else if (!is_blocked(tempx+1,y)){x += (dx+1);}
+            } 
+            else if (dx == 1 && dy == 0){
+                if (p_dir == false){
+                    if (!is_blocked(x,tempy-1)){y += (dy-1);}
+                }    
+                else if (!is_blocked(x,tempy+1)){y += (dy+1);}
+            }
+            //std::cout << "Fuck, it's blocked. " << std::endl;
+        }    
+/* }
+        if (x >= MAP_WIDTH) {x = MAP_WIDTH-1;std::cout << "No, I'm not stepping into the void." << std::endl;}
+        if (y >= MAP_HEIGHT) {y = MAP_HEIGHT-1;std::cout << "No, I'm not stepping into the void." << std::endl;}
+        if (x <= 0) {x = 0;std::cout << "No, I'm not stepping into the void." << std::endl;}
+        if (y <= 0) {y = 0;std::cout << "No, I'm not stepping into the void." << std::endl;}
+
+        bloody = (map_array[y * MAP_WIDTH + x].bloodyt);
+        if (map_array[y * MAP_WIDTH + x].bloodyt > 1) --map_array[y * MAP_WIDTH + x].bloodyt;
+        */
+    }
+
+void Object_player::move(int dx, int dy, std::vector<Object_monster> smonvector) {
+       
+        int tempx = 0;
+        int tempy = 0;
+        tempx = x + dx;
+        tempy = y + dy;
+
+        if (!is_blocked(tempx,tempy)){
             x += dx;
             y += dy;
             if (bloody > 0){
                 if (bloody >= map_array[y * MAP_WIDTH + x].bloodyt)
                 map_array[y * MAP_WIDTH + x].bloodyt = bloody;
             }
-        } else std::cout << "Fuck, it's blocked. " << std::endl;
+        } else ; //std::cout << "Fuck, it's blocked. " << std::endl;
 
         if (x >= MAP_WIDTH) {x = MAP_WIDTH-1;std::cout << "No, I'm not stepping into the void." << std::endl;}
         if (y >= MAP_HEIGHT) {y = MAP_HEIGHT-1;std::cout << "No, I'm not stepping into the void." << std::endl;}
@@ -226,19 +433,25 @@ void Object::move(int dx, int dy, std::vector<Object> smonvector) {
         if (map_array[y * MAP_WIDTH + x].bloodyt > 1) --map_array[y * MAP_WIDTH + x].bloodyt;
     }
 
+BasicMonster orc_ai;
+
+
 void place_objects(Rect room){
     TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
 
     int num_mosters = wtf->getInt(0, MAX_ROOM_MONSTERS, 0);
 
     int x, y;
-    Object monster(0, 0, 'i', TCODColor::black, TCODColor::black, 0);
+
+    Fighter fighter_component(0, 0, 0);
+    Object_monster monster(0, 0, 'i', TCODColor::black, TCODColor::black, 0, fighter_component);
 
     for (int i = 0; i < num_mosters; ++i){
         x = wtf->getInt((room.x1+1), (room.x2-1), 0);
         y = wtf->getInt((room.y1+1), (room.y2-1), 0);
-        if (!is_blocked(x,y, monvector)){
+        if (!is_blocked(x,y)){
         if ( wtf->getInt(0, 100, 0) < 80){
+            Fighter fighter_component(10, 0, 3); // hp, defense, power
             monster.x = x;
             monster.y = y;
             monster.selfchar= 'o';
@@ -248,8 +461,11 @@ void place_objects(Rect room){
             monster.blocks = true;
             //monster.name[] = "orc";
             strcpy(monster.name, "orc");
+            monster.stats = fighter_component;
+            monster.myai = &orc_ai;
             }
         else {
+            Fighter fighter_component(16, 1, 4); // hp, defense, power
             monster.x = x;
             monster.y = y;
             monster.selfchar= 'T';
@@ -259,6 +475,8 @@ void place_objects(Rect room){
             monster.blocks = true;
             //monster.name[] = "troll";
             strcpy(monster.name, "troll");
+            monster.stats = fighter_component;
+            monster.myai = &orc_ai;
         }  
         monvector.push_back(monster);
     }
@@ -267,9 +485,9 @@ void place_objects(Rect room){
     }
 }
 
-int killall = 0;
+int killall = 0; // monster count
 
-void make_map(Object &duh){
+void make_map(Object_player &duh){
            
     map_array.resize(MAP_HEIGHT * MAP_WIDTH);
         
@@ -363,7 +581,7 @@ void set_black(){
     } 
 } // fill "con" with black
 
-void render_all (std::vector<Object*> &invector){
+void render_all (std::vector<Object_player*> &invector){
 
     bool wall = false;
     bool visible = false;
@@ -423,10 +641,13 @@ void render_all (std::vector<Object*> &invector){
     fov_recompute = false;
     }
 
-    for (unsigned int i = 0; i<invector.size(); ++i) invector[i]->draw(0);
-    for (unsigned int i = 0; i<monvector.size(); ++i) monvector[i].draw(0);
+    for (unsigned int i = 0; i<invector.size(); ++i) invector[i]->draw(0); // player vector
+    for (unsigned int i = 0; i<monvector.size(); ++i) monvector[i].draw(0); //monster vector
     
     TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
+    //std::cout << "player hp: " << player.stats.max_hp << std::endl;
+    //std::cout << "monster1 hp: " << monvector[3].stats.max_hp << std::endl;
+    //std::cout << "monster2 hp: " << monvector[6].stats.max_hp << std::endl;
 }
 
 int blx = 0;
@@ -465,7 +686,7 @@ int fly_blood_fly_h(int asin, int bsin, int origin, int where){
     else return tile_3;
 }
 
-void bloodsplat(Object &cobj){
+void bloodsplat(Object_monster &cobj){
 
     int blood = 2;
 
@@ -555,7 +776,7 @@ void player_move_attack(int dx, int dy){
      unsigned   int target = 0;
      bool is_it = false;
     
-    for (unsigned int i = 0; i<monvector.size(); ++i){
+    for (unsigned int i = 0; i<monvector.size(); ++i){ // checks if monster is in next cell
         if (monvector[i].x == x && monvector[i].y == y){
             //*target = &monvector[i];
             target = i;
@@ -595,16 +816,17 @@ void player_move_attack(int dx, int dy){
                 fov_recompute = true;
                 render_all(myvector);
                 TCODConsole::flush();
+                std::cout << "monster target hp: " << monvector[target].stats.hp << std::endl;
             }
         std::cout << "The " << monvector[target].name << " laughs!" << std::endl;
     } else { 
-        //std::cout << "Tdsfsdsadfsdfsdfhe "  << std::endl;
+        std::cout << "TIMES INTO move loop"  << std::endl;
         player.move(dx, dy, monvector);
         fov_recompute = true;
     }    
 }
 
-int handle_keys(Object &duh) {
+int handle_keys(Object_player &duh) {
 
     bool mycase_p;
     mycase_p = 0;
@@ -791,8 +1013,10 @@ int main() {
 
         int player_action = 0;
 
+        con->clear();
         TCODConsole::root->clear();
-        
+       
+        fov_recompute = true;
         render_all(myvector);
         
         TCODConsole::root->setAlignment(TCOD_LEFT);
@@ -817,14 +1041,28 @@ int main() {
        
         TCODConsole::flush(); // this updates the screen
 
-        for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->clear();
+        for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->clear(); // player array, clar previous
 
         player_action = handle_keys(player);
 
         if (player_action == quit) break;
         if (game_state == playing && player_action != no_turn){
-            for (unsigned int i = 0; i<monvector.size(); ++i); //std::cout << "The " << monvector[i].name << " growls!" << std::endl; 
+            for (unsigned int i = 0; i<monvector.size(); ++i) { 
+                monvector[i].myai->take_turn(monvector[i], player.x, player.y); //std::cout << "The " << monvector[i].name << " growls!" << std::endl; 
+                
+            }  
+        std::cout << "END MONSTER TURN" << std::endl;    
+          //  --playerb.stats.max_hp;
+        //std::cout << "DEBUG: " << playera.stats.max_hp << std::endl;
+        //std::cout << "DEBUG: " << playerb.stats.max_hp << std::endl;
+
         }
+
+        
+
     }
+    //std::cout << "DEBUG: " << playero.stats.max_hp << std::endl;
+    //char bla;
+    //std::cin >> bla;
     return 0;
 }
