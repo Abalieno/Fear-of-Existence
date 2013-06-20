@@ -3572,6 +3572,10 @@ int main() {
         //player.combat_move = 8; // 1 cost for movement, 4 for attack
         while (combat_mode){
 
+            for (unsigned int i = 0; i<monvector.size(); ++i) { 
+                monvector[i].initiative = -1;
+            }    
+
             if (alreadydead) break;
          
             std::vector<Monster> monsters; // vector used for initiative juggling
@@ -3586,9 +3590,9 @@ int main() {
                
             fov_recompute = true;
             render_all();
-TCODConsole::flush(); // this updates the screen
-            //TCOD_key_t key = 
-                TCODConsole::waitForKeypress(true);
+            TCODConsole::flush(); // this updates the screen
+                
+            TCODConsole::waitForKeypress(true);
 
             bool break_combat = true;
             TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
@@ -3618,7 +3622,9 @@ TCODConsole::flush(); // this updates the screen
                     msg_log msg1;
                     sprintf(msg1.message, "%s initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
                         monvector[i].name, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
-                        monvector[i].speed, *tempm.initiative);
+                        *tempm.speed, monvector[i].initiative);        
+                    //    monvector[i].name, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
+                    //    monvector[i].speed, *tempm.initiative);
                     msg1.color1 = TCODColor::yellow;
                     msg_log_list.push_back(msg1);
                 }
@@ -3634,7 +3640,7 @@ TCODConsole::flush(); // this updates the screen
             player.initiative = player.speed + myroll;
             player.temp_init = player.initiative;
 
-            Monster tempm;
+            Monster tempm; // player counts as monster for initiative
             tempm.initiative = &player.initiative;
             tempm.speed = &player.speed;
             monsters.push_back(tempm);
