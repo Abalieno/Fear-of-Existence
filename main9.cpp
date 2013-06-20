@@ -8,12 +8,13 @@
 
 // #include <process.h> //used for threading?
 
-const int   win_x   =   95; // window width in cells
-const int   win_y   =   63; // window height in cells
-const int   LIMIT_FPS = 20;
+const int MAP_WIDTH = 55;
+const int MAP_HEIGHT = 35;
+// 16map
 
-const int MAP_WIDTH = 80;
-const int MAP_HEIGHT = 45;
+const int   win_x   = (MAP_WIDTH * 2) + 15; // window width in cells
+const int   win_y   = (MAP_HEIGHT * 2)+ 18; // window height in cells
+const int   LIMIT_FPS = 20;
 
 const int quit = 1;
 const int move_up = 5;
@@ -25,6 +26,9 @@ const int no_turn = 2;
 const int dead = 99;
 
 int stance_pos = 1;
+
+int bigg = 0; // sets 16x16 font
+int bigg2 = 0;
 
 //parameters for dungeon generator
 int ROOM_MAX_SIZE = 10;
@@ -48,6 +52,7 @@ TCODColor blood4(100, 0, 0);
 
 TCODColor color_light_wall(0, 0, 100);
 TCODColor color_light_ground(50, 50, 150);
+TCODColor color_dark_groundF(TCODColor::grey);
 //TCODColor color_light_ground(200, 180, 50);
 
 TCODColor orc(0, 200, 0);
@@ -60,12 +65,13 @@ bool debug = false; // shows all monsters on map, when set
 bool no_combat = false; // disable combat mode
 
 
-TCODConsole *con = new TCODConsole(MAP_WIDTH, MAP_HEIGHT);
+TCODConsole *con = new TCODConsole((MAP_WIDTH*2), (MAP_HEIGHT*2));
+TCODConsole *con_mini = new TCODConsole(MAP_WIDTH+2, MAP_HEIGHT+2);
 TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
 TCODConsole *load = new TCODConsole(win_x, win_y);  // load screen
 
-TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT));  // combat UI panel
-TCODConsole *r_panel = new TCODConsole((win_x - MAP_WIDTH), MAP_HEIGHT); // panel on right of map 
+TCODConsole *panel = new TCODConsole(win_x, (win_y - (MAP_HEIGHT*2)));  // combat UI panel
+TCODConsole *r_panel = new TCODConsole((win_x - (MAP_WIDTH*2)), (MAP_HEIGHT*2)); // panel on right of map 
 // 30, 46 message log
 int BAR_WIDTH = 20;
 int MSG_X = 30; // BAR_WIDTH + 2;
@@ -81,10 +87,35 @@ struct msg_log { char message [50]; TCODColor color1; TCODColor color2; TCODColo
 std::vector<msg_log> msg_log_list;
 
 void map_16x16_tile(){
-    TCODConsole::mapAsciiCodeToFont(1201,14,16);
-    TCODConsole::mapAsciiCodeToFont(1301,15,16);
-    TCODConsole::mapAsciiCodeToFont(1401,14,17);
-    TCODConsole::mapAsciiCodeToFont(4096,15,17); // tile #1
+    TCODConsole::mapAsciiCodeToFont(501,14,16);
+    TCODConsole::mapAsciiCodeToFont(601,15,16);
+    TCODConsole::mapAsciiCodeToFont(701,14,17);
+    TCODConsole::mapAsciiCodeToFont(801,15,17); // tile #1 floor
+
+    TCODConsole::mapAsciiCodeToFont(502,10,16);
+    TCODConsole::mapAsciiCodeToFont(602,11,16);
+    TCODConsole::mapAsciiCodeToFont(702,10,17);
+    TCODConsole::mapAsciiCodeToFont(802,11,17); // tile #2 player
+
+    TCODConsole::mapAsciiCodeToFont(503,12,16);
+    TCODConsole::mapAsciiCodeToFont(603,13,16);
+    TCODConsole::mapAsciiCodeToFont(703,12,17);
+    TCODConsole::mapAsciiCodeToFont(803,13,17); // tile #3 null
+
+    TCODConsole::mapAsciiCodeToFont(504,10,18);
+    TCODConsole::mapAsciiCodeToFont(604,11,18);
+    TCODConsole::mapAsciiCodeToFont(704,10,19);
+    TCODConsole::mapAsciiCodeToFont(804,11,19); // tile #4 troll
+
+    TCODConsole::mapAsciiCodeToFont(505,10,20);
+    TCODConsole::mapAsciiCodeToFont(605,11,20);
+    TCODConsole::mapAsciiCodeToFont(705,10,21);
+    TCODConsole::mapAsciiCodeToFont(805,11,21); // tile #5 orc
+
+    TCODConsole::mapAsciiCodeToFont(506,10,22);
+    TCODConsole::mapAsciiCodeToFont(606,11,22);
+    TCODConsole::mapAsciiCodeToFont(706,10,23);
+    TCODConsole::mapAsciiCodeToFont(806,11,23); // tile #6 corpse
 }
 
 void map_8x16_font(){
@@ -289,8 +320,32 @@ public: // public should be moved down, but I keep it here for debug messages
         con->setDefaultForeground(color);
         if (!uh) colorb = con->getCharBackground(x, y);
         con->setDefaultBackground(colorb);
-        if (fov_map->isInFov(x,y) || debug == 1)
-        con->putChar(x, y, selfchar, TCOD_BKGND_SET);
+
+        if (fov_map->isInFov(x,y) || debug == 1){
+        if(bigg){         
+            if (selfchar == 'T'){
+                con->putChar((x*2), (y*2), 504, TCOD_BKGND_NONE);
+                con->putChar((x*2)+1, (y*2), 604, TCOD_BKGND_NONE);
+                con->putChar((x*2), (y*2)+1, 704, TCOD_BKGND_NONE);
+                con->putChar((x*2)+1, (y*2)+1, 804, TCOD_BKGND_NONE);
+                //std::cout << "TROLL";
+            } else if (selfchar == 'o'){
+                con->putChar((x*2), (y*2), 505, TCOD_BKGND_NONE);
+                con->putChar((x*2)+1, (y*2), 605, TCOD_BKGND_NONE);
+                con->putChar((x*2), (y*2)+1, 705, TCOD_BKGND_NONE);
+                con->putChar((x*2)+1, (y*2)+1, 805, TCOD_BKGND_NONE);
+                //std::cout << "ORC";
+            } else if (selfchar == '%'){
+                con->putChar((x*2), (y*2), 506, TCOD_BKGND_NONE);
+                con->putChar((x*2)+1, (y*2), 606, TCOD_BKGND_NONE);
+                con->putChar((x*2), (y*2)+1, 706, TCOD_BKGND_NONE);
+                con->putChar((x*2)+1, (y*2)+1, 806, TCOD_BKGND_NONE);
+            } 
+        } else {
+            con->putChar(x, y, selfchar, TCOD_BKGND_SET);
+        }
+        
+        }
     }
 
     void move_towards(int target_x, int target_y){
@@ -319,8 +374,16 @@ public: // public should be moved down, but I keep it here for debug messages
     }
 
     void clear() {
-        if (fov_map->isInFov(x,y))
-        con->putChar(x, y, ' ', TCOD_BKGND_NONE);
+        if (fov_map->isInFov(x,y)){
+            if(bigg){
+                con->putChar((x*2), (y*2), 503, TCOD_BKGND_NONE);
+                con->putChar((x*2)+1, (y*2), 603, TCOD_BKGND_NONE);
+                con->putChar((x*2), (y*2)+1, 703, TCOD_BKGND_NONE);
+                con->putChar((x*2)+1, (y*2)+1, 803, TCOD_BKGND_NONE);
+            } else {
+                con->putChar(x, y, ' ', TCOD_BKGND_NONE);
+            }
+        }
     }
 
     ~Object_monster(){} // ?
@@ -460,15 +523,40 @@ public: // public should be moved down, but I keep it here for debug messages
 
     void draw(bool uh) {
         con->setDefaultForeground(color);
-        if (!uh) colorb = con->getCharBackground(x, y);
+        if (!uh){
+            if(bigg){
+                colorb = con->getCharBackground((x*2), (y*2));
+            } else {    
+                colorb = con->getCharBackground(x, y);
+            }  
+        }    
         con->setDefaultBackground(colorb);
-        if (fov_map->isInFov(x,y))
-        con->putChar(x, y, selfchar, TCOD_BKGND_SET);
+        if (fov_map->isInFov(x,y)){
+            if(bigg){
+                con->putChar((x*2), (y*2), 502, TCOD_BKGND_SET);
+                con->putChar((x*2)+1, (y*2), 602, TCOD_BKGND_SET);
+                con->putChar((x*2), (y*2)+1, 702, TCOD_BKGND_SET);
+                con->putChar((x*2)+1, (y*2)+1, 802, TCOD_BKGND_SET);
+            } else {
+                con->putChar(x, y, selfchar, TCOD_BKGND_SET);
+            }
+        }
+        con->setDefaultBackground(TCODColor::black); // reset background for smaller map
+      
     }
 
     void clear() {
-        if (fov_map->isInFov(x,y))
+        if (fov_map->isInFov(x,y)){
+        if(bigg){
+        con->putChar((x*2), (y*2), 503, TCOD_BKGND_NONE);
+        con->putChar((x*2)+1, (y*2), 603, TCOD_BKGND_NONE);
+        con->putChar((x*2), (y*2)+1, 703, TCOD_BKGND_NONE);
+        con->putChar((x*2)+1, (y*2)+1, 803, TCOD_BKGND_NONE);
+        } else {
+
         con->putChar(x, y, ' ', TCOD_BKGND_NONE);
+        }
+        }
     }
 
     ~Object_player(){} // ?
@@ -801,7 +889,7 @@ void make_map(Object_player &duh){
         
         for (int l = 0; l < MAP_WIDTH ;++l) {
            map_array[row * MAP_WIDTH + l] = Tile(1,1);
-           map_array[3597] = Tile(1,1);
+           //map_array[3597] = Tile(1,1);
         }
         ++row;
     } // fills map with walls 
@@ -970,6 +1058,16 @@ void set_black(){
     } 
 } // fill "con" with black
 
+void set_black_b(){
+    for (int i = 0; i < (MAP_HEIGHT*2) ;++i){
+        for (int l = 0; l < (MAP_WIDTH*2) ;++l) {
+            con->putChar(l, i, ' ', TCOD_BKGND_SET);
+                        con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
+                        con->setCharForeground(l, i, TCODColor::black);
+        }
+    } 
+} // fill "con" with black
+
 TCOD_key_t keyz;
     TCOD_mouse_t mousez;
     TCOD_event_t ev;
@@ -1013,20 +1111,48 @@ void I_am_moused(){
 
     char *whatis;
 
+    if(mousez.lbutton && mousez.cx == 0 && mousez.cy == 0) {stance_pos = 1; bigg = 0;}
+    if(mousez.lbutton && mousez.cx == 1 && mousez.cy == 0) {stance_pos = 2; bigg =1;}
+    //if(mousez.lbutton && mousez.cx == 2 && mousez.cy == 0) stance_pos = 3;
+    if(mousez.cx == 2 && mousez.cy == 0) {
+        bigg2 = 1;
+    } else {
+        bigg2 = 0;
+    }    
+
     //std::cout << "MOUSE " << x << " " << y << std::endl;
 
     bool found = false;
     TCODColor col_obj; // color of object
 
-    if (x == player.x && y == player.y){
+    if ((!bigg && x == player.x && y == player.y) || (bigg && (x/2) == player.x && (y/2) == player.y)){
         panel->setDefaultForeground(TCODColor::white);
         panel->setAlignment(TCOD_LEFT);
         panel->print(1, 5, "Mouse on [Player] at [%d.%d]", x, y);
         panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
     } else {
         for (unsigned int n = 0; n<monvector.size(); ++n) {
-            if( (x == monvector[n].x && y == monvector[n].y) && !(monvector[n].alive) 
-                    && fov_map->isInFov(monvector[n].x,monvector[n].y)){
+            if( (!bigg && (x == monvector[n].x && y == monvector[n].y && monvector[n].alive) 
+                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
+                (bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y && monvector[n].alive) 
+                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ){
+                whatis = &(monvector[n].name[0]);
+                panel->setDefaultForeground(TCODColor::white);
+                panel->setAlignment(TCOD_LEFT);
+                col_obj = monvector[n].color;
+                TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
+                panel->print(1, 5, "Mouse on [%c%s%c] at [%d.%d]",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
+                panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+                found = true;
+                  }
+        }
+
+        if (!found){ // only if no moster alive found        
+        for (unsigned int n = 0; n<monvector.size(); ++n) {
+            if( (!bigg && (x == monvector[n].x && y == monvector[n].y) && !(monvector[n].alive) 
+                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
+                (bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y) && !(monvector[n].alive) 
+                    && fov_map->isInFov(monvector[n].x,monvector[n].y))    ){
                 whatis = &(monvector[n].name[0]);
                 panel->setDefaultForeground(TCODColor::white);
                 panel->setAlignment(TCOD_LEFT);
@@ -1037,19 +1163,8 @@ void I_am_moused(){
                 found = true;
             }
         }
-        for (unsigned int n = 0; n<monvector.size(); ++n) {
-            if( (x == monvector[n].x && y == monvector[n].y && monvector[n].alive) 
-                    && fov_map->isInFov(monvector[n].x,monvector[n].y)){
-                whatis = &(monvector[n].name[0]);
-                panel->setDefaultForeground(TCODColor::white);
-                panel->setAlignment(TCOD_LEFT);
-                col_obj = monvector[n].color;
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-                panel->print(1, 5, "Mouse on [%c%s%c] at [%d.%d]",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
-                panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
-                found = true;
-            }
         }
+          
         if (!found){
             panel->setDefaultForeground(TCODColor::white);
             panel->setAlignment(TCOD_LEFT);
@@ -1070,37 +1185,32 @@ void I_am_moused2(){ // doubled because of main loop
 
     char *whatis;
 
-    if(mousez.lbutton && mousez.cx == 0 && mousez.cy == 0) stance_pos = 1;
-    if(mousez.lbutton && mousez.cx == 1 && mousez.cy == 0) stance_pos = 2;
-    if(mousez.lbutton && mousez.cx == 2 && mousez.cy == 0) stance_pos = 3;
+    if(mousez.lbutton && mousez.cx == 0 && mousez.cy == 0) {stance_pos = 1; bigg = 0;}
+    if(mousez.lbutton && mousez.cx == 1 && mousez.cy == 0) {stance_pos = 2; bigg =1;}
+    //if(mousez.lbutton && mousez.cx == 2 && mousez.cy == 0) stance_pos = 3;
+    if(mousez.cx == 2 && mousez.cy == 0) {
+        bigg2 = 1;
+    } else {
+        bigg2 = 0;
+    } 
 
     //std::cout << "MOUSE " << x << " " << y << std::endl;
 
     bool found = false;
     TCODColor col_obj; // color of object
 
-    if (x == player.x && y == player.y){
+    
+    if ((!bigg && x == player.x && y == player.y) || (bigg && (x/2) == player.x && (y/2) == player.y)){
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->print(1, win_y-5, "Mouse on [Player] at [%d.%d]", x, y);
         TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
     } else {
         for (unsigned int n = 0; n<monvector.size(); ++n) {
-        if( (x == monvector[n].x && y == monvector[n].y) && !(monvector[n].alive)
-                && fov_map->isInFov(monvector[n].x,monvector[n].y)){
-            whatis = &(monvector[n].name[0]);
-            TCODConsole::root->setDefaultForeground(TCODColor::white);
-            TCODConsole::root->setAlignment(TCOD_LEFT);
-            col_obj = monvector[n].color;
-            TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-            TCODConsole::root->print(1, win_y-5, "Mouse on [dead %c%s%c] at [%d.%d]",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
-            TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
-            found = true;
-        } 
-    }
-    for (unsigned int n = 0; n<monvector.size(); ++n) {
-        if( (x == monvector[n].x && y == monvector[n].y) && monvector[n].alive
-                && fov_map->isInFov(monvector[n].x,monvector[n].y)){
+        if( (!bigg && (x == monvector[n].x && y == monvector[n].y && monvector[n].alive) 
+                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
+                (bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y && monvector[n].alive) 
+                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ){
             whatis = &(monvector[n].name[0]);
             TCODConsole::root->setDefaultForeground(TCODColor::white);
             TCODConsole::root->setAlignment(TCOD_LEFT);
@@ -1111,6 +1221,24 @@ void I_am_moused2(){ // doubled because of main loop
             found = true;
         } 
     }
+        if (!found){ // only if no moster alive found
+        for (unsigned int n = 0; n<monvector.size(); ++n) {
+        if(( (!bigg && (x == monvector[n].x && y == monvector[n].y) && !(monvector[n].alive) 
+                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
+                (bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y) && !(monvector[n].alive) 
+                    && fov_map->isInFov(monvector[n].x,monvector[n].y))    )){
+            whatis = &(monvector[n].name[0]);
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setAlignment(TCOD_LEFT);
+            col_obj = monvector[n].color;
+            TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
+            TCODConsole::root->print(1, win_y-5, "Mouse on [dead %c%s%c] at [%d.%d]",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
+            TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+            found = true;
+        } 
+    }
+    }
+    
     if (!found){
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->setAlignment(TCOD_LEFT);
@@ -1193,40 +1321,163 @@ void render_all (){
                 visible = fov_map->isInFov(l,i);
                 wall = map_array[i * MAP_WIDTH + l].blocked;
                 isbloody = map_array[i * MAP_WIDTH + l].bloodyt;
-                con->putChar(l, i, ' ', TCOD_BKGND_SET);
-                        con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
-                        con->setCharForeground(l, i, TCODColor::black);
+
+                if (bigg){
+                    con->putChar((l*2), (i*2), 503, TCOD_BKGND_SET);
+                    con->putChar((l*2)+1, (i*2), 603, TCOD_BKGND_SET);
+                    con->putChar((l*2), (i*2)+1, 703, TCOD_BKGND_SET);
+                    con->putChar((l*2)+1, (i*2)+1, 803, TCOD_BKGND_SET);
+               
+                    con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                    con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                    con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                    con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                    con->setCharForeground((l*2), (i*2), TCODColor::black);
+                    con->setCharForeground((l*2)+1, (i*2), TCODColor::black);
+                    con->setCharForeground((l*2), (i*2)+1, TCODColor::black);
+                    con->setCharForeground((l*2)+1, (i*2)+1, TCODColor::black);
+
+                } else {
+                    con->putChar(l, i, ' ', TCOD_BKGND_SET);
+                    con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
+                    con->setCharForeground(l, i, TCODColor::black);
+                }
+                if (bigg2){
+                    con_mini->putChar(l+1, i+1, ' ', TCOD_BKGND_SET);
+                    con_mini->setCharBackground(l+1, i+1, TCODColor::black, TCOD_BKGND_SET);
+                    con_mini->setCharForeground(l+1, i+1, TCODColor::black);
+                }
 
                 if (!visible){
                     if (map_array[i * MAP_WIDTH + l].explored){
                     if (wall){
-                        con->putChar(l, i, '#', TCOD_BKGND_SET);
-                        con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
-                        con->setCharForeground(l, i, color_dark_wall);
+                        if(bigg){
+                            con->putChar((l*2), (i*2), 503, TCOD_BKGND_SET);
+                            con->putChar((l*2)+1, (i*2), 603, TCOD_BKGND_SET);
+                            con->putChar((l*2), (i*2)+1, 703, TCOD_BKGND_SET);
+                            con->putChar((l*2)+1, (i*2)+1, 803, TCOD_BKGND_SET);
+
+                            con->setCharBackground((l*2), (i*2), color_dark_wall, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2)+1, (i*2), color_dark_wall, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2), (i*2)+1, color_dark_wall, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2)+1, (i*2)+1, color_dark_wall, TCOD_BKGND_SET);
+
+                            con->setCharForeground((l*2), (i*2), color_dark_wall);
+                            con->setCharForeground((l*2)+1, (i*2), color_dark_wall);
+                            con->setCharForeground((l*2), (i*2)+1, color_dark_wall);
+                            con->setCharForeground((l*2)+1, (i*2)+1, color_dark_wall);
+                        
+                        } else {    
+                            con->putChar(l, i, '#', TCOD_BKGND_SET);
+                            con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
+                            con->setCharForeground(l, i, color_dark_wall);
+                        }
+                        if (bigg2){
+                            con_mini->putChar(l+1, i+1, '#', TCOD_BKGND_SET);
+                            con_mini->setCharBackground(l+1, i+1, color_dark_wall, TCOD_BKGND_SET);
+                            con_mini->setCharForeground(l+1, i+1, color_dark_wall);
+                        }
                     }
                     else {
-                        con->putChar(l, i, '.', TCOD_BKGND_SET);
-                        con->setCharForeground(l, i, TCODColor::white);
-                        con->setCharBackground(l, i, color_dark_ground, TCOD_BKGND_SET);
+                        if(bigg){
+                            con->putChar(l*2,i*2, 501, TCOD_BKGND_SET);
+                            con->putChar((l*2)+1,i*2, 601, TCOD_BKGND_SET);
+                            con->putChar(l*2,(i*2)+1, 701, TCOD_BKGND_SET);
+                            con->putChar((l*2)+1,(i*2)+1, 801, TCOD_BKGND_SET); 
+                        
+                            con->setCharForeground((l*2), (i*2), color_dark_groundF);
+                            con->setCharForeground((l*2)+1, (i*2), color_dark_groundF);
+                            con->setCharForeground((l*2), (i*2)+1, color_dark_groundF);
+                            con->setCharForeground((l*2)+1, (i*2)+1, color_dark_groundF);
+
+                            con->setCharBackground((l*2), (i*2), color_dark_ground, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2)+1, (i*2), color_dark_ground, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2), (i*2)+1, color_dark_ground, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2)+1, (i*2)+1, color_dark_ground, TCOD_BKGND_SET);
+                        } else {
+                            con->putChar(l, i, '.', TCOD_BKGND_SET);
+                            con->setCharForeground(l, i, color_dark_groundF);
+                            con->setCharBackground(l, i, color_dark_ground, TCOD_BKGND_SET);
+                        }
+                        if (bigg2){
+                            con_mini->putChar(l+1, i+1, '.', TCOD_BKGND_SET);
+                            con_mini->setCharForeground(l+1, i+1, color_dark_groundF);
+                            con_mini->setCharBackground(l+1, i+1, color_dark_ground, TCOD_BKGND_SET);
+                        }
+                        
                     }
                                         }
                 } else {
                     if (wall){
-                        con->putChar(l, i, '#', TCOD_BKGND_SET);
-                        con->setCharBackground(l, i, color_light_wall, TCOD_BKGND_SET);
-                        con->setCharForeground(l, i, color_light_wall);
+                        if(bigg){
+                            con->putChar(l*2,i*2, 503, TCOD_BKGND_SET);
+                            con->putChar((l*2)+1,i*2, 603, TCOD_BKGND_SET);
+                            con->putChar(l*2,(i*2)+1, 703, TCOD_BKGND_SET);
+                            con->putChar((l*2)+1,(i*2)+1, 803, TCOD_BKGND_SET);
+
+                            con->setCharBackground((l*2), (i*2), color_light_wall, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2)+1, (i*2), color_light_wall, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2), (i*2)+1, color_light_wall, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2)+1, (i*2)+1, color_light_wall, TCOD_BKGND_SET);
+
+                            con->setCharForeground((l*2), (i*2), color_light_wall);
+                            con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                            con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                            con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall);
+                        } else {
+                            con->putChar(l, i, '#', TCOD_BKGND_SET);
+                            con->setCharBackground(l, i, color_light_wall, TCOD_BKGND_SET);
+                            con->setCharForeground(l, i, color_light_wall);
+                        }
+                        if (bigg2){
+                            con_mini->putChar(l+1, i+1, '#', TCOD_BKGND_SET);
+                            con_mini->setCharBackground(l+1, i+1, color_light_wall, TCOD_BKGND_SET);
+                            con_mini->setCharForeground(l+1, i+1, color_light_wall);
+                        }
                     }
                     else {
-                        con->putChar(l, i, '.', TCOD_BKGND_SET);
-                        con->setCharForeground(l, i, TCODColor::white);
-                        con->setCharBackground(l, i, color_light_ground, TCOD_BKGND_SET);
+                        if(bigg){
+                            con->putChar(l*2,i*2, 501, TCOD_BKGND_SET);
+                            con->putChar((l*2)+1,i*2, 601, TCOD_BKGND_SET);
+                            con->putChar(l*2,(i*2)+1, 701, TCOD_BKGND_SET);
+                            con->putChar((l*2)+1,(i*2)+1, 801, TCOD_BKGND_SET);
+
+                            con->setCharForeground((l*2), (i*2), TCODColor::white);
+                            con->setCharForeground((l*2)+1, (i*2), TCODColor::white);
+                            con->setCharForeground((l*2), (i*2)+1, TCODColor::white);
+                            con->setCharForeground((l*2)+1, (i*2)+1, TCODColor::white);
+
+                            con->setCharBackground((l*2), (i*2), color_light_ground, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2)+1, (i*2), color_light_ground, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2), (i*2)+1, color_light_ground, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2)+1, (i*2)+1, color_light_ground, TCOD_BKGND_SET);
+                        } else {
+                            con->putChar(l, i, '.', TCOD_BKGND_SET);
+                            con->setCharForeground(l, i, TCODColor::white);
+                            con->setCharBackground(l, i, color_light_ground, TCOD_BKGND_SET);
+                        }
+                        if (bigg2){
+                            con_mini->putChar(l+1, i+1, '.', TCOD_BKGND_SET);
+                            con_mini->setCharForeground(l+1, i+1, TCODColor::white);
+                            con_mini->setCharBackground(l+1, i+1, color_light_ground, TCOD_BKGND_SET);
+                        }
+                        
                     }
                     if (isbloody > 0){
                 if (isbloody >= 4) blood = blood1;
                 if (isbloody == 3) blood = blood2;
                 if (isbloody == 2) blood = blood3;
                 if (isbloody < 2) blood = blood4;
-                con->setCharBackground(l, i, blood, TCOD_BKGND_SET);
+                if(bigg){
+                    con->setCharBackground((l*2), (i*2), blood, TCOD_BKGND_SET);
+                    con->setCharBackground((l*2)+1, (i*2), blood, TCOD_BKGND_SET);
+                    con->setCharBackground((l*2), (i*2)+1, blood, TCOD_BKGND_SET);
+                    con->setCharBackground((l*2)+1, (i*2)+1, blood, TCOD_BKGND_SET);
+                } else {   
+                    con->setCharBackground(l, i, blood, TCOD_BKGND_SET);
+                }
+
             }
                     map_array[i * MAP_WIDTH + l].explored = true;
                     
@@ -1283,18 +1534,41 @@ void render_all (){
     con->putChar(10, 10+1, 668, TCOD_BKGND_SET);
     con->putChar(10+1, 10+1, 669, TCOD_BKGND_SET);
     */
+    /*
     print_8x16(10, 10, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", TCODColor::red, TCODColor::black);
     print_8x16(10, 12, "abcdefghijklmnopqrstuvwxyz", TCODColor::red, TCODColor::black);
     print_8x16(10, 14, "\"Hello world!\" 1234", TCODColor::white, TCODColor::black);
+    
 
-    con->setDefaultForeground(TCODColor::white);
+    con->setDefaultForeground(TCODColor::red);
     con->setDefaultBackground(TCODColor::black);
-    con->putChar(10, 17, 1201, TCOD_BKGND_SET);
-    con->putChar(11, 17, 1301, TCOD_BKGND_SET);
-    con->putChar(10, 18, 1401, TCOD_BKGND_SET);
-    con->putChar(11, 18, 4096, TCOD_BKGND_SET);
+    con->putChar(10, 17, 501, TCOD_BKGND_SET);
+    con->putChar(11, 17, 601, TCOD_BKGND_SET);
+    con->putChar(10, 18, 701, TCOD_BKGND_SET);
+    con->putChar(11, 18, 801, TCOD_BKGND_SET);
+    */
 
     TCODConsole::blit(con,0,0,0,0,TCODConsole::root,0,0);
+    
+    if(bigg2){
+        for (int n = 0; n < MAP_HEIGHT+1; ++n){
+        con_mini->setDefaultForeground(TCODColor::lighterGrey);
+        con_mini->setDefaultBackground(TCODColor::black);
+        con_mini->print(0, n, "%c", TCOD_CHAR_VLINE);
+        con_mini->print(MAP_WIDTH+1, n, "%c", TCOD_CHAR_VLINE);
+    }
+    for (int n = 0; n < MAP_WIDTH+1; ++n){
+        con_mini->setDefaultForeground(TCODColor::lighterGrey);
+        con_mini->setDefaultBackground(TCODColor::black);
+        con_mini->print(n, 0, "%c", TCOD_CHAR_HLINE);
+        con_mini->print(n, MAP_HEIGHT+1, "%c", TCOD_CHAR_HLINE);
+    }
+    con_mini->print(0, 0, "%c", TCOD_CHAR_NW);
+    con_mini->print(MAP_WIDTH+1, 0, "%c", TCOD_CHAR_NE);
+    con_mini->print(0, MAP_HEIGHT+1, "%c", TCOD_CHAR_SW);
+    con_mini->print(MAP_WIDTH+1, MAP_HEIGHT+1, "%c", TCOD_CHAR_SE);
+        TCODConsole::blit(con_mini,0,0,0,0,TCODConsole::root,20,10);
+    }
 }
 
 int blx = 0;
@@ -2953,24 +3227,24 @@ int main() {
         
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->print(1, MAP_HEIGHT+1, "Use arrows to move");
+        TCODConsole::root->print(1, (MAP_HEIGHT*2)+1, "Use arrows to move");
         TCODConsole::root->print(1, win_y-3, "Press 'q' to quit");
         
         TCODConsole::root->setAlignment(TCOD_RIGHT);
         if (player.stats.hp < 7) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
         else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
         TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
-            TCODConsole::root->print(win_x-2, MAP_HEIGHT+1, "HP: %c%d%c/%d",TCOD_COLCTRL_1, player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
+            TCODConsole::root->print(win_x-2, (MAP_HEIGHT*2)+1, "HP: %c%d%c/%d",TCOD_COLCTRL_1, player.stats.hp,TCOD_COLCTRL_STOP , player.stats.max_hp);
             if (player.combat_move < 4) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
             else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-            TCODConsole::root->print(win_x-2, MAP_HEIGHT+2, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
+            TCODConsole::root->print(win_x-2, (MAP_HEIGHT*2)+2, "Movement Points: %c%d%c",TCOD_COLCTRL_1,
                     player.combat_move,TCOD_COLCTRL_STOP);
         //TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->print(win_x-2, MAP_HEIGHT+4, "Press 'p' to punch walls");
-        TCODConsole::root->print(win_x-2, MAP_HEIGHT+5, "Press 'r' to regenerate layout/revive player");
-        TCODConsole::root->print(win_x-2, MAP_HEIGHT+7, "Press 'd' for DEBUG");
+        TCODConsole::root->print(win_x-2, (MAP_HEIGHT*2)+4, "Press 'p' to punch walls");
+        TCODConsole::root->print(win_x-2, (MAP_HEIGHT*2)+5, "Press 'r' to regenerate layout/revive player");
+        TCODConsole::root->print(win_x-2, (MAP_HEIGHT*2)+7, "Press 'd' for DEBUG");
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::yellow,TCODColor::black);
-        if (debug) TCODConsole::root->print(win_x-2, MAP_HEIGHT+8, "%cMonster count%c: %d",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, killall);
+        if (debug) TCODConsole::root->print(win_x-2, (MAP_HEIGHT*2)+8, "%cMonster count%c: %d",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, killall);
         
         TCODConsole::root->print(win_x-1, 0, "Mode-N");
        
@@ -3092,7 +3366,7 @@ TCODConsole::flush(); // this updates the screen
             }  
 
             r_panel->setAlignment(TCOD_RIGHT);
-            r_panel->print((win_x-MAP_WIDTH)-1, 3, "Initiative list");
+            r_panel->print((win_x-(MAP_WIDTH*2))-1, 3, "Initiative list");
 
             unsigned int player_own = player.initiative;
 
@@ -3102,13 +3376,13 @@ TCODConsole::flush(); // this updates the screen
             TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lightAmber,TCODColor::black);
             for (unsigned int i = 0; i<monsters.size(); ++i) {
                 if (i == (player_own - 1)){
-                    r_panel->print((win_x-MAP_WIDTH)-2, 5+(i), "[%c%d%c] Player <", TCOD_COLCTRL_1, 
+                    r_panel->print((win_x-(MAP_WIDTH*2))-2, 5+(i), "[%c%d%c] Player <", TCOD_COLCTRL_1, 
                             player.temp_init, TCOD_COLCTRL_STOP);
                 } else {
                     for (unsigned int b = 0; b<monvector.size(); ++b) {
                         unsigned int monster_ini =  monvector[b].initiative;
                         if ((i+1) == monster_ini){
-                            r_panel->print((win_x-MAP_WIDTH)-2, 5+ (i), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
+                            r_panel->print((win_x-(MAP_WIDTH*2))-2, 5+ (i), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
                                     monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
                                     monvector[b].name, TCOD_COLCTRL_STOP);
                         }
@@ -3121,40 +3395,40 @@ TCODConsole::flush(); // this updates the screen
             TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::lighterGreen, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::darkGreen, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::darkGreen, TCODColor::darkestRed);
-            r_panel->print((win_x-MAP_WIDTH)-2, 16, "%cAF%c%cAF%c%cA*%c%cA*%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-(MAP_WIDTH*2))-2, 16, "%cAF%c%cAF%c%cA*%c%cA*%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
-            r_panel->print((win_x-MAP_WIDTH)-2, 17, "%cDF%c%cD*%c%cDA%c%cDA%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-(MAP_WIDTH*2))-2, 17, "%cDF%c%cD*%c%cDA%c%cDA%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
             TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lighterRed, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::lighterGreen, TCODColor::black);
             TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::lightYellow, TCODColor::black);
             TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::darkGreen, TCODColor::darkestRed);
-            r_panel->print((win_x-MAP_WIDTH)-2, 18, "%cA*%c%c**%c%c**%c%cA*%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-(MAP_WIDTH*2))-2, 18, "%cA*%c%c**%c%c**%c%cA*%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
-            r_panel->print((win_x-MAP_WIDTH)-2, 19, "%cDF%c%cDB%c%c**%c%cDA%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-(MAP_WIDTH*2))-2, 19, "%cDF%c%cDB%c%c**%c%cDA%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
             TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::red, TCODColor::black);
             TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::lighterGreen, TCODColor::black);
             TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::lightYellow, TCODColor::darkestRed);
-            r_panel->print((win_x-MAP_WIDTH)-2, 20, "%cA2%c%cA1%c%c**%c%c**%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-(MAP_WIDTH*2))-2, 20, "%cA2%c%cA1%c%c**%c%c**%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
-            r_panel->print((win_x-MAP_WIDTH)-2, 21, "%cD*%c%cD*%c%cDB%c%c**%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-(MAP_WIDTH*2))-2, 21, "%cD*%c%cD*%c%cDB%c%c**%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
             TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::red, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::red, TCODColor::darkestRed);
             TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::lighterGreen, TCODColor::darkestRed);
-            r_panel->print((win_x-MAP_WIDTH)-2, 22, "%cA3%c%cA2%c%cA1%c%c**%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-(MAP_WIDTH*2))-2, 22, "%cA3%c%cA2%c%cA1%c%c**%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
-            r_panel->print((win_x-MAP_WIDTH)-2, 23, "%cD*%c%cD*%c%cD*%c%cDB%c", TCOD_COLCTRL_1, 
+            r_panel->print((win_x-(MAP_WIDTH*2))-2, 23, "%cD*%c%cD*%c%cD*%c%cDB%c", TCOD_COLCTRL_1, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, 
                     TCOD_COLCTRL_STOP,TCOD_COLCTRL_4, TCOD_COLCTRL_STOP);
 
@@ -3169,7 +3443,7 @@ TCODConsole::flush(); // this updates the screen
             
             fov_recompute = true;
             render_all();
-            TCODConsole::blit(r_panel,0,0,0,0,TCODConsole::root,MAP_WIDTH, 0);
+            TCODConsole::blit(r_panel,0,0,0,0,TCODConsole::root,(MAP_WIDTH*2), 0);
 TCODConsole::flush(); // this updates the screen
             //TCOD_key_t key2 = 
                 TCODConsole::waitForKeypress(true); // to start combat
@@ -3274,7 +3548,7 @@ TCODConsole::flush(); // this updates the screen
                         if(msg_log_list.size() > 0){
                             Message_Log();
                         }
-                        TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT);
+                        TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,(MAP_HEIGHT*2));
 
                         TCODConsole::flush(); // this updates the screen
                     }
