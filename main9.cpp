@@ -131,6 +131,16 @@ void create_v_tunnel(int y1, int y2, int x){
     }
 }
 
+
+
+
+class AI;
+
+class Object_monster;
+
+class Object_player;
+
+
 class Fighter {
 public:
     int max_hp;
@@ -144,11 +154,13 @@ public:
         defense = defval;
         power = powval;
     }
+
+    void attack(Object_player &player, Object_monster &monster, bool who); 
+
+    void take_damage(int damage){
+        if (damage > 0) hp -= damage;
+    }
 };
-
-
-class AI;
-
 
 class Object_monster {
 
@@ -183,11 +195,13 @@ public: // public should be moved down, but I keep it here for debug messages
         defined below
       */ 
 
+    /* 
     bool attack(Object_monster &foe){
         foe.h = foe.h - 1;
         if (foe.h == 0) {std::cout << "Killed a foe." << std::endl; return 1;}// killed!
         return 0; // not killed
     }
+    */
 
     void draw(bool uh) {
         con->setDefaultForeground(color);
@@ -231,10 +245,9 @@ public: // public should be moved down, but I keep it here for debug messages
 
 class AI {
 public:
-     virtual void take_turn(Object_monster &monster, int p_x, int p_y) {std::cout << "WHAT" ;} 
+     virtual void take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y) {std::cout << "WHAT" ;} 
 
 };
-
 
 
 class BasicMonster : public AI {
@@ -244,21 +257,23 @@ public:
 
     }
 
-    virtual void take_turn(Object_monster &monster, int p_x, int p_y){
+    virtual void take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y){
         float dist = 0;
  
         if (fov_map->isInFov(monster.x,monster.y)){
-            std::cout << "The " << monster.name << " in view! " ;
+            std::cout << "The " << monster.name << " in view! " << std::endl;
 dist = monster.distance_to(p_x, p_y);
             if (monster.distance_to(p_x, p_y) >= 2){
                 monster.move_towards(p_x, p_y);
-                std::cout << "I'm moving! " << dist;
-            } else  std::cout << "Close! " ;  
+                std::cout << "The " << monster.name << " is moving." << std::endl;
+            } else  monster.stats.attack(player, monster, 1) ;  
         }
         //else std::cout << "The " << monster.name << " lurks in the dark! " ;
         
     }    
 };
+
+
 
 class Object_player {
 
@@ -313,6 +328,32 @@ public: // public should be moved down, but I keep it here for debug messages
     ~Object_player(){} // ?
 };
 
+
+void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
+
+
+    int damage = 0;
+
+    if (who){        
+
+        damage = monster.stats.power - player.stats.defense;
+
+        if (damage > 0){
+            std::cout << monster.name << " attacks " << player.name << " for " << damage << " hit points." << std::endl;
+            player.stats.take_damage(damage);
+        } else std::cout << monster.name << " attacks " << player.name << " but it has no effect!" << std::endl;
+        
+    } else {
+        damage = player.stats.power - monster.stats.defense;
+
+        if (damage > 0){
+            std::cout << player.name << " attacks " << monster.name << " for " << damage << " hit points." << std::endl;
+            monster.stats.take_damage(damage);
+        } else std::cout << player.name << " attacks " << monster.name << " but it has no effect!" << std::endl;       
+    }
+
+}
+
 /*  
 player = Object(0, 0, '@', 'player', libtcod.white, blocks=True, NULL)
 Object(int a, int b, char chr, string?, TCODColor color, bool blocks, ai *AI)
@@ -325,6 +366,8 @@ Object_player playera(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black,
 Object_player playerb(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
 
 Object_player player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
+//strcpy(player.name, "Playername");
+//strcpy(monster.name, "orc");
 
 std::vector<Object_player*> myvector; // player vector object
 std::vector<Object_monster> monvector;
@@ -362,10 +405,8 @@ void Object_monster::move(int dx, int dy, bool p_dir) {
         tempy = y + dy;
 
         if (!is_blocked(tempx,tempy)){
-            std::cout << "Real moving x1: " << x << " " << dx << std::endl;
             x += dx;
             y += dy;
-            std::cout << "Real moving x2: " << x << " " << dx << std::endl;
             if (bloody > 0){
                 if (bloody >= map_array[y * MAP_WIDTH + x].bloodyt)
                 map_array[y * MAP_WIDTH + x].bloodyt = bloody;
@@ -460,7 +501,7 @@ void place_objects(Rect room){
             monster.h = 4;
             monster.blocks = true;
             //monster.name[] = "orc";
-            strcpy(monster.name, "orc");
+            strcpy(monster.name, "Orc");
             monster.stats = fighter_component;
             monster.myai = &orc_ai;
             }
@@ -474,7 +515,7 @@ void place_objects(Rect room){
             monster.h = 5;  
             monster.blocks = true;
             //monster.name[] = "troll";
-            strcpy(monster.name, "troll");
+            strcpy(monster.name, "Troll");
             monster.stats = fighter_component;
             monster.myai = &orc_ai;
         }  
@@ -818,9 +859,9 @@ void player_move_attack(int dx, int dy){
                 TCODConsole::flush();
                 std::cout << "monster target hp: " << monvector[target].stats.hp << std::endl;
             }
-        std::cout << "The " << monvector[target].name << " laughs!" << std::endl;
+        std::cout << "The " << monvector[target].name << " laughs of your attack!" << std::endl;
     } else { 
-        std::cout << "TIMES INTO move loop"  << std::endl;
+        //std::cout << "TIMES INTO move loop"  << std::endl;
         player.move(dx, dy, monvector);
         fov_recompute = true;
     }    
@@ -945,7 +986,7 @@ int handle_keys(Object_player &duh) {
         --bloodycount;
         --duh.bloody;  
         player_move_attack(0, -1);
-        std::cout << " Monster array: " << myvector.size() << std::endl;
+        //std::cout << " Monster array: " << myvector.size() << std::endl;
     }
 
     // end KEY UP cycle
@@ -1003,6 +1044,8 @@ int main() {
     player.colorb = color_dark_ground;
     //npc.colorb = color_dark_ground;
 
+    strcpy(player.name, "Playername");
+
     fov_recompute = true;
 
     TCODConsole::initRoot(win_x, win_y, "windowname", false);
@@ -1048,7 +1091,7 @@ int main() {
         if (player_action == quit) break;
         if (game_state == playing && player_action != no_turn){
             for (unsigned int i = 0; i<monvector.size(); ++i) { 
-                monvector[i].myai->take_turn(monvector[i], player.x, player.y); //std::cout << "The " << monvector[i].name << " growls!" << std::endl; 
+                monvector[i].myai->take_turn(monvector[i], player, player.x, player.y); //std::cout << "The " << monvector[i].name << " growls!" << std::endl; 
                 
             }  
         std::cout << "END MONSTER TURN" << std::endl;    
