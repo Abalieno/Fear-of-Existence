@@ -78,7 +78,51 @@ TCODMap * fov_map_mons = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 struct msg_log { char message [50]; TCODColor color1; TCODColor color2; TCODColor color3; TCODColor color4; TCODColor
     color5;};
 
-std::vector<msg_log> msg_log_list; 
+std::vector<msg_log> msg_log_list;
+
+void map_16x16_tile(){
+    TCODConsole::mapAsciiCodeToFont(1201,14,16);
+    TCODConsole::mapAsciiCodeToFont(1301,15,16);
+    TCODConsole::mapAsciiCodeToFont(1401,14,17);
+    TCODConsole::mapAsciiCodeToFont(4096,15,17); // tile #1
+}
+
+void map_8x16_font(){
+
+    for (int n = 0; n <= 100; n++){
+        int step = 0;
+        step = 2*n;
+        TCODConsole::mapAsciiCodeToFont(1001+step,1,0+step);
+        TCODConsole::mapAsciiCodeToFont(1001+(step+1),1,0+(step+1));
+    }
+}
+
+void print_8x16(int where_x, int where_y, const char *msg, TCODColor front, TCODColor back){
+
+    con->setDefaultForeground(front);
+    con->setDefaultBackground(back);
+    int msg_length = 0;
+    for (int i = 0; msg[i] != '\0'; i++){
+        msg_length = i;
+    }
+    
+    for (int n = 0; n <= msg_length; ++n){
+        int letter = 0;
+        letter = int(msg[n]);
+        int step = 0;
+        step = 2*(letter - 32);
+        // 936 + 65 = 1001
+        con->putChar(where_x + n, where_y, 1001+step, TCOD_BKGND_SET);
+        con->putChar(where_x + n, where_y+1, 1001+(step+1), TCOD_BKGND_SET);
+        //con->putChar((where_x + (m + 1))-2, where_y+1, 936+(step+1), TCOD_BKGND_SET);
+
+    }
+
+    //con->putChar(3, 3, 1001+step, TCOD_BKGND_SET);
+    //con->putChar(3, 4, 1001+(step+1), TCOD_BKGND_SET);
+
+    //std::cout << "char 1: " << first << std::endl;
+}
 
 class Tile {
 
@@ -1233,11 +1277,23 @@ void render_all (){
     con->print(0, 0, "%c1%c%c2%c%c3%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
             TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
 
+    /* 
     con->putChar(10, 10, 666, TCOD_BKGND_SET);
     con->putChar(10+1, 10, 667, TCOD_BKGND_SET);
     con->putChar(10, 10+1, 668, TCOD_BKGND_SET);
     con->putChar(10+1, 10+1, 669, TCOD_BKGND_SET);
-    
+    */
+    print_8x16(10, 10, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", TCODColor::red, TCODColor::black);
+    print_8x16(10, 12, "abcdefghijklmnopqrstuvwxyz", TCODColor::red, TCODColor::black);
+    print_8x16(10, 14, "\"Hello world!\" 1234", TCODColor::white, TCODColor::black);
+
+    con->setDefaultForeground(TCODColor::white);
+    con->setDefaultBackground(TCODColor::black);
+    con->putChar(10, 17, 1201, TCOD_BKGND_SET);
+    con->putChar(11, 17, 1301, TCOD_BKGND_SET);
+    con->putChar(10, 18, 1401, TCOD_BKGND_SET);
+    con->putChar(11, 18, 4096, TCOD_BKGND_SET);
+
     TCODConsole::blit(con,0,0,0,0,TCODConsole::root,0,0);
 }
 
@@ -2725,10 +2781,15 @@ int main() {
 
     //TCODConsole::mapAsciiCodeToFont('s',4,0);
     //TCODConsole::mapAsciiCodeToFont(TCOD_CHAR_HLINE,4,0);
+
+    // x = 1 y = 16 start of new font a = 1,16 + 1,17 / b = 1,18 + 1,19
     TCODConsole::mapAsciiCodeToFont(666,1,16);
     TCODConsole::mapAsciiCodeToFont(667,2,16);
     TCODConsole::mapAsciiCodeToFont(668,1,17);
     TCODConsole::mapAsciiCodeToFont(669,2,17);
+
+    map_8x16_font();
+    map_16x16_tile();
 
     /* 
     msg_log msg1;
