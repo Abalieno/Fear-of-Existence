@@ -1,13 +1,13 @@
 Fear-of-Existence
 =================
 
-[b]Ok, this is essentially like a joke since my game is in an purely conceptual stage, it will take me years to get closer to a playable/interesting stage, and I'm not asking for money, neither now nor later. (but I could always use some help)[/b]
+Ok, this is essentially like a joke since my game is in an purely conceptual stage, it will take me years to get closer to a playable/interesting stage, and I'm not asking for money, neither now nor later. (but I could always use some help)
 
 Maybe someone can find the ideas involved in this project interesting and inspiring.
 
 FoE is a project shell containing the 'ideal' for an ambitious roguelike. More than a faithful roguelike, it is intended as an hybrid, that will mix together many, many old-school games and styles, back from the days of the AMIGA. Not only, but it will borrow ideas, maybe cameos, from modern fantasy literature, anime and lots of other different material. A strong influence will come from Malazan (from the literature side) and Dark Souls (from the current games side).
 
-There are plenty of complex and ambitious roguelikes out there, but I think none, beside Incursion in its own way, tried to recreate a full RPG system. For RPG system I intend a fully open ruleset like pen and paper RPGs. Pathfinder, Rolemaster, Dangerous Journey, Elric!, Harnmaster, to name a few of those that I'm interested in. So a roguelike that will mimic a real ruleset, without hiding its mechanics behind complex math, and that will be run entirely through 'open' mechanics and rules, with dice rolls and everything. Borrowing especially from those rulesets the detail and complexity. See my further considerations on why using a full ruleset: [b]http://www.cesspit.net/drupal/node/2067[/b]
+There are plenty of complex and ambitious roguelikes out there, but I think none, beside Incursion in its own way, tried to recreate a full RPG system. For RPG system I intend a fully open ruleset like pen and paper RPGs. Pathfinder, Rolemaster, Dangerous Journey, Elric!, Harnmaster, to name a few of those that I'm interested in. So a roguelike that will mimic a real ruleset, without hiding its mechanics behind complex math, and that will be run entirely through 'open' mechanics and rules, with dice rolls and everything. Borrowing especially from those rulesets the detail and complexity. See my further considerations on why using a full ruleset: http://www.cesspit.net/drupal/node/2067
 
 The other important point is that I'm not a programmer, so the hope of even getting close to the goals are pretty dim. But this process is the part of the project, right now, that could make it interesting. I'm learning how to program from scratch, by working directly on this game concept. I learn a few things every day, make plenty of mistakes. Not only what I'm doing and will do is completely open source freely available at all stages, but I'll also keep a diary of my (sporadic) successes and (many) failures. So someone who's as clueless as me about game programming (but still interested about it) could tag along and see what I'm doing. It's not just open source (very bad) code, but code that will be explained through all its iterations step by step, so that someone as clueless as me could still understand it at least as much as I do, and maybe eventually make a better progress than me.
 
@@ -15,7 +15,7 @@ Those are the two main important points: the recreation of a full, complex RPG s
 
 Long-term, the game has quite an ambitious set of goals that will keep me busy for several centuries:
 
-[list]
+
 [*] Persistent, handcrafted world (including dungeons) 
 [*] Overworld and travel (ADOM-like)
 [*] Story and quests (ADOM-like)
@@ -30,7 +30,7 @@ Long-term, the game has quite an ambitious set of goals that will keep me busy f
 [*] Resource/consumables system (basic crafting, need to sleep, food, drink)
 [*] Settlement mode and city management (very long term)
 [*] Menu-driven (no memorization of esoteric commands required)
-[/list]
+
 
 The idea is to work toward a fully realized game-world that still has a 'story' to follow, but that it can also be 'lived-in' in a sort of sandbox-lite mode. Where it is the player who decides what to do and when. Including if to go after the story(ies) or completely ignore it.
 
@@ -48,7 +48,7 @@ Being based on libtcod, and so a console-like, ASCII-only game, there won't be '
 Some more information.
 On twitter: @MrSkimpole
 My site: http://www.cesspit.net/ (but not much about this project yet)
-A forum thread where I go in detail about what I do (and how I fail): [b]http://www.quartertothree.com/game-talk/showthread.php?t=70123[/b]
+A forum thread where I go in detail about what I do (and how I fail): http://www.quartertothree.com/game-talk/showthread.php?t=70123
 Another thread, at the library forum: http://doryen.eptalys.net/forum/index.php?topic=1500.0
 And from time to time I'm on IRC asking for help: irc://irc.quakenet.org:6667/rgrd
 
