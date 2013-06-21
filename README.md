@@ -16,20 +16,20 @@ Those are the two main important points: the recreation of a full, complex RPG s
 Long-term, the game has quite an ambitious set of goals that will keep me busy for several centuries:
 
 
-[*] Persistent, handcrafted world (including dungeons) 
-[*] Overworld and travel (ADOM-like)
-[*] Story and quests (ADOM-like)
-[*] Systemic flow, with linear branches (a number of optional paths, or go freeform sandbox mode)
-[*] No classes
-[*] No levels
-[*] Skill based (but not strictly use-based)
-[*] Full turn based combat with movement points. Influences from Vagrant Story and others.
-[*] Full party system (joinable persistent NPCs, up to four, including player)
-[*] Realistic looting (no coins or armor dropping from rats)
-[*] No infinitely respawning mobs
-[*] Resource/consumables system (basic crafting, need to sleep, food, drink)
-[*] Settlement mode and city management (very long term)
-[*] Menu-driven (no memorization of esoteric commands required)
+- Persistent, handcrafted world (including dungeons) 
+- Overworld and travel (ADOM-like)
+- Story and quests (ADOM-like)
+- Systemic flow, with linear branches (a number of optional paths, or go freeform sandbox mode)
+- No classes
+- No levels
+- Skill based (but not strictly use-based)
+- Full turn based combat with movement points. Influences from Vagrant Story and others.
+- Full party system (joinable persistent NPCs, up to four, including player)
+- Realistic looting (no coins or armor dropping from rats)
+- No infinitely respawning mobs
+- Resource/consumables system (basic crafting, need to sleep, food, drink)
+- Settlement mode and city management (very long term)
+- Menu-driven (no memorization of esoteric commands required)
 
 
 The idea is to work toward a fully realized game-world that still has a 'story' to follow, but that it can also be 'lived-in' in a sort of sandbox-lite mode. Where it is the player who decides what to do and when. Including if to go after the story(ies) or completely ignore it.
