@@ -104,7 +104,7 @@ TCODConsole *r_panel = new TCODConsole((win_x - MAP_WIDTH_AREA), MAP_HEIGHT_AREA
 // 30, 46 message log
 int BAR_WIDTH = 20;
 int MSG_X = 30; // BAR_WIDTH + 2;
-int MSG_WIDTH = 93; // SCREEN_WIDTH - BAR_WIDTH - 2 |was 63!
+int MSG_WIDTH = 93; // SCREEN_WIDTH - BAR_WIDTH - 2 | was 63!
 unsigned int MSG_HEIGHT = 15;// PANEL_HEIGHT - 1 | was 12!
 
 TCODMap * fov_map = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
@@ -733,24 +733,17 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
 
         short int p_success_level = 0;
         short int crit_val = p_d100 % 10;
-
-        char sstri1[3];
-        char sstri2[3];    
         if (p_d100 <= p_AML){
             if ( crit_val == 0 || crit_val == 5 ){
                 p_success_level = 0; // CS Critical Success
-                strcpy(sstri1, "CS");
             } else {    
                 p_success_level = 1; // MS Marginal Success
-                strcpy(sstri1, "MS");
             }    
         } else if (p_d100 > p_AML){
             if ( crit_val == 0 || crit_val == 5){
                 p_success_level = 3; // CF Critical Failure
-                strcpy(sstri1, "CF");
             } else {
                 p_success_level = 2; // MF Marginal Failure
-                strcpy(sstri1, "MF");
             }
         }
 
@@ -759,18 +752,14 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
         if (m_d100 <= m_DML){
             if ( crit_val == 0 || crit_val == 5 ){
                 m_success_level = 0; // CS Critical Success
-                strcpy(sstri2, "CS");
             } else {    
                 m_success_level = 1; // MS Marginal Success
-                strcpy(sstri2, "MS");
             }    
         } else if (m_d100 > m_DML){
             if ( crit_val == 0 || crit_val == 5){
                 m_success_level = 3; // CF Critical Failure
-                strcpy(sstri2, "CF");
             } else {
                 m_success_level = 2; // MF Marginal Failure
-                strcpy(sstri2, "MF");
             }
         }
 
@@ -1835,26 +1824,27 @@ void I_am_moused2(){ // doubled because of main loop, changes where messages are
     }
 }
 
+// HP bar during combat
 //def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
 void render_bar(int x, int y, int total_width, const char *name, 
         int value, int maximum, TCODColor bar_color, TCODColor back_color){
 
     int bar_width = int(float(value) / maximum * total_width);
 
-    panel->setDefaultBackground(back_color);
-    panel->rect(x, y, total_width, 1, false,TCOD_BKGND_SET);
-
-    //std::cout << "BAR " << bar_width << std::endl;
-    //std::cout << "value " << value << std::endl;
-    //std::cout << "maximum " << maximum << std::endl;
-    //std::cout << "total_width " << total_width << std::endl;
-    panel->setDefaultBackground(bar_color);
-    if (bar_width > 0) 
-        panel->rect(x, y, bar_width, 1, false,TCOD_BKGND_SET);
- 
+    // moved first so that the background of text is properly working
     panel->setDefaultForeground(TCODColor::white);
     panel->setAlignment(TCOD_CENTER);
     panel->print((x + total_width) / 2, y, "%s: %d/%d",name , value, maximum);
+
+    // fills bar with darkred
+    panel->setDefaultBackground(back_color);
+    panel->rect(x, y, total_width, 1, false,TCOD_BKGND_SET);
+
+    // draws the active part in lightred 
+    panel->setDefaultBackground(bar_color);
+    if (bar_width > 0) 
+        panel->rect(x, y, bar_width, 1, false,TCOD_BKGND_SET);
+    
     panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
 
 }
@@ -2515,24 +2505,17 @@ void player_move_attack(int dx, int dy){
 
         short int p_success_level = 0;
         short int crit_val = p_d100 % 10;
-
-        char sstri1[3];
-        char sstri2[3];    
         if (p_d100 <= p_AML){
             if ( crit_val == 0 || crit_val == 5 ){
                 p_success_level = 0; // CS Critical Success
-                strcpy(sstri1, "CS");
             } else {    
                 p_success_level = 1; // MS Marginal Success
-                strcpy(sstri1, "MS");
             }    
         } else if (p_d100 > p_AML){
             if ( crit_val == 0 || crit_val == 5){
                 p_success_level = 3; // CF Critical Failure
-                strcpy(sstri1, "CF");
             } else {
                 p_success_level = 2; // MF Marginal Failure
-                strcpy(sstri1, "MF");
             }
         }
 
@@ -2541,18 +2524,14 @@ void player_move_attack(int dx, int dy){
         if (m_d100 <= m_DML){
             if ( crit_val == 0 || crit_val == 5 ){
                 m_success_level = 0; // CS Critical Success
-                strcpy(sstri2, "CS");
             } else {    
                 m_success_level = 1; // MS Marginal Success
-                strcpy(sstri2, "MS");
             }    
         } else if (m_d100 > m_DML){
             if ( crit_val == 0 || crit_val == 5){
                 m_success_level = 3; // CF Critical Failure
-                strcpy(sstri2, "CF");
             } else {
                 m_success_level = 2; // MF Marginal Failure
-                strcpy(sstri2, "MF");
             }
         }
 
@@ -3873,12 +3852,12 @@ void draw_menu_2(int state, int pickone, int sel, int rolled, int pick, Statisti
     }
     if(!pick && rolled1ce){
         TCODConsole::root->setDefaultForeground(TCODColor::lightGreen);
-	    TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total);
-	    TCODConsole::root->print(10, 26, "%d", tempnumbers[1].total);
-	    TCODConsole::root->print(15, 26, "%d", tempnumbers[2].total);
-	    TCODConsole::root->print(20, 26, "%d", tempnumbers[3].total);
-	    TCODConsole::root->print(25, 26, "%d", tempnumbers[4].total);
-	    TCODConsole::root->print(30, 26, "%d", tempnumbers[5].total);
+    TCODConsole::root->print(5, 26, "%d", tempnumbers[0].total);
+    TCODConsole::root->print(10, 26, "%d", tempnumbers[1].total);
+    TCODConsole::root->print(15, 26, "%d", tempnumbers[2].total);
+    TCODConsole::root->print(20, 26, "%d", tempnumbers[3].total);
+    TCODConsole::root->print(25, 26, "%d", tempnumbers[4].total);
+    TCODConsole::root->print(30, 26, "%d", tempnumbers[5].total);
     }
    
     if (pick == 2){
@@ -3895,85 +3874,85 @@ void draw_menu_2(int state, int pickone, int sel, int rolled, int pick, Statisti
     TCODConsole::root->print(47, 5, "(S)Spiritual");
 
     TCODConsole::root->setDefaultForeground(TCODColor::white);
-	TCODConsole::root->print(3, 7, "CATEGORIES"); 
-	TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
-	TCODConsole::root->print(5, 9, "(MM)Mnemonic");
-	TCODConsole::root->print(5, 10, "(MR)Reasoning");
-	TCODConsole::root->print(26, 9, "(PM)Muscular");
-	TCODConsole::root->print(26, 10, "(PN)Neural");
-	TCODConsole::root->print(47, 9, "(SM)Metaphysical");
-	TCODConsole::root->print(47, 10, "(SP)Psychic");
+       TCODConsole::root->print(3, 7, "CATEGORIES"); 
+       TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+       TCODConsole::root->print(5, 9, "(MM)Mnemonic");
+       TCODConsole::root->print(5, 10, "(MR)Reasoning");
+       TCODConsole::root->print(26, 9, "(PM)Muscular");
+       TCODConsole::root->print(26, 10, "(PN)Neural");
+       TCODConsole::root->print(47, 9, "(SM)Metaphysical");
+       TCODConsole::root->print(47, 10, "(SP)Psychic");
 
-	TCODConsole::root->setDefaultForeground(TCODColor::white);
-	TCODConsole::root->print(3, 12, "ATTRIBUTES");
-	TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
-	TCODConsole::root->print(5, 14, "(MMC)Capacity");
-	TCODConsole::root->print(5, 15, "(MMP)Power");
-	TCODConsole::root->print(5, 16, "(MMS)Speed");
+       TCODConsole::root->setDefaultForeground(TCODColor::white);
+       TCODConsole::root->print(3, 12, "ATTRIBUTES");
+       TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
+       TCODConsole::root->print(5, 14, "(MMC)Capacity");
+       TCODConsole::root->print(5, 15, "(MMP)Power");
+       TCODConsole::root->print(5, 16, "(MMS)Speed");
 
-	TCODConsole::root->print(5, 18, "(MRC)Capacity");
-	TCODConsole::root->print(5, 19, "(MRP)Power");
-	TCODConsole::root->print(5, 20, "(MRS)Speed");
+       TCODConsole::root->print(5, 18, "(MRC)Capacity");
+       TCODConsole::root->print(5, 19, "(MRP)Power");
+       TCODConsole::root->print(5, 20, "(MRS)Speed");
 
-	TCODConsole::root->print(26, 14, "(PMC)Capacity");
-	TCODConsole::root->print(26, 15, "(PMP)Power");
-	TCODConsole::root->print(26, 16, "(PMS)Speed");
+       TCODConsole::root->print(26, 14, "(PMC)Capacity");
+       TCODConsole::root->print(26, 15, "(PMP)Power");
+       TCODConsole::root->print(26, 16, "(PMS)Speed");
 
-	TCODConsole::root->print(26, 18, "(PNC)Capacity");
-	TCODConsole::root->print(26, 19, "(PNP)Power");
-	TCODConsole::root->print(26, 20, "(PNS)Speed");
+       TCODConsole::root->print(26, 18, "(PNC)Capacity");
+       TCODConsole::root->print(26, 19, "(PNP)Power");
+       TCODConsole::root->print(26, 20, "(PNS)Speed");
 
-	TCODConsole::root->print(47, 14, "(SMC)Capacity");
-	TCODConsole::root->print(47, 15, "(SMP)Power");
-	TCODConsole::root->print(47, 16, "(SMS)Speed");
+       TCODConsole::root->print(47, 14, "(SMC)Capacity");
+       TCODConsole::root->print(47, 15, "(SMP)Power");
+       TCODConsole::root->print(47, 16, "(SMS)Speed");
 
-	TCODConsole::root->print(47, 18, "(SPC)Capacity");
-	TCODConsole::root->print(47, 19, "(SPP)Power");
-	TCODConsole::root->print(47, 20, "(SPS)Speed");
+       TCODConsole::root->print(47, 18, "(SPC)Capacity");
+       TCODConsole::root->print(47, 19, "(SPP)Power");
+       TCODConsole::root->print(47, 20, "(SPS)Speed");
 
-	TCODConsole::root->setAlignment(TCOD_RIGHT);
-	TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+       TCODConsole::root->setAlignment(TCOD_RIGHT);
+       TCODConsole::root->setDefaultForeground(TCODColor::yellow);
 
-	TCODConsole::root->print(23, 5, "%d", (player.sts.M));
-	TCODConsole::root->print(44, 5, "%d", (player.sts.P));
-	TCODConsole::root->print(65, 5, "%d", (player.sts.S));
+       TCODConsole::root->print(23, 5, "%d", (player.sts.M));
+       TCODConsole::root->print(44, 5, "%d", (player.sts.P));
+       TCODConsole::root->print(65, 5, "%d", (player.sts.S));
 
-	TCODConsole::root->setDefaultForeground(TCODColor::lighterCyan);
-	TCODConsole::root->print(23, 9, "%d", (player.sts.MM));
-	TCODConsole::root->print(23, 10, "%d", (player.sts.MR));
-	TCODConsole::root->print(44, 9, "%d", (player.sts.PM));
-	TCODConsole::root->print(44, 10, "%d", (player.sts.PN));
-	TCODConsole::root->print(65, 9, "%d", (player.sts.SM));
-	TCODConsole::root->print(65, 10, "%d", (player.sts.SP));
+       TCODConsole::root->setDefaultForeground(TCODColor::lighterCyan);
+       TCODConsole::root->print(23, 9, "%d", (player.sts.MM));
+       TCODConsole::root->print(23, 10, "%d", (player.sts.MR));
+       TCODConsole::root->print(44, 9, "%d", (player.sts.PM));
+       TCODConsole::root->print(44, 10, "%d", (player.sts.PN));
+       TCODConsole::root->print(65, 9, "%d", (player.sts.SM));
+       TCODConsole::root->print(65, 10, "%d", (player.sts.SP));
 
-	TCODConsole::root->setDefaultForeground(TCODColor::yellow);
-	TCODConsole::root->print(23, 14, "%d", (player.sts.MMC));
-	TCODConsole::root->print(23, 15, "%d", (player.sts.MMP));
-	TCODConsole::root->print(23, 16, "%d", (player.sts.MMS));
+       TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+       TCODConsole::root->print(23, 14, "%d", (player.sts.MMC));
+       TCODConsole::root->print(23, 15, "%d", (player.sts.MMP));
+       TCODConsole::root->print(23, 16, "%d", (player.sts.MMS));
 
-	TCODConsole::root->print(23, 18, "%d", (player.sts.MRC));
-	TCODConsole::root->print(23, 19, "%d", (player.sts.MRP));
-	TCODConsole::root->print(23, 20, "%d", (player.sts.MRS));
+       TCODConsole::root->print(23, 18, "%d", (player.sts.MRC));
+       TCODConsole::root->print(23, 19, "%d", (player.sts.MRP));
+       TCODConsole::root->print(23, 20, "%d", (player.sts.MRS));
 
-	TCODConsole::root->print(44, 14, "%d", (player.sts.PMC));
-	TCODConsole::root->print(44, 15, "%d", (player.sts.PMP));
-	TCODConsole::root->print(44, 16, "%d", (player.sts.PMS));
+       TCODConsole::root->print(44, 14, "%d", (player.sts.PMC));
+       TCODConsole::root->print(44, 15, "%d", (player.sts.PMP));
+       TCODConsole::root->print(44, 16, "%d", (player.sts.PMS));
 
-	TCODConsole::root->print(44, 18, "%d", (player.sts.PNC));
-	TCODConsole::root->print(44, 19, "%d", (player.sts.PNP));
-	TCODConsole::root->print(44, 20, "%d", (player.sts.PNS));
+       TCODConsole::root->print(44, 18, "%d", (player.sts.PNC));
+       TCODConsole::root->print(44, 19, "%d", (player.sts.PNP));
+       TCODConsole::root->print(44, 20, "%d", (player.sts.PNS));
 
-	TCODConsole::root->print(65, 14, "%d", (player.sts.SMC));
-	TCODConsole::root->print(65, 15, "%d", (player.sts.SMP));
-	TCODConsole::root->print(65, 16, "%d", (player.sts.SMS));
+       TCODConsole::root->print(65, 14, "%d", (player.sts.SMC));
+       TCODConsole::root->print(65, 15, "%d", (player.sts.SMP));
+       TCODConsole::root->print(65, 16, "%d", (player.sts.SMS));
 
-	TCODConsole::root->print(65, 18, "%d", (player.sts.SPC));
-	TCODConsole::root->print(65, 19, "%d", (player.sts.SPP));
-	TCODConsole::root->print(65, 20, "%d", (player.sts.SPS));
+       TCODConsole::root->print(65, 18, "%d", (player.sts.SPC));
+       TCODConsole::root->print(65, 19, "%d", (player.sts.SPP));
+       TCODConsole::root->print(65, 20, "%d", (player.sts.SPS));
+            
+        draw_frame("Character Creation", "Choose Attributes");
 
-	draw_frame("Character Creation", "Choose Attributes");
-
-	TCODConsole::root->setAlignment(TCOD_LEFT);
+        TCODConsole::root->setAlignment(TCOD_LEFT);
 
         for (int n = 0; n < 15; ++n){
         TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
@@ -4244,8 +4223,8 @@ int main() {
     }
 
     uint32 timin1 = 0;
-    uint32 timin2 = 0;  
-    
+    uint32 timin2 = 0; 
+
     while (! TCODConsole::isWindowClosed()) {
 
         /* int seco;
@@ -4299,7 +4278,8 @@ int main() {
         TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+8, "Press 'd' for DEBUG");
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::yellow,TCODColor::black);
         if (debug) TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+9, "%cMonster count%c: %d",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, killall);
-
+        TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+10, "Press 'CTRL+V' to toggle-reveal the map");
+        
         TCODConsole::root->print(win_x-1, 0, "Mode-N");
 
         TCODConsole::root->setAlignment(TCOD_CENTER);
