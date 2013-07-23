@@ -56,7 +56,7 @@ int bigg3 = 0; // is in tinymap
 int ROOM_MAX_SIZE = 18;
 int ROOM_MIN_SIZE = 6;
 int MAX_ROOMS = 30;
-int MAX_ROOM_MONSTERS = 13;
+int MAX_ROOM_MONSTERS = 4;
 unsigned int MAX_TOTAL_MONSTERS = 15;
 
 TCOD_fov_algorithm_t FOV_ALGO = FOV_BASIC; //default FOV algorithm
@@ -700,9 +700,9 @@ public:
                 //else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
 
                 if(bigg){
-                    TCODConsole::blit(con,offbig_x,offbig_y,110,70,TCODConsole::root,0,0);
+                    TCODConsole::blit(con,offbig_x,offbig_y+2,110,68,TCODConsole::root,0,2);
                 } else {    
-                    TCODConsole::blit(con,off_xx,off_yy,110,70,TCODConsole::root,0,0);
+                    TCODConsole::blit(con,off_xx,off_yy+1,110,69,TCODConsole::root,0,1);
                 }
                 //std::cout << "SMALLOFF: " << off_xx << " " << off_yy << std::endl;
 
@@ -2261,6 +2261,83 @@ void render_minimaps(){
     } // end bigg3 tinimap
 }
 
+void render_top(){
+    if(wid_top_open){
+    // map modes
+        switch(stance_pos){
+            case 1:
+                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::red);
+                TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::black);
+                TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::black);
+                //std::cout << std::endl << stance_pos << std::endl;
+                break;
+            case 2:
+                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+                TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::red);
+                TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::black);
+                break;
+            case 3:   
+                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+                TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::black);
+                TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::red);
+                break;
+        }
+        TCODConsole::setColorControl(TCOD_COLCTRL_5,TCODColor::white,TCODColor::black);
+
+        widget_top->setBackgroundFlag(TCOD_BKGND_SET);
+        widget_top->print(0, 0, "%c->%c%c1%c%c2%c%c34%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP,
+            TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
+            TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
+        TCODConsole::blit(widget_top,0,0,0,0,TCODConsole::root,0,0);
+
+        // object-list pop up window
+        if(stance_pos2 == 1){
+            widget_2_p->clear();
+            TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::red);
+            widget_2_p->setDefaultForeground(TCODColor::white);
+            int obj_line;
+            obj_line = 0;
+            for (unsigned int i = 0; i<monvector.size(); ++i) {
+                if (fov_map->isInFov(monvector[i].x,monvector[i].y)){
+                    obj_line += 1;
+                    TCODConsole::setColorControl(TCOD_COLCTRL_2,monvector[i].color,TCODColor::black);     
+                    widget_2_p->print(0, obj_line, "%c%c%c> This is one %c%s%c.", 
+                        TCOD_COLCTRL_2, monvector[i].selfchar, TCOD_COLCTRL_STOP, 
+                        TCOD_COLCTRL_2, monvector[i].name, TCOD_COLCTRL_STOP);
+                }    
+            //if (monvector[i].selfchar == '%')
+            //monvector[i].draw(0); // first draws dead bodies
+            } 
+            if (obj_line == 0){  
+                widget_2_p->print(0, 1, "No object in range.");
+                obj_line = 1;
+            }    
+            TCODConsole::blit(widget_2_p,0,0,50,obj_line+2,TCODConsole::root,6,1);  
+        } else {
+        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+        }  
+
+        //widget_2->setBackgroundFlag(TCOD_BKGND_SET);
+        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+        TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::red,TCODColor::black);
+        widget_top->print(8, 0, "%cIn Sight%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        
+        // fps count
+        int fpscount = TCODSystem::getFps();
+        //TCODConsole::root->print(100, 0, "FPS: %d", fpscount);
+        widget_top->print(100, 0, "%cFPS: %d%c", TCOD_COLCTRL_1, fpscount, TCOD_COLCTRL_STOP);
+        widget_top->print(92, 0, "%c>?<%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+
+        TCODConsole::blit(widget_top,0,0,0,0,TCODConsole::root,0,0);
+
+        } else {
+        // BLIT widget_top as closed
+        widget_top->setDefaultForeground(TCODColor::red);
+        widget_top->print(0, 0, "*");
+        TCODConsole::blit(widget_top,0,0,1,1,TCODConsole::root,0,0);
+        }
+}
+
 void render_all (){
 
     //std::cout << fov_recompute << std::endl;
@@ -2297,6 +2374,13 @@ void render_all (){
 
     if (fov_recompute){
         fov_map->computeFov(player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO);
+
+        //if(bigg){
+        //    maxmap_x = maxmap_x/2;
+        //    maxmap_y = maxmap_y/2;
+            //drawmap_off_y = drawmap_off_y/2;
+            //drawmap_off_x = drawmap_off_x/2;
+        //}
 
         for (int i = drawmap_off_y; i < maxmap_y ;++i){ // i = column
             for (int l = drawmap_off_x; l < maxmap_x ;++l) { // l = row
@@ -2570,86 +2654,14 @@ void render_all (){
         if(bigoff_y < 0) bigoff_y = 0;
         // bigg: *2 to pick the correct source point of the square to copy
         TCODConsole::blit(con, bigoff_x, bigoff_y, win_x, win_y,TCODConsole::root,0,0);
+        //std::cout << " " << bigoff_x;
         offbig_x = bigoff_x;
         offbig_y = bigoff_y; // sets offset to bring during monster attacks
     }
    
     
-
-    if(wid_top_open){
-    // map modes
-        switch(stance_pos){
-            case 1:
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::red);
-                TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::black);
-                TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::black);
-                //std::cout << std::endl << stance_pos << std::endl;
-                break;
-            case 2:
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-                TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::red);
-                TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::black);
-                break;
-            case 3:   
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-                TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::black);
-                TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::red);
-                break;
-        }
-        TCODConsole::setColorControl(TCOD_COLCTRL_5,TCODColor::white,TCODColor::black);
-
-        widget_top->setBackgroundFlag(TCOD_BKGND_SET);
-        widget_top->print(0, 0, "%c->%c%c1%c%c2%c%c34%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP,
-            TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
-            TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
-        TCODConsole::blit(widget_top,0,0,0,0,TCODConsole::root,0,0);
-
-        // object-list pop up window
-        if(stance_pos2 == 1){
-            widget_2_p->clear();
-            TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::red);
-            widget_2_p->setDefaultForeground(TCODColor::white);
-            int obj_line;
-            obj_line = 0;
-            for (unsigned int i = 0; i<monvector.size(); ++i) {
-                if (fov_map->isInFov(monvector[i].x,monvector[i].y)){
-                    obj_line += 1;
-                    TCODConsole::setColorControl(TCOD_COLCTRL_2,monvector[i].color,TCODColor::black);     
-                    widget_2_p->print(0, obj_line, "%c%c%c> This is one %c%s%c.", 
-                        TCOD_COLCTRL_2, monvector[i].selfchar, TCOD_COLCTRL_STOP, 
-                        TCOD_COLCTRL_2, monvector[i].name, TCOD_COLCTRL_STOP);
-                }    
-            //if (monvector[i].selfchar == '%')
-            //monvector[i].draw(0); // first draws dead bodies
-            } 
-            if (obj_line == 0){  
-                widget_2_p->print(0, 1, "No object in range.");
-                obj_line = 1;
-            }    
-            TCODConsole::blit(widget_2_p,0,0,50,obj_line+2,TCODConsole::root,6,1);  
-        } else {
-        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-        }  
-
-        //widget_2->setBackgroundFlag(TCOD_BKGND_SET);
-        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-        TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::red,TCODColor::black);
-        widget_top->print(8, 0, "%cIn Sight%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-        
-        // fps count
-        int fpscount = TCODSystem::getFps();
-        //TCODConsole::root->print(100, 0, "FPS: %d", fpscount);
-        widget_top->print(100, 0, "%cFPS: %d%c", TCOD_COLCTRL_1, fpscount, TCOD_COLCTRL_STOP);
-        widget_top->print(92, 0, "%c>?<%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
-
-        TCODConsole::blit(widget_top,0,0,0,0,TCODConsole::root,0,0);
-
-        } else {
-        // BLIT widget_top as closed
-        widget_top->setDefaultForeground(TCODColor::red);
-        widget_top->print(0, 0, "*");
-        TCODConsole::blit(widget_top,0,0,1,1,TCODConsole::root,0,0);
-        }
+        render_top();
+    
 
         if(!combat_mode && !wid_combat_open) render_base();
         render_messagelog();
@@ -3004,12 +3016,13 @@ void player_move_attack(int dx, int dy){
                     player.draw(1);
                     monvector[target].draw(1);
 
+                     
                     if (bigg){   
-                        TCODConsole::blit(con,offbig_x,offbig_y,110,70,TCODConsole::root,0,0);
+                        TCODConsole::blit(con,offbig_x,offbig_y+2,110,68,TCODConsole::root,0,2);
                     } else {    
                     //    TCODConsole::blit(con,0,0,110,70,TCODConsole::root,0,0);
                     //} else {
-                        TCODConsole::blit(con,off_xx,off_yy,110,70,TCODConsole::root,0,0);
+                        TCODConsole::blit(con,off_xx,off_yy+1,110,69,TCODConsole::root,0,1);
                     }
 
                     //TCODConsole::blit(con,0,0,0,0,TCODConsole::root,0,0);
@@ -4888,12 +4901,18 @@ int main() {
 
                             TCODConsole::root->setAlignment(TCOD_CENTER);
                             TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::yellow);
-                            TCODConsole::root->print(win_x/2,win_y-4,"%cMONSTER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                            //TCODConsole::root->print(win_x/2,win_y-4,"%cMONSTER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
 
                             TCODConsole::root->clear();
                             fov_recompute = true;
                             render_all();
                             r_panel->clear();
+                            widget_popup->clear();
+                                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+                                widget_popup->print(0, 0, "%cMONSTER TURNS%c",
+                                    TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                                //render_all();
+                                TCODConsole::blit(widget_popup,0,0,13,1,TCODConsole::root, (MAP_WIDTH_AREA/2)-6, 66);
                             //render_messagelog();
                             //render_minimaps();
                             //render_rpanel();
@@ -4982,7 +5001,7 @@ int main() {
                                 widget_popup->print(0, 0, "%cMONSTER TURNS%c",
                                     TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
                                 render_all();
-                                TCODConsole::blit(widget_popup,0,0,13,1,TCODConsole::root, (win_x/2)-6, 66);
+                                TCODConsole::blit(widget_popup,0,0,13,1,TCODConsole::root, (MAP_WIDTH_AREA/2)-6, 66);
                                 //TCODConsole::root->print(win_x/2,win_y-4,"%cMONSTER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
                                 //TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT_AREA+2);
                                 //render_messagelog();
