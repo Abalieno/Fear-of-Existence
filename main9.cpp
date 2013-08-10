@@ -53,7 +53,7 @@ int bigg2 = 0; // is in minimap
 int bigg3 = 0; // is in tinymap
 
 //parameters for dungeon generator
-int ROOM_MAX_SIZE = 18;
+int ROOM_MAX_SIZE = 24;
 int ROOM_MIN_SIZE = 6;
 int MAX_ROOMS = 30;
 int MAX_ROOM_MONSTERS = 4;
@@ -247,6 +247,7 @@ public:
     int y2;
     int center_x;
     int center_y;
+    bool special;
 
     Rect(int x, int y, int w, int h){
         x1 = x;
@@ -255,6 +256,7 @@ public:
         y2 = y + h;
         center_x = (x1 + x2) / 2;
         center_y = (y1 + y2) / 2;
+        special = false;
     }    
 
     void center(){
@@ -273,11 +275,47 @@ public:
 
 void create_room(Rect inroom){
     
-    for (int i = inroom.y1 + 1; i < inroom.y2;++i){
-        for (int l = inroom.x1 + 1; l < inroom.x2 ;++l) {
+    for (int i = inroom.y1 + 1; i < inroom.y2; ++i){
+        for (int l = inroom.x1 + 1; l < inroom.x2; ++l) {
             map_array[i * MAP_WIDTH + l] = Tile(0,0);
         }
     }
+}
+
+void create_round_room(Rect &inroom){
+
+    inroom.special = true;
+    int radius = 0;
+    int width = inroom.x2 - inroom.x1;
+    int height = inroom.y2 - inroom.y1;
+
+    radius = std::min(width, height) / 2;
+    
+    for (int i = inroom.y1; i < inroom.y2 + 1; ++i){
+        for (int l = inroom.x1; l < inroom.x2  +1; ++l) {
+            if (sqrt( pow((l - inroom.center_x),2) + pow((i - inroom.center_y),2) )< radius){
+                //sqrt (pow(dx, 2) + pow(dy, 2));
+                map_array[i * MAP_WIDTH + l] = Tile(0,0);
+            }    
+        }
+    }
+}
+
+void create_column_room(Rect &inroom){
+
+    inroom.special = true;
+    inroom.center_x = inroom.x1 + 6;
+    inroom.center_y = inroom.y1 + 3;
+    
+    for (int i = inroom.y1 ; i < inroom.y1+7; ++i){
+        for (int l = inroom.x1 ; l < inroom.x1+12; ++l) {
+            map_array[i * MAP_WIDTH + l] = Tile(0,0);
+        }
+    }
+
+    //for (int col = 0; col < 5; ++col){
+        
+    //}
 }
 
 void create_h_tunnel(int x1, int x2, int y){
@@ -1322,12 +1360,15 @@ void make_map2(Object_player &duh){
     killall = monvector.size();
 }
 
-void place_doors(){
+void place_doors(Rect inroom){
+
+    if(!inroom.special){
 
     TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
 
-    for (int i = 0; i < MAP_HEIGHT ;++i){
-        for (int l = 0; l < MAP_WIDTH ;++l){
+    for (int i = inroom.y1; i <= inroom.y2; ++i){
+        for (int l = inroom.x1; l <= inroom.x2; ++l){
+
             Door door1(l, i, 0);
             
             if(wtf->getInt(1, 10, 0) > 5){
@@ -1398,25 +1439,39 @@ void place_doors(){
             }
         }
     }
+    } // inroom.special
 
 }
 
+void place_columns(Rect inroom){
+    map_array[(inroom.y1+1) * MAP_WIDTH + (inroom.x1 + 2)] = Tile(1,1);
+    map_array[(inroom.y1+1) * MAP_WIDTH + (inroom.x1 + 4)] = Tile(1,1);
+    map_array[(inroom.y1+1) * MAP_WIDTH + (inroom.x1 + 6)] = Tile(1,1);
+    map_array[(inroom.y1+1) * MAP_WIDTH + (inroom.x1 + 8)] = Tile(1,1);
+    map_array[(inroom.y1+1) * MAP_WIDTH + (inroom.x1 + 10)] = Tile(1,1);
+
+    map_array[(inroom.y1+5) * MAP_WIDTH + (inroom.x1 + 2)] = Tile(1,1);
+    map_array[(inroom.y1+5) * MAP_WIDTH + (inroom.x1 + 4)] = Tile(1,1);
+    map_array[(inroom.y1+5) * MAP_WIDTH + (inroom.x1 + 6)] = Tile(1,1);
+    map_array[(inroom.y1+5) * MAP_WIDTH + (inroom.x1 + 8)] = Tile(1,1);
+    map_array[(inroom.y1+5) * MAP_WIDTH + (inroom.x1 + 10)] = Tile(1,1);
+}
+
 void make_map(Object_player &duh){
+
+    bool throne = false;
+    bool doorescape = false;
+    int column = 0;
            
     map_array.resize(MAP_HEIGHT * MAP_WIDTH);
-        
-    int row = 0;
-    
+     
+    // fill map with walls [1,1]
     for (int i = 0; i < MAP_HEIGHT ;++i){
-        
         for (int l = 0; l < MAP_WIDTH ;++l) {
-           map_array[row * MAP_WIDTH + l] = Tile(1,1);
+           map_array[i * MAP_WIDTH + l] = Tile(1,1);
            //map_array[3597] = Tile(1,1);
         }
-        ++row;
     } // fills map with walls 
-
-    
 
     std::vector<Rect> rooms;
     int num_rooms = 0;
@@ -1429,8 +1484,8 @@ void make_map(Object_player &duh){
 
     for (int r = 0; r < MAX_ROOMS; ++r){
 
+        /// I think this makes execute animation every 2 frames
         if ( r%2 == 0 ) secd = true; else secd = false;
-
         
         if (init && secd){
             load->setAlignment(TCOD_CENTER);
@@ -1506,25 +1561,24 @@ void make_map(Object_player &duh){
         TCODConsole::flush(); // this updates the screen
         ++cycle;
         if (cycle >= 7) cycle = 0;
-        
         }
 
         std::cout << "num_rooms: " << num_rooms << std::endl;
         std::cout << "Rooms array: " << rooms.size() << std::endl;
 
-
         TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
 
         //random width and height
         int w = 0;
-         w=    wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
+        w = wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
         int h = 0;
-         h=   wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
+        h = wtf->getInt(ROOM_MIN_SIZE, ROOM_MAX_SIZE, 0);
+
         //random position without going out of the boundaries of the map
         int x = 0;
-         x=   wtf->getInt( 0, MAP_WIDTH - w - 1,0);
+        x = wtf->getInt( 0, MAP_WIDTH - w - 1, 0);
         int y = 0;
-         y=   wtf->getInt( 0, MAP_HEIGHT - h - 1,0);
+        y = wtf->getInt( 0, MAP_HEIGHT - h - 1, 0);
 
         //Rect *new_room = new Rect(x, y, w, h);
         Rect new_room(x, y, w, h);
@@ -1542,7 +1596,15 @@ void make_map(Object_player &duh){
         }  
 
         if (!failed){
-            create_room(new_room);
+            
+            if (!throne && (w > 14 && h > 6)) {create_column_room(new_room); throne = true; doorescape = true;}
+            else {
+                doorescape = false;
+                int round = 0;
+                round = wtf->getInt( 0, 5, 0);
+                if (round == 5) create_round_room(new_room);
+                else create_room(new_room);
+                }
             
             if (num_rooms == 0){
                 duh.x = new_room.center_x;
@@ -1562,16 +1624,23 @@ void make_map(Object_player &duh){
                     create_v_tunnel(prev_y, new_room.center_y, prev_x);
                     create_h_tunnel(prev_x, new_room.center_x, new_room.center_y);
                 }
+                
+                
             }
             num_rooms = num_rooms + 1; // add room to counter
             rooms.push_back(new_room); // add room to array
+            if(doorescape) column = rooms.size()-1;
         }
     }
 
+    for (unsigned int i = 0; i<rooms.size(); ++i){
+        place_doors(rooms[i]);    
+    }
+
+    place_columns(rooms[column]);
+
     killall = monvector.size();
     ++init;
-
-    place_doors();
 }
 
 void set_black(){
