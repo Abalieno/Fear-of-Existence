@@ -248,6 +248,7 @@ public:
     int center_x;
     int center_y;
     bool special;
+    bool needcol;
 
     Rect(int x, int y, int w, int h){
         x1 = x;
@@ -273,8 +274,9 @@ public:
     }
 };
 
-void create_room(Rect inroom){
+void create_room(Rect &inroom){
     
+    inroom.needcol = false;
     for (int i = inroom.y1 + 1; i < inroom.y2; ++i){
         for (int l = inroom.x1 + 1; l < inroom.x2; ++l) {
             map_array[i * MAP_WIDTH + l] = Tile(0,0);
@@ -290,6 +292,8 @@ void create_round_room(Rect &inroom){
     int height = inroom.y2 - inroom.y1;
 
     radius = std::min(width, height) / 2;
+    if (radius > 5) inroom.needcol = true;
+    else inroom.needcol = false;
     
     for (int i = inroom.y1; i < inroom.y2 + 1; ++i){
         for (int l = inroom.x1; l < inroom.x2  +1; ++l) {
@@ -304,6 +308,7 @@ void create_round_room(Rect &inroom){
 void create_column_room(Rect &inroom){
 
     inroom.special = true;
+    inroom.needcol = false;
     inroom.center_x = inroom.x1 + 6;
     inroom.center_y = inroom.y1 + 3;
     
@@ -1457,6 +1462,44 @@ void place_columns(Rect inroom){
     map_array[(inroom.y1+5) * MAP_WIDTH + (inroom.x1 + 10)] = Tile(1,1);
 }
 
+void place_column(Rect inroom){
+
+    if(inroom.needcol){
+    map_array[(inroom.center_y) * MAP_WIDTH + (inroom.center_x)] = Tile(1,1);
+    map_array[(inroom.center_y+1) * MAP_WIDTH + (inroom.center_x)] = Tile(1,1);
+    map_array[(inroom.center_y-1) * MAP_WIDTH + (inroom.center_x)] = Tile(1,1);
+    map_array[(inroom.center_y) * MAP_WIDTH + (inroom.center_x+1)] = Tile(1,1);
+    map_array[(inroom.center_y) * MAP_WIDTH + (inroom.center_x-1)] = Tile(1,1);
+    }
+
+}
+
+void make_map_BSP(Object_player &duh){
+
+    map_array.resize(MAP_HEIGHT * MAP_WIDTH);
+     
+    // fill map with walls [1,1]
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+           map_array[i * MAP_WIDTH + l] = Tile(1,1);
+        }
+    } 
+
+    TCODBsp *myBSP = new TCODBsp(0,0, MAP_WIDTH, MAP_HEIGHT);
+    myBSP->splitOnce(false, MAP_WIDTH/2); // false: vertical line
+    TCODBsp *myLeft = myBSP->getLeft();
+
+    myLeft->splitOnce(true, MAP_HEIGHT/2); // false: vertical line
+    TCODBsp *myLeft2 = myLeft->getLeft();
+
+    for (int i = myLeft2->y + 1; i < (myLeft2->y+myLeft2->h); ++i){
+        for (int l = myLeft2->x + 1; l < (myLeft2->x+myLeft2->w); ++l) {
+            map_array[i * MAP_WIDTH + l] = Tile(0,0);
+        }
+    }
+
+}    
+
 void make_map(Object_player &duh){
 
     bool throne = false;
@@ -1597,14 +1640,22 @@ void make_map(Object_player &duh){
 
         if (!failed){
             
-            if (!throne && (w > 14 && h > 6)) {create_column_room(new_room); throne = true; doorescape = true;}
+            if (!throne && (w > 14 && h > 6)) {
+                create_column_room(new_room); 
+                throne = true; 
+                doorescape = true;
+            }
             else {
                 doorescape = false;
                 int round = 0;
                 round = wtf->getInt( 0, 5, 0);
-                if (round == 5) create_round_room(new_room);
-                else create_room(new_room);
+                if (round == 5){ 
+                    create_round_room(new_room);
+                }    
+                else { 
+                    create_room(new_room);
                 }
+            }    
             
             if (num_rooms == 0){
                 duh.x = new_room.center_x;
@@ -1634,7 +1685,8 @@ void make_map(Object_player &duh){
     }
 
     for (unsigned int i = 0; i<rooms.size(); ++i){
-        place_doors(rooms[i]);    
+        place_doors(rooms[i]);
+        place_column(rooms[i]);
     }
 
     place_columns(rooms[column]);
@@ -3173,10 +3225,12 @@ int handle_keys(Object_player &duh) {
 
         //Sleep(4000);
         if (mapmode == 1){
+            //make_map_BSP(duh);
             make_map(duh);
             mapmode = 0;
         } else {
-            make_map2(duh);
+            make_map_BSP(duh);
+            //make_map2(duh);
             mapmode = 1;
         }    
         duh.bloody = 0;
@@ -4327,7 +4381,7 @@ int main() {
     myvector.push_back(&player);
     //myvector.push_back(&npc);
    
-    make_map(player);
+    make_map_BSP(player);
 
     for (int i = 0; i < MAP_HEIGHT ;++i){
         for (int l = 0; l < MAP_WIDTH ;++l) {
