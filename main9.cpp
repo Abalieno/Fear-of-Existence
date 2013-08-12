@@ -1553,11 +1553,16 @@ public :
 			miny = TCODRandom::getInstance()->getInt(miny,maxy-ROOM_MIN_SIZE+1);
 			maxx = TCODRandom::getInstance()->getInt(minx+ROOM_MIN_SIZE-1,maxx);
 			maxy = TCODRandom::getInstance()->getInt(miny+ROOM_MIN_SIZE-1,maxy);
+
+            // ratio
             
             node->x=minx;
 			node->y=miny;
 			node->w=maxx-minx+1;
 			node->h=maxy-miny+1;
+            //if((node->w)*3 > node->h) node->h = (node->w)*3;
+            //if((node->h)*3 > node->w) node->w = (node->h)*3;
+            //Rect new_room(minx, miny, node->w, node->h);
             Rect new_room(minx, miny, maxx-minx, maxy-miny);
             /* for (int x=minx; x <= maxx; x++ ) {
 				for (int y=miny; y <= maxy; y++ ) {
@@ -1653,7 +1658,7 @@ void make_map_BSP(Object_player &duh){
     } 
 
     TCODBsp *myBSP = new TCODBsp(30,30, MAP_WIDTH-60, MAP_HEIGHT-60);
-    myBSP->splitRecursive(NULL,200,ROOM_MIN_SIZE+1,ROOM_MIN_SIZE+1,1.5f,1.5f);
+    myBSP->splitRecursive(NULL,6,ROOM_MIN_SIZE+1,ROOM_MIN_SIZE+1,1.5f,1.5f);
     //myBSP->splitRecursive(NULL,17,3,2,1.5f,1.5f);
     
     myBSP->traverseInvertedLevelOrder(new MyCallback(),NULL);
