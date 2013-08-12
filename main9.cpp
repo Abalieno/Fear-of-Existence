@@ -54,7 +54,7 @@ int bigg3 = 0; // is in tinymap
 
 //parameters for dungeon generator
 int ROOM_MAX_SIZE = 24;
-int ROOM_MIN_SIZE = 10;
+int ROOM_MIN_SIZE = 4;
 int MAX_ROOMS = 30;
 int MAX_ROOM_MONSTERS = 4;
 unsigned int MAX_TOTAL_MONSTERS = 15;
@@ -295,9 +295,9 @@ void create_round_room(Rect &inroom){
     if (radius > 5) inroom.needcol = true;
     else inroom.needcol = false;
     
-    for (int i = inroom.y1; i < inroom.y2 + 1; ++i){
-        for (int l = inroom.x1; l < inroom.x2  +1; ++l) {
-            if (sqrt( pow((l - inroom.center_x),2) + pow((i - inroom.center_y),2) )< radius){
+    for (int i = inroom.y1; i <= inroom.y2; i++){
+        for (int l = inroom.x1; l <= inroom.x2; l++) {
+            if (sqrt( pow((l - inroom.center_x),2) + pow((i - inroom.center_y),2) ) < radius){
                 //sqrt (pow(dx, 2) + pow(dy, 2));
                 map_array[i * MAP_WIDTH + l] = Tile(0,0);
             }    
@@ -1545,15 +1545,15 @@ public :
 			int miny = node->y+1;
 			int maxy = node->y+node->h-1;
 
-            /* if ( minx > 1 ) minx--;
-			if ( miny > 1 ) miny--;
+            //if ( minx > 1 ) minx--;
+			//if ( miny > 1 ) miny--; 
             if (maxx == MAP_WIDTH-1 ) maxx--;
-			if (maxy == MAP_HEIGHT-1 ) maxy--; */
-            /*minx = TCODRandom::getInstance()->getInt(minx,maxx-ROOM_MIN_SIZE+1);
+			if (maxy == MAP_HEIGHT-1 ) maxy--; 
+            minx = TCODRandom::getInstance()->getInt(minx,maxx-ROOM_MIN_SIZE+1);
 			miny = TCODRandom::getInstance()->getInt(miny,maxy-ROOM_MIN_SIZE+1);
 			maxx = TCODRandom::getInstance()->getInt(minx+ROOM_MIN_SIZE-1,maxx);
 			maxy = TCODRandom::getInstance()->getInt(miny+ROOM_MIN_SIZE-1,maxy);
-            */
+            
             node->x=minx;
 			node->y=miny;
 			node->w=maxx-minx+1;
@@ -1564,7 +1564,7 @@ public :
 					map_array[y * MAP_WIDTH + x] = Tile(0,0);
 				}
 			}*/
-            int round = 0;
+            /* int round = 0;
             round = TCODRandom::getInstance()->getInt( 0, 5, 0);
             if (round == 5){ 
                 int radius = 0;
@@ -1572,10 +1572,10 @@ public :
                 node->w=radius;
 			    node->h=radius;
                 create_round_room(new_room);
-            }    
-            else { 
+            }*/    
+            //else { 
                 create_room(new_room);
-            }
+            //}
             BSProoms.push_back(new_room);
 
             if (BSProoms.size() == 1){
@@ -1653,7 +1653,7 @@ void make_map_BSP(Object_player &duh){
     } 
 
     TCODBsp *myBSP = new TCODBsp(30,30, MAP_WIDTH-60, MAP_HEIGHT-60);
-    myBSP->splitRecursive(NULL,200,4,4,1.5f,1.5f);
+    myBSP->splitRecursive(NULL,200,ROOM_MIN_SIZE+1,ROOM_MIN_SIZE+1,1.5f,1.5f);
     //myBSP->splitRecursive(NULL,17,3,2,1.5f,1.5f);
     
     myBSP->traverseInvertedLevelOrder(new MyCallback(),NULL);
