@@ -54,7 +54,7 @@ int bigg3 = 0; // is in tinymap
 
 //parameters for dungeon generator
 int ROOM_MAX_SIZE = 24;
-int ROOM_MIN_SIZE = 6;
+int ROOM_MIN_SIZE = 10;
 int MAX_ROOMS = 30;
 int MAX_ROOM_MONSTERS = 4;
 unsigned int MAX_TOTAL_MONSTERS = 15;
@@ -277,8 +277,8 @@ public:
 void create_room(Rect &inroom){
     
     inroom.needcol = false;
-    for (int i = inroom.y1 + 1; i < inroom.y2; ++i){
-        for (int l = inroom.x1 + 1; l < inroom.x2; ++l) {
+    for (int i = inroom.y1 ; i <= inroom.y2; i++){
+        for (int l = inroom.x1 ; l <= inroom.x2; l++) {
             map_array[i * MAP_WIDTH + l] = Tile(0,0);
         }
     }
@@ -1371,8 +1371,8 @@ void place_doors(Rect inroom){
 
     TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
 
-    for (int i = inroom.y1; i <= inroom.y2; ++i){
-        for (int l = inroom.x1; l <= inroom.x2; ++l){
+    for (int i = inroom.y1-1; i <= inroom.y2+1; ++i){ // +1 so it looks to walls too
+        for (int l = inroom.x1-1; l <= inroom.x2+1; ++l){
 
             Door door1(l, i, 0);
             
@@ -1474,6 +1474,173 @@ void place_column(Rect inroom){
 
 }
 
+void vline(int x, int y1, int y2) {
+	int y=y1;
+	int dy=(y1>y2?-1:1);
+    map_array[y * MAP_WIDTH + x] = Tile(0,0);
+	if ( y1 == y2 ) return;
+	do {
+		y+=dy;
+		map_array[y * MAP_WIDTH + x] = Tile(0,0);
+	} while (y!=y2);
+}
+
+
+// draw a vertical line up until we reach an empty space
+void vline_up(int x, int y) {
+	while (y >= 0 && map_array[y * MAP_WIDTH + x].blocked) {
+		map_array[y * MAP_WIDTH + x] = Tile(0,0);
+		y--;
+	}
+}
+
+// draw a vertical line down until we reach an empty space
+void vline_down(int x, int y) {
+	while (y < MAP_HEIGHT && map_array[y * MAP_WIDTH + x].blocked) {
+		map_array[y * MAP_WIDTH + x] = Tile(0,0);
+		y++;
+	}
+}
+
+// draw a horizontal line
+void hline(int x1, int y, int x2) {
+	int x=x1;
+	int dx=(x1>x2?-1:1);
+	map_array[y * MAP_WIDTH + x] = Tile(0,0);
+	if ( x1 == x2 ) return;
+	do {
+		x+=dx;
+		map_array[y * MAP_WIDTH + x] = Tile(0,0);
+	} while (x!=x2);
+}
+
+// draw a horizontal line left until we reach an empty space
+void hline_left(int x, int y) {
+	while (x >= 0 && map_array[y * MAP_WIDTH + x].blocked) {
+		map_array[y * MAP_WIDTH + x] = Tile(0,0);
+		x--;
+	}
+}
+
+// draw a horizontal line right until we reach an empty space
+void hline_right(int x, int y) {
+	while (x < MAP_WIDTH && map_array[y * MAP_WIDTH + x].blocked) {
+		map_array[y * MAP_WIDTH + x] = Tile(0,0);
+		x++;
+	}
+}
+
+int roomcount = 0;
+std::vector<Rect> BSProoms;
+
+class MyCallback : public ITCODBspCallback {
+public :
+    bool visitNode(TCODBsp *node, void *userData) {
+        printf("node pos %dx%d size %dx%d level %d\n",node->x,node->y,node->w,node->h,node->level);
+
+        if (node->isLeaf()){
+            
+            int minx = node->x+1; // x+1
+			int maxx = node->x+node->w-1; // from x to width -1
+			int miny = node->y+1;
+			int maxy = node->y+node->h-1;
+
+            /* if ( minx > 1 ) minx--;
+			if ( miny > 1 ) miny--;
+            if (maxx == MAP_WIDTH-1 ) maxx--;
+			if (maxy == MAP_HEIGHT-1 ) maxy--; */
+            /*minx = TCODRandom::getInstance()->getInt(minx,maxx-ROOM_MIN_SIZE+1);
+			miny = TCODRandom::getInstance()->getInt(miny,maxy-ROOM_MIN_SIZE+1);
+			maxx = TCODRandom::getInstance()->getInt(minx+ROOM_MIN_SIZE-1,maxx);
+			maxy = TCODRandom::getInstance()->getInt(miny+ROOM_MIN_SIZE-1,maxy);
+            */
+            node->x=minx;
+			node->y=miny;
+			node->w=maxx-minx+1;
+			node->h=maxy-miny+1;
+            Rect new_room(minx, miny, maxx-minx, maxy-miny);
+            /* for (int x=minx; x <= maxx; x++ ) {
+				for (int y=miny; y <= maxy; y++ ) {
+					map_array[y * MAP_WIDTH + x] = Tile(0,0);
+				}
+			}*/
+            int round = 0;
+            round = TCODRandom::getInstance()->getInt( 0, 5, 0);
+            if (round == 5){ 
+                int radius = 0;
+                radius = std::min(node->w, node->h);
+                node->w=radius;
+			    node->h=radius;
+                create_round_room(new_room);
+            }    
+            else { 
+                create_room(new_room);
+            }
+            BSProoms.push_back(new_room);
+
+            if (BSProoms.size() == 1){
+                player.x = new_room.center_x;
+                player.y = new_room.center_y; // new player coordinates from room 0
+            }    
+
+            //for (int i = miny ; i < maxy; ++i){
+            //    for (int l = minx; l < maxx; ++l) {
+            //        map_array[i * MAP_WIDTH + l] = Tile(0,0);
+            //    }
+            //}
+        } else {
+//printf("lvl %d %dx%d %dx%d\n",node->level, node->x,node->y,node->w,node->h);
+			// resize the node to fit its sons
+			TCODBsp *left=node->getLeft();
+			TCODBsp *right=node->getRight();
+			node->x=MIN(left->x,right->x);
+			node->y=MIN(left->y,right->y);
+			node->w=MAX(left->x+left->w,right->x+right->w)-node->x;
+			node->h=MAX(left->y+left->h,right->y+right->h)-node->y;
+			// create a corridor between the two lower nodes
+			if (node->horizontal) {
+				// vertical corridor
+				if ( left->x+left->w -1 < right->x || right->x+right->w-1 < left->x ) {
+					// no overlapping zone. we need a Z shaped corridor
+					int x1=TCODRandom::getInstance()->getInt(left->x,left->x+left->w-1);
+					int x2=TCODRandom::getInstance()->getInt(right->x,right->x+right->w-1);
+					int y=TCODRandom::getInstance()->getInt(left->y+left->h,right->y);
+					vline_up(x1,y-1);
+					hline(x1,y,x2);
+					vline_down(x2,y+1);
+				} else {
+					// straight vertical corridor
+					int minx=MAX(left->x,right->x);
+					int maxx=MIN(left->x+left->w-1,right->x+right->w-1);
+					int x=TCODRandom::getInstance()->getInt(minx,maxx);
+					vline_down(x,right->y);
+					vline_up(x,right->y-1);
+				}
+			} else {
+				// horizontal corridor
+				if ( left->y+left->h -1 < right->y || right->y+right->h-1 < left->y ) {
+					// no overlapping zone. we need a Z shaped corridor
+					int y1=TCODRandom::getInstance()->getInt(left->y,left->y+left->h-1);
+					int y2=TCODRandom::getInstance()->getInt(right->y,right->y+right->h-1);
+					int x=TCODRandom::getInstance()->getInt(left->x+left->w,right->x);
+					hline_left(x-1,y1);
+					vline(x,y1,y2);
+					hline_right(x+1,y2);
+				} else {
+					// straight horizontal corridor
+					int miny=MAX(left->y,right->y);
+					int maxy=MIN(left->y+left->h-1,right->y+right->h-1);
+					int y=TCODRandom::getInstance()->getInt(miny,maxy);
+					hline_left(right->x-1,y);
+					hline_right(right->x,y);
+				}
+			}
+		}    
+        return true;
+    }
+};
+
+
 void make_map_BSP(Object_player &duh){
 
     map_array.resize(MAP_HEIGHT * MAP_WIDTH);
@@ -1485,18 +1652,17 @@ void make_map_BSP(Object_player &duh){
         }
     } 
 
-    TCODBsp *myBSP = new TCODBsp(0,0, MAP_WIDTH, MAP_HEIGHT);
-    myBSP->splitOnce(false, MAP_WIDTH/2); // false: vertical line
-    TCODBsp *myLeft = myBSP->getLeft();
-
-    myLeft->splitOnce(true, MAP_HEIGHT/2); // false: vertical line
-    TCODBsp *myLeft2 = myLeft->getLeft();
-
-    for (int i = myLeft2->y + 1; i < (myLeft2->y+myLeft2->h); ++i){
-        for (int l = myLeft2->x + 1; l < (myLeft2->x+myLeft2->w); ++l) {
-            map_array[i * MAP_WIDTH + l] = Tile(0,0);
-        }
+    TCODBsp *myBSP = new TCODBsp(30,30, MAP_WIDTH-60, MAP_HEIGHT-60);
+    myBSP->splitRecursive(NULL,200,4,4,1.5f,1.5f);
+    //myBSP->splitRecursive(NULL,17,3,2,1.5f,1.5f);
+    
+    myBSP->traverseInvertedLevelOrder(new MyCallback(),NULL);
+  
+    for (unsigned int i = 0; i<BSProoms.size(); ++i){
+        place_doors(BSProoms[i]);
+        place_column(BSProoms[i]);
     }
+    delete myBSP;
 
 }    
 
@@ -3229,6 +3395,7 @@ int handle_keys(Object_player &duh) {
             make_map(duh);
             mapmode = 0;
         } else {
+            BSProoms.clear();
             make_map_BSP(duh);
             //make_map2(duh);
             mapmode = 1;
