@@ -53,7 +53,7 @@ int bigg2 = 0; // is in minimap
 int bigg3 = 0; // is in tinymap
 
 //parameters for dungeon generator
-int ROOM_MAX_SIZE = 24;
+int ROOM_MAX_SIZE = 18;
 int ROOM_MIN_SIZE = 4;
 int MAX_ROOMS = 30;
 int MAX_ROOM_MONSTERS = 4;
@@ -1551,17 +1551,20 @@ public :
 			if (maxy == MAP_HEIGHT-1 ) maxy--; 
             minx = TCODRandom::getInstance()->getInt(minx,maxx-ROOM_MIN_SIZE+1);
 			miny = TCODRandom::getInstance()->getInt(miny,maxy-ROOM_MIN_SIZE+1);
+            if( (maxx - minx) > ROOM_MAX_SIZE ) maxx = minx + ROOM_MAX_SIZE;
+            if( (maxy - miny) > ROOM_MAX_SIZE ) maxy = miny + ROOM_MAX_SIZE;
 			maxx = TCODRandom::getInstance()->getInt(minx+ROOM_MIN_SIZE-1,maxx);
 			maxy = TCODRandom::getInstance()->getInt(miny+ROOM_MIN_SIZE-1,maxy);
-
             // ratio
-            
+            if((maxx-minx)*3 < (maxy-miny)) maxy = miny+(maxx-minx)*3;
+            if((maxy-miny)*3 < (maxx-minx)) maxx = minx+(maxy-miny)*3;
+
             node->x=minx;
 			node->y=miny;
 			node->w=maxx-minx+1;
 			node->h=maxy-miny+1;
-            //if((node->w)*3 > node->h) node->h = (node->w)*3;
-            //if((node->h)*3 > node->w) node->w = (node->h)*3;
+            //if((node->w)*3 < node->h) node->h = (node->w)*3;
+            //if((node->h)*3 < node->w) node->w = (node->h)*3;
             //Rect new_room(minx, miny, node->w, node->h);
             Rect new_room(minx, miny, maxx-minx, maxy-miny);
             /* for (int x=minx; x <= maxx; x++ ) {
