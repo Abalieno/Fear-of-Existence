@@ -57,7 +57,7 @@ int ROOM_MAX_SIZE = 18;
 int ROOM_MIN_SIZE = 4;
 int MAX_ROOMS = 30;
 int MAX_ROOM_MONSTERS = 4;
-unsigned int MAX_TOTAL_MONSTERS = 15;
+unsigned int MAX_TOTAL_MONSTERS = 815;
 
 TCOD_fov_algorithm_t FOV_ALGO = FOV_BASIC; //default FOV algorithm
 bool FOV_LIGHT_WALLS = true;
@@ -249,6 +249,7 @@ public:
     int center_y;
     bool special;
     bool needcol;
+    bool reround; // for BSP tress, make room after BSP
 
     Rect(int x, int y, int w, int h){
         x1 = x;
@@ -276,12 +277,25 @@ public:
 
 void create_room(Rect &inroom){
     
+    inroom.reround = false;
     inroom.needcol = false;
     for (int i = inroom.y1 ; i <= inroom.y2; i++){
         for (int l = inroom.x1 ; l <= inroom.x2; l++) {
             map_array[i * MAP_WIDTH + l] = Tile(0,0);
         }
     }
+}
+
+void create_round_room2(Rect &inroom){
+
+    inroom.needcol = false; 
+    inroom.reround = true;
+    
+    map_array[inroom.center_y * MAP_WIDTH + inroom.center_x] = Tile(0,0);
+    map_array[(inroom.center_y-1) * MAP_WIDTH + (inroom.center_x)] = Tile(0,0);
+    map_array[(inroom.center_y+1) * MAP_WIDTH + (inroom.center_x)] = Tile(0,0);
+    map_array[(inroom.center_y) * MAP_WIDTH + (inroom.center_x-1)] = Tile(0,0);
+    map_array[(inroom.center_y) * MAP_WIDTH + (inroom.center_x+1)] = Tile(0,0);
 }
 
 void create_round_room(Rect &inroom){
@@ -292,13 +306,12 @@ void create_round_room(Rect &inroom){
     int height = inroom.y2 - inroom.y1;
 
     radius = std::min(width, height) / 2;
-    if (radius > 5) inroom.needcol = true;
+    if (radius > 3) inroom.needcol = true;
     else inroom.needcol = false;
     
     for (int i = inroom.y1; i <= inroom.y2; i++){
         for (int l = inroom.x1; l <= inroom.x2; l++) {
-            if (sqrt( pow((l - inroom.center_x),2) + pow((i - inroom.center_y),2) ) < radius){
-                //sqrt (pow(dx, 2) + pow(dy, 2));
+            if (sqrt( pow((l - inroom.center_x),2) + pow((i - inroom.center_y),2) ) <= radius){
                 map_array[i * MAP_WIDTH + l] = Tile(0,0);
             }    
         }
@@ -1109,6 +1122,10 @@ void place_objects(Rect room){
     //int empty_room = wtf->getInt(0, 100, 0);
     //if (empty_room < 60){
     int num_mosters = wtf->getInt(0, MAX_ROOM_MONSTERS, 0);
+   
+    // 1 every 3 rooms has monsters
+    int skip = wtf->getInt(0, 2, 0);
+    if(skip == 2){
 
     int x, y;
 
@@ -1186,6 +1203,7 @@ void place_objects(Rect room){
      }
  
     std::cout << " Monster array: " << myvector.size() << std::endl;
+    }
    // }
 }
 
@@ -1536,7 +1554,7 @@ std::vector<Rect> BSProoms;
 class MyCallback : public ITCODBspCallback {
 public :
     bool visitNode(TCODBsp *node, void *userData) {
-        printf("node pos %dx%d size %dx%d level %d\n",node->x,node->y,node->w,node->h,node->level);
+        
 
         if (node->isLeaf()){
             
@@ -1563,8 +1581,6 @@ public :
 			node->y=miny;
 			node->w=maxx-minx+1;
 			node->h=maxy-miny+1;
-            //if((node->w)*3 < node->h) node->h = (node->w)*3;
-            //if((node->h)*3 < node->w) node->w = (node->h)*3;
             //Rect new_room(minx, miny, node->w, node->h);
             Rect new_room(minx, miny, maxx-minx, maxy-miny);
             /* for (int x=minx; x <= maxx; x++ ) {
@@ -1572,18 +1588,22 @@ public :
 					map_array[y * MAP_WIDTH + x] = Tile(0,0);
 				}
 			}*/
-            /* int round = 0;
+            int round = 0;
             round = TCODRandom::getInstance()->getInt( 0, 5, 0);
-            if (round == 5){ 
-                int radius = 0;
-                radius = std::min(node->w, node->h);
-                node->w=radius;
-			    node->h=radius;
-                create_round_room(new_room);
-            }*/    
-            //else { 
+            int radius = 0;
+            radius = std::min(node->w, node->h);
+            if (round == 5 && radius > 4){ 
+                
+                // - 1 ; 2
+                node->x=new_room.center_x-1;
+                node->y=new_room.center_y-1;
+                node->w=2;
+			    node->h=2;
+                create_round_room2(new_room);
+                printf("node pos x%d y%d ",new_room.center_x, new_room.center_y);
+            }  else { 
                 create_room(new_room);
-            //}
+            }
             BSProoms.push_back(new_room);
 
             if (BSProoms.size() == 1){
@@ -1667,11 +1687,18 @@ void make_map_BSP(Object_player &duh){
     myBSP->traverseInvertedLevelOrder(new MyCallback(),NULL);
   
     for (unsigned int i = 0; i<BSProoms.size(); ++i){
+        if(BSProoms[i].reround) create_round_room(BSProoms[i]);
         place_doors(BSProoms[i]);
         place_column(BSProoms[i]);
+        if(i > 3) place_objects(BSProoms[i]); // don't place monsters on player start
     }
     delete myBSP;
 
+    killall = monvector.size();
+    while(map_array[player.y * MAP_WIDTH + player.x].blocked){
+        player.x++;
+        player.y++;
+    }    
 }    
 
 void make_map(Object_player &duh){
@@ -3392,6 +3419,7 @@ int handle_keys(Object_player &duh) {
         std::cout << " Monster array: " << monvector.size() << std::endl;
         unsigned int b = monvector.size();
         for (unsigned int i = 0; i < b; ++i) monvector.erase (monvector.begin()+i); // erase monster vector on map regen
+        monvector.clear();
         std::cout << " Monster array: " << monvector.size() << std::endl; // 0
 
         b = doors.size();
@@ -3399,8 +3427,9 @@ int handle_keys(Object_player &duh) {
 
         //Sleep(4000);
         if (mapmode == 1){
-            //make_map_BSP(duh);
-            make_map(duh);
+            BSProoms.clear();
+            make_map_BSP(duh);
+            //make_map(duh);
             mapmode = 0;
         } else {
             BSProoms.clear();
@@ -3411,16 +3440,16 @@ int handle_keys(Object_player &duh) {
         duh.bloody = 0;
         for (int i = 0; i < MAP_HEIGHT ;++i){
             for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
-                        l].blocked));
+                fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        !(map_array[i * MAP_WIDTH + l].blocked));
                 //map_array[row * MAP_WIDTH + l] = Tile(1,1);
             }
 
         }
         for (int i = 0; i < MAP_HEIGHT ;++i){
             for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
-                        l].blocked));
+                fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        !(map_array[i * MAP_WIDTH + l].blocked));
                 //map_array[row * MAP_WIDTH + l] = Tile(1,1);
             }
 
@@ -3434,7 +3463,7 @@ int handle_keys(Object_player &duh) {
         alreadydead = 0;
         //    fov_recompute = true;
         render_all();
-            TCODConsole::flush(); // this updates the screen
+        TCODConsole::flush(); // this updates the screen
     }
 
     if (game_state == playing) {
@@ -3596,20 +3625,31 @@ int handle_combat(Object_player &duh) {
         std::cout << " Monster array: " << monvector.size() << std::endl; // 0
 
         //Sleep(4000);
-        make_map(duh);
+        
+        if (mapmode == 1){
+            BSProoms.clear();
+            make_map_BSP(duh);
+            //make_map(duh);
+            mapmode = 0;
+        } else {
+            BSProoms.clear();
+            make_map_BSP(duh);
+            //make_map2(duh);
+            mapmode = 1;
+        }
         duh.bloody = 0;
         for (int i = 0; i < MAP_HEIGHT ;++i){
             for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
-                        l].blocked));
+                fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        !(map_array[i * MAP_WIDTH + l].blocked));
                 //map_array[row * MAP_WIDTH + l] = Tile(1,1);
             }
 
         }
         for (int i = 0; i < MAP_HEIGHT ;++i){
             for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
-                        l].blocked));
+                fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        !(map_array[i * MAP_WIDTH + l].blocked));
                 //map_array[row * MAP_WIDTH + l] = Tile(1,1);
             }
 
@@ -3623,8 +3663,8 @@ int handle_combat(Object_player &duh) {
         alreadydead = 0;
         //    fov_recompute = true;
         render_all();
-            TCODConsole::flush(); // this updates the screen
-            return quit;
+        TCODConsole::flush(); // this updates the screen
+        return quit;
     }
 
     if (game_state == playing) {
@@ -4771,8 +4811,8 @@ int main() {
     }
     }
 
-    uint32 timin1 = 0;
-    uint32 timin2 = 0; 
+    //uint32 timin1 = 0;
+    //uint32 timin2 = 0; 
 
     //int fpscount = 0;
     //TCODConsole::setKeyboardRepeat(1, 1);
