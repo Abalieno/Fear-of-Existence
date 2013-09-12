@@ -78,6 +78,8 @@ int off_yy = 0;
 int offbig_x = 0;
 int offbig_y = 0;
 
+TCODColor demake(0,146,170);
+
 TCODColor color_light_wall(0, 0, 100);
 
 TCODColor color_light_ground(50, 50, 150);
@@ -178,6 +180,56 @@ void map_16x16_tile(){
     TCODConsole::mapAsciiCodeToFont(608,15,20);
     TCODConsole::mapAsciiCodeToFont(708,14,21);
     TCODConsole::mapAsciiCodeToFont(808,15,21); // tile #8 door
+
+    TCODConsole::mapAsciiCodeToFont(509,14,22);
+    TCODConsole::mapAsciiCodeToFont(609,15,22);
+    TCODConsole::mapAsciiCodeToFont(709,14,23);
+    TCODConsole::mapAsciiCodeToFont(809,15,23); // tile #9 floor.a
+
+    TCODConsole::mapAsciiCodeToFont(510,14,24);
+    TCODConsole::mapAsciiCodeToFont(610,15,24);
+    TCODConsole::mapAsciiCodeToFont(710,14,25);
+    TCODConsole::mapAsciiCodeToFont(810,15,25); // tile #10 door.h
+
+    TCODConsole::mapAsciiCodeToFont(511,14,26);
+    TCODConsole::mapAsciiCodeToFont(611,15,26);
+    TCODConsole::mapAsciiCodeToFont(711,14,27);
+    TCODConsole::mapAsciiCodeToFont(811,15,27); // tile #11 door.v
+
+    TCODConsole::mapAsciiCodeToFont(512,14,28);
+    TCODConsole::mapAsciiCodeToFont(612,15,28);
+    TCODConsole::mapAsciiCodeToFont(712,14,29);
+    TCODConsole::mapAsciiCodeToFont(812,15,29); // tile #12 wall
+
+    TCODConsole::mapAsciiCodeToFont(513,14,30);
+    TCODConsole::mapAsciiCodeToFont(613,15,30);
+    TCODConsole::mapAsciiCodeToFont(713,14,31);
+    TCODConsole::mapAsciiCodeToFont(813,15,31); // tile #13 wall.T-left
+
+    TCODConsole::mapAsciiCodeToFont(514,14,32);
+    TCODConsole::mapAsciiCodeToFont(614,15,32);
+    TCODConsole::mapAsciiCodeToFont(714,14,33);
+    TCODConsole::mapAsciiCodeToFont(814,15,33); // tile #14 wall.v
+
+    TCODConsole::mapAsciiCodeToFont(515,14,34);
+    TCODConsole::mapAsciiCodeToFont(615,15,34);
+    TCODConsole::mapAsciiCodeToFont(715,14,35);
+    TCODConsole::mapAsciiCodeToFont(815,15,35); // tile #15 wall.B
+
+    TCODConsole::mapAsciiCodeToFont(516,14,36);
+    TCODConsole::mapAsciiCodeToFont(616,15,36);
+    TCODConsole::mapAsciiCodeToFont(716,14,37);
+    TCODConsole::mapAsciiCodeToFont(816,15,37); // tile #16 wall.full
+
+    TCODConsole::mapAsciiCodeToFont(517,14,38);
+    TCODConsole::mapAsciiCodeToFont(617,15,38);
+    TCODConsole::mapAsciiCodeToFont(717,14,39);
+    TCODConsole::mapAsciiCodeToFont(817,15,39); // tile #17 wall.T-right
+
+    TCODConsole::mapAsciiCodeToFont(518,14,40);
+    TCODConsole::mapAsciiCodeToFont(618,15,40);
+    TCODConsole::mapAsciiCodeToFont(718,14,41);
+    TCODConsole::mapAsciiCodeToFont(818,15,41); // tile #18 wall.B-inv
 }
 
 void map_8x16_font(){
@@ -2767,10 +2819,10 @@ void render_all (){
                             }
                         } else { // if floor
                             if(bigg){
-                                con->putChar(l*2,i*2, 501, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 601, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 701, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 801, TCOD_BKGND_SET); 
+                                con->putChar(l*2,i*2, 509, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 609, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 709, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 809, TCOD_BKGND_SET); 
                         
                                 con->setCharForeground((l*2), (i*2), color_dark_groundF);
                                 con->setCharForeground((l*2)+1, (i*2), color_dark_groundF);
@@ -2796,37 +2848,237 @@ void render_all (){
                 } else { // if visible
                     if (wall){
                         if(bigg){
-                            if(!(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked)){ // isometric walls
-                                con->putChar(l*2,i*2, 507, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 607, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 707, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 807, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_dark_wallF, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_dark_wallF, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_dark_wallF, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_dark_wallF, TCOD_BKGND_SET);
+                            
+                            // make doors as wall to correctly draw
+                            for (unsigned int n = 0; n<doors.size(); ++n){
+                                map_array[doors[n].y * MAP_WIDTH + doors[n].x] = Tile(1,1);
+                            }
+                            
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall);
-                            } else { // if lower cell closed, draw the fullwall   
-                                con->putChar(l*2,i*2, 503, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 603, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 703, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 803, TCOD_BKGND_SET);
+                            if( ( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
+                                    (map_array[(i * MAP_WIDTH + l)+1].blocked) ) &&
+                                    ( fov_map->isInFov(l+1,i) && fov_map->isInFov(l-1,i) ) ){
+                                con->putChar(l*2,i*2, 512, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 612, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 712, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 812, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_light_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_light_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_light_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_light_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
                                 con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall);
-                            }        
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else if( ( (map_array[(i * MAP_WIDTH + l)+1].blocked) && 
+                                    fov_map->isInFov(l+1,i) ) &&
+                                    ( (map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) &&
+                                    fov_map->isInFov(l,i+1) ) ){
+                                con->putChar(l*2,i*2, 517, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 617, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 717, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 817, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else if( ( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
+                                    fov_map->isInFov(l-1,i) ) &&
+                                    ( (map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) &&
+                                    fov_map->isInFov(l,i+1) ) ){
+                                con->putChar(l*2,i*2, 513, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 613, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 713, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 813, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else if( ( (map_array[(i * MAP_WIDTH + l)+1].blocked) && 
+                                    fov_map->isInFov(l+1,i) ) &&
+                                    ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) &&
+                                    fov_map->isInFov(l,i-1) ) ){
+                                con->putChar(l*2,i*2, 515, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 615, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 715, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 815, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else if( ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) && 
+                                    fov_map->isInFov(l,i-1) ) &&
+                                    ( (map_array[(i * MAP_WIDTH + l)-1].blocked) &&
+                                    fov_map->isInFov(l-1,i) ) ){
+                                con->putChar(l*2,i*2, 518, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 618, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 718, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 818, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else if( ( (map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) && 
+                                    fov_map->isInFov(l,i+1) ) ||
+                                    ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) &&
+                                    fov_map->isInFov(l,i-1) ) ){
+                                con->putChar(l*2,i*2, 514, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 614, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 714, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 814, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else if( ( !(map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) && 
+                                    fov_map->isInFov(l,i-1) ) &&
+                                    ( (map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) &&
+                                    fov_map->isInFov(l,i+1) ) &&
+                                    ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH-1].blocked) &&
+                                    fov_map->isInFov(l-1,i-1) ) ){
+                                con->putChar(l*2,i*2, 513, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 613, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 713, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 813, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else if( ( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
+                                    (map_array[(i * MAP_WIDTH + l)+1].blocked) ) ||
+                                    ( fov_map->isInFov(l+1,i) && fov_map->isInFov(l-1,i) ) ){
+                                con->putChar(l*2,i*2, 512, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 612, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 712, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 812, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else if( ( (map_array[(i * MAP_WIDTH + l)].blocked) && 
+                                    fov_map->isInFov(l,i) ) &&
+                                    ( !(map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) && 
+                                    fov_map->isInFov(l,i-1) ) &&
+                                    ( !(map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) && 
+                                    fov_map->isInFov(l,i+1) )
+                                     ){
+                                con->putChar(l*2,i*2, 514, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 614, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 714, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 814, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else if( ( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
+                                    fov_map->isInFov(l-1,i) ) ||
+                                    ( (map_array[(i * MAP_WIDTH + l)+1].blocked) && 
+                                    fov_map->isInFov(l+1,i)  )
+                                     ){
+                                con->putChar(l*2,i*2, 512, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 612, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 712, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 812, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else if(abs(i-player.x) > abs(l-player.y)
+                                     ){
+                                con->putChar(l*2,i*2, 512, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 612, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 712, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 812, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            } else {
+                                con->putChar(l*2,i*2, 514, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, 614, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, 714, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, 814, TCOD_BKGND_SET);
+
+                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+
+                                con->setCharForeground((l*2), (i*2), color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                            }
+
+                            
+                            // reset door hack
+                            for (unsigned int n = 0; n<doors.size(); ++n){
+                                map_array[doors[n].y * MAP_WIDTH + doors[n].x] = Tile(0,1);
+                            }
+                                   
                         } else { // if map standard
                             if(!(map_array[(i * MAP_WIDTH + l)-1].blocked) && 
                                     !(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked)){ // isometric walls
@@ -2862,20 +3114,20 @@ void render_all (){
                     }
                     else { // if floor
                         if(bigg){
-                            con->putChar(l*2,i*2, 501, TCOD_BKGND_SET);
-                            con->putChar((l*2)+1,i*2, 601, TCOD_BKGND_SET);
-                            con->putChar(l*2,(i*2)+1, 701, TCOD_BKGND_SET);
-                            con->putChar((l*2)+1,(i*2)+1, 801, TCOD_BKGND_SET);
+                            con->putChar(l*2,i*2, 509, TCOD_BKGND_SET);
+                            con->putChar((l*2)+1,i*2, 609, TCOD_BKGND_SET);
+                            con->putChar(l*2,(i*2)+1, 709, TCOD_BKGND_SET);
+                            con->putChar((l*2)+1,(i*2)+1, 809, TCOD_BKGND_SET);
 
-                            con->setCharBackground((l*2), (i*2), color_light_ground2, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2)+1, (i*2), color_light_ground2, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2), (i*2)+1, color_light_ground2, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2)+1, (i*2)+1, color_light_ground2, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                            con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
 
-                            con->setCharForeground((l*2), (i*2), color_light_ground);
-                            con->setCharForeground((l*2)+1, (i*2), color_light_ground);
-                            con->setCharForeground((l*2), (i*2)+1, color_light_ground);
-                            con->setCharForeground((l*2)+1, (i*2)+1, color_light_ground); 
+                            con->setCharForeground((l*2), (i*2), color_light_ground2);
+                            con->setCharForeground((l*2)+1, (i*2), color_light_ground2);
+                            con->setCharForeground((l*2), (i*2)+1, color_light_ground2);
+                            con->setCharForeground((l*2)+1, (i*2)+1, color_light_ground2); 
 
                         } else {
                             con->putChar(l, i, '.', TCOD_BKGND_SET);
@@ -2914,21 +3166,29 @@ void render_all (){
         }
 
     fov_recompute = false;
+
     }
 
     // draw doors
     for (unsigned int i = 0; i<doors.size(); ++i){
         if(fov_map->isInFov(doors[i].x,doors[i].y)){
             if(bigg){
-                con->putChar(doors[i].x*2,doors[i].y*2, 508, TCOD_BKGND_SET);
-                con->putChar((doors[i].x*2)+1,doors[i].y*2, 608, TCOD_BKGND_SET);
-                con->putChar(doors[i].x*2,(doors[i].y*2)+1, 708, TCOD_BKGND_SET);
-                con->putChar((doors[i].x*2)+1,(doors[i].y*2)+1, 808, TCOD_BKGND_SET);
-
-                con->setCharBackground((doors[i].x*2), (doors[i].y*2), door_c, TCOD_BKGND_SET);
-                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2), door_c, TCOD_BKGND_SET);
-                con->setCharBackground((doors[i].x*2), (doors[i].y*2)+1, door_c, TCOD_BKGND_SET);
-                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2)+1, door_c, TCOD_BKGND_SET);
+                if((map_array[(doors[i].y * MAP_WIDTH + doors[i].x)-1].blocked)){
+                    con->putChar(doors[i].x*2,doors[i].y*2, 510, TCOD_BKGND_SET);
+                    con->putChar((doors[i].x*2)+1,doors[i].y*2, 610, TCOD_BKGND_SET);
+                    con->putChar(doors[i].x*2,(doors[i].y*2)+1, 710, TCOD_BKGND_SET);
+                    con->putChar((doors[i].x*2)+1,(doors[i].y*2)+1, 810, TCOD_BKGND_SET);
+                } else {
+                    con->putChar(doors[i].x*2,doors[i].y*2, 511, TCOD_BKGND_SET);
+                    con->putChar((doors[i].x*2)+1,doors[i].y*2, 611, TCOD_BKGND_SET);
+                    con->putChar(doors[i].x*2,(doors[i].y*2)+1, 711, TCOD_BKGND_SET);
+                    con->putChar((doors[i].x*2)+1,(doors[i].y*2)+1, 811, TCOD_BKGND_SET); 
+                }
+                    
+                con->setCharBackground((doors[i].x*2), (doors[i].y*2), color_light_wall, TCOD_BKGND_SET);
+                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2), color_light_wall, TCOD_BKGND_SET);
+                con->setCharBackground((doors[i].x*2), (doors[i].y*2)+1, color_light_wall, TCOD_BKGND_SET);
+                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2)+1, color_light_wall, TCOD_BKGND_SET);
 
                 con->setCharForeground((doors[i].x*2), (doors[i].y*2), TCODColor::black);
                 con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2), TCODColor::black);
@@ -3425,7 +3685,7 @@ int handle_keys(Object_player &duh) {
         for (unsigned int i = 0; i < b; ++i) doors.erase (doors.begin()+i); // erase monster vector on map regen
         doors.clear();
 
-        if(color_light_wall.r == 0){ // organge
+        if(color_light_wall.r == 1){ // organge
             color_light_wall.r = 255;
             color_light_wall.g = 90;
             color_light_wall.b = 16;
@@ -3464,7 +3724,20 @@ int handle_keys(Object_player &duh) {
             color_light_ground2.r = 90;
             color_light_ground2.g = 50;
             color_light_ground2.b = 150;
-        }    
+        } else if(color_light_wall.r == 0){ // demake
+            color_light_wall.r = 1;
+            color_light_wall.g = 146;
+            color_light_wall.b = 170;
+            color_dark_wallF.r = 0;
+            color_dark_wallF.g = 0;
+            color_dark_wallF.b = 50;
+            color_light_ground.r = 50;
+            color_light_ground.g = 50;
+            color_light_ground.b = 150;
+            color_light_ground2.r = 1;
+            color_light_ground2.g = 146;
+            color_light_ground2.b = 170;
+        }   
 
         //Sleep(4000);
         if (mapmode == 1){
@@ -3847,10 +4120,10 @@ void player_death(){
     game_state = dead;
     player.selfchar = 'X';
 
-        bloodsplat(monster);
-        bloodsplat(monster);
-        bloodsplat(monster);
-        bloodsplat(monster);
+    bloodsplat(monster);
+    bloodsplat(monster);
+    bloodsplat(monster);
+    bloodsplat(monster);
       
     TCODConsole::root->setAlignment(TCOD_CENTER);
     TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
