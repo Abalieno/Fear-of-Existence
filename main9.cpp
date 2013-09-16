@@ -16,6 +16,7 @@ int t8_player = 0; //global player sprite
 const int t28_door = 519; // door
 const int t28_player = 520; // player
 const int t28_wall = 521; // wall
+const int t28_nwall = 503; // null.wall
 const int t28_floor1 = 522; // floor1
 const int t28_floor2 = 523; // floor2
 const int t28_orc = 524; // orc
@@ -23,12 +24,17 @@ const int t28_troll = 525; // troll
 const int t28_corpse = 526; // corpse
 
 // 16 demake
-const int t16_door = 508; // door
+const int t16_door = 510; // door
 const int t16_doorv = 511; // doorv
 const int t16_player = 502; // player
-const int t16_wall = 507; // wall
-const int t16_floor1 = 501; // floor1
-const int t16_floor2 = 501; // floor2
+const int t16_wall = 512; // wall
+const int t16_vwall = 514; // v.wall
+const int t16_trwall = 517; // t-r.wall
+const int t16_tlwall = 513; // t-l.wall
+const int t16_bwall = 515; // B.wall
+const int t16_ibwall = 518; // iB.wall
+const int t16_floor1 = 509; // floor1
+const int t16_floor2 = 509; // floor2
 const int t16_orc = 505; // orc
 const int t16_troll = 504; // troll
 const int t16_corpse = 506; // corpse
@@ -38,6 +44,11 @@ int u16_door = 0; // door
 int u16_doorv = 0; // doorv
 int u16_player = 0; // player
 int u16_wall = 0; // wall
+int u16_vwall = 0; // v.wall
+int u16_trwall = 0; // t-r.wall
+int u16_tlwall = 0; // t-l.wall
+int u16_bwall = 0; // B.wall
+int u16_ibwall = 0; // B.wall
 int u16_floor1 = 0; // floor1
 int u16_floor2 = 0; // floor2
 int u16_orc = 0; // orc
@@ -119,10 +130,16 @@ TCODColor demake_sub_floor(0,0,0);
 TCODColor demake_main_wall(219,85,97);
 TCODColor demake_sub_wall(0,0,0);
 
-TCODColor color_light_wall(0, 0, 100);
+TCODColor color_bdark_wall(219, 85, 97);
+TCODColor color_adark_wall(0, 0, 0);
+
+TCODColor color_door_main(222, 136, 0);
+TCODColor color_door_sub(0, 0, 0);
+
+TCODColor color_light_wall(219, 85, 97);
 
 TCODColor color_light_ground(50, 50, 150);
-TCODColor color_light_ground2(70, 50, 150);
+TCODColor color_light_ground2(154, 174, 182);
 TCODColor color_dark_groundF(TCODColor::darkGrey);
 TCODColor color_dark_wallF(0, 0, 50);
 //TCODColor color_light_ground(200, 180, 50);
@@ -2972,19 +2989,19 @@ void render_all (){
                                 map_array[doors[n].y * MAP_WIDTH + doors[n].x] = Tile(1,1);
                             }
                             
-
+                            // adark = not hidden in 2*8 mode
                             if( ( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
                                     (map_array[(i * MAP_WIDTH + l)+1].blocked) ) &&
                                     ( fov_map->isInFov(l+1,i) && fov_map->isInFov(l-1,i) ) ){
-                                con->putChar(l*2,i*2, 512, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 612, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 712, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 812, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_wall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_wall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_wall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_wall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -2994,15 +3011,15 @@ void render_all (){
                                     fov_map->isInFov(l+1,i) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) &&
                                     fov_map->isInFov(l,i+1) ) ){
-                                con->putChar(l*2,i*2, 517, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 617, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 717, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 817, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_trwall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_trwall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_trwall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_trwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -3012,15 +3029,15 @@ void render_all (){
                                     fov_map->isInFov(l-1,i) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) &&
                                     fov_map->isInFov(l,i+1) ) ){
-                                con->putChar(l*2,i*2, 513, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 613, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 713, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 813, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_tlwall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_tlwall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_tlwall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_tlwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -3030,15 +3047,15 @@ void render_all (){
                                     fov_map->isInFov(l+1,i) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) &&
                                     fov_map->isInFov(l,i-1) ) ){
-                                con->putChar(l*2,i*2, 515, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 615, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 715, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 815, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_bwall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_bwall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_bwall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_bwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -3048,15 +3065,15 @@ void render_all (){
                                     fov_map->isInFov(l,i-1) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)-1].blocked) &&
                                     fov_map->isInFov(l-1,i) ) ){
-                                con->putChar(l*2,i*2, 518, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 618, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 718, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 818, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_ibwall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_ibwall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_ibwall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_ibwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -3066,15 +3083,15 @@ void render_all (){
                                     fov_map->isInFov(l,i+1) ) ||
                                     ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) &&
                                     fov_map->isInFov(l,i-1) ) ){
-                                con->putChar(l*2,i*2, 514, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 614, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 714, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 814, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_vwall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_vwall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_vwall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_vwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -3086,15 +3103,15 @@ void render_all (){
                                     fov_map->isInFov(l,i+1) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH-1].blocked) &&
                                     fov_map->isInFov(l-1,i-1) ) ){
-                                con->putChar(l*2,i*2, 513, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 613, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 713, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 813, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_tlwall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_tlwall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_tlwall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_tlwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -3103,15 +3120,15 @@ void render_all (){
                             } else if( ( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
                                     (map_array[(i * MAP_WIDTH + l)+1].blocked) ) ||
                                     ( fov_map->isInFov(l+1,i) && fov_map->isInFov(l-1,i) ) ){
-                                con->putChar(l*2,i*2, 512, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 612, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 712, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 812, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_wall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_wall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_wall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_wall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -3124,15 +3141,15 @@ void render_all (){
                                     ( !(map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) && 
                                     fov_map->isInFov(l,i+1) )
                                      ){
-                                con->putChar(l*2,i*2, 514, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 614, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 714, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 814, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_vwall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_vwall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_vwall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_vwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -3143,15 +3160,15 @@ void render_all (){
                                     ( (map_array[(i * MAP_WIDTH + l)+1].blocked) && 
                                     fov_map->isInFov(l+1,i)  )
                                      ){
-                                con->putChar(l*2,i*2, 512, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 612, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 712, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 812, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_wall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_wall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_wall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_wall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -3159,30 +3176,30 @@ void render_all (){
                                 con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if(abs(i-player.x) > abs(l-player.y)
                                      ){
-                                con->putChar(l*2,i*2, 512, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 612, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 712, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 812, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_wall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_wall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_wall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_wall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
                                 con->setCharForeground((l*2), (i*2)+1, color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else {
-                                con->putChar(l*2,i*2, 514, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 614, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 714, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 814, TCOD_BKGND_SET);
+                                con->putChar(l*2,i*2, u16_vwall, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_vwall+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_vwall+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_vwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
                                 con->setCharForeground((l*2), (i*2), color_light_wall);
                                 con->setCharForeground((l*2)+1, (i*2), color_light_wall);
@@ -3274,10 +3291,17 @@ void render_all (){
                     }
                     else { // if floor
                         if(bigg){
-                            con->putChar(l*2,i*2, 509, TCOD_BKGND_SET);
-                            con->putChar((l*2)+1,i*2, 609, TCOD_BKGND_SET);
-                            con->putChar(l*2,(i*2)+1, 709, TCOD_BKGND_SET);
-                            con->putChar((l*2)+1,(i*2)+1, 809, TCOD_BKGND_SET);
+                            if(l%2==1){
+                                con->putChar(l*2,i*2, u16_floor2, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_floor2+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_floor2+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_floor2+300, TCOD_BKGND_SET);
+                            } else {
+                                con->putChar(l*2,i*2, u16_floor1, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,i*2, u16_floor1+100, TCOD_BKGND_SET);
+                                con->putChar(l*2,(i*2)+1, u16_floor1+200, TCOD_BKGND_SET);
+                                con->putChar((l*2)+1,(i*2)+1, u16_floor1+300, TCOD_BKGND_SET);
+                            }
 
                             con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
                             con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
@@ -3356,15 +3380,16 @@ void render_all (){
                     con->putChar((doors[i].x*2)+1,(doors[i].y*2)+1, u16_doorv+300, TCOD_BKGND_SET); 
                 }
                     
-                con->setCharBackground((doors[i].x*2), (doors[i].y*2), color_light_wall, TCOD_BKGND_SET);
-                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2), color_light_wall, TCOD_BKGND_SET);
-                con->setCharBackground((doors[i].x*2), (doors[i].y*2)+1, color_light_wall, TCOD_BKGND_SET);
-                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2)+1, color_light_wall, TCOD_BKGND_SET);
-
-                con->setCharForeground((doors[i].x*2), (doors[i].y*2), TCODColor::black);
-                con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2), TCODColor::black);
-                con->setCharForeground((doors[i].x*2), (doors[i].y*2)+1, TCODColor::black);
-                con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2)+1, TCODColor::black);
+                con->setCharBackground((doors[i].x*2), (doors[i].y*2), color_door_sub, TCOD_BKGND_SET);
+                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2), color_door_sub, TCOD_BKGND_SET);
+                con->setCharBackground((doors[i].x*2), (doors[i].y*2)+1, color_door_sub, TCOD_BKGND_SET);
+                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2)+1, color_door_sub, TCOD_BKGND_SET);
+                
+                // black for demake, brown for 28
+                con->setCharForeground((doors[i].x*2), (doors[i].y*2), color_door_main);
+                con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2), color_door_main);
+                con->setCharForeground((doors[i].x*2), (doors[i].y*2)+1, color_door_main);
+                con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2)+1, color_door_main);
             } else {    
                 //con->putChar(doors[i].x, doors[i].y, TCOD_CHAR_CROSS, TCOD_BKGND_SET);
                 con->putChar(doors[i].x, doors[i].y, 444, TCOD_BKGND_SET);
@@ -3847,21 +3872,49 @@ int handle_keys(Object_player &duh) {
     if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'w' ){
 
         if(bigg){
-            if(u16_door == 519){
+            if(u16_door == t28_door){
+                color_bdark_wall.r = 0;
+                color_bdark_wall.g = 0;
+                color_bdark_wall.b = 0;
+                color_door_sub.r = color_light_wall.r;
+                color_door_sub.g = color_light_wall.g;
+                color_door_sub.b = color_light_wall.b;
+                color_door_main.r = 0;
+                color_door_main.g = 0;
+                color_door_main.b = 0;
                 u16_door = t16_door;
                 u16_doorv = t16_doorv;
-                u16_player = t16_player; 
-                u16_wall = t16_wall; 
+                //u16_player = t16_player; 
+                u16_wall = t16_wall;
+                u16_vwall = t16_vwall;
+                u16_trwall = t16_trwall;
+                u16_tlwall = t16_tlwall;
+                u16_bwall = t16_bwall;
+                u16_ibwall = t16_ibwall;
                 u16_floor1 = t16_floor1; 
                 u16_floor2 = t16_floor2; 
-                u16_orc = t16_orc; 
-                u16_troll = t16_troll; 
-                u16_corpse = t16_corpse; 
+                //u16_orc = t16_orc; 
+                //u16_troll = t16_troll; 
+                //u16_corpse = t16_corpse; 
             } else {
+                color_bdark_wall.r = color_light_wall.r;
+                color_bdark_wall.g = color_light_wall.g;
+                color_bdark_wall.b = color_light_wall.b;
+                color_door_sub.r = 0;
+                color_door_sub.g = 0;
+                color_door_sub.b = 0;
+                color_door_main.r = 222;
+                color_door_main.g = 136;
+                color_door_main.b = 0;
                 u16_door = t28_door;
                 u16_doorv = t28_door;
                 u16_player = t28_player; 
                 u16_wall = t28_wall; 
+                u16_vwall = t28_nwall;
+                u16_trwall = t28_nwall;
+                u16_tlwall = t28_nwall;
+                u16_bwall = t28_wall;
+                u16_ibwall = t28_wall;
                 u16_floor1 = t28_floor1; 
                 u16_floor2 = t28_floor2; 
                 u16_orc = t28_orc; 
@@ -3887,7 +3940,7 @@ int handle_keys(Object_player &duh) {
         for (unsigned int i = 0; i < b; ++i) doors.erase (doors.begin()+i); // erase monster vector on map regen
         doors.clear();
 
-        if(color_light_wall.r == 1){ // organge
+        if(color_light_wall.r == 1 || color_light_wall.r == 219){ // organge
             color_light_wall.r = 255;
             color_light_wall.g = 90;
             color_light_wall.b = 16;
@@ -3900,6 +3953,22 @@ int handle_keys(Object_player &duh) {
             color_light_ground2.r = 55;
             color_light_ground2.g = 86;
             color_light_ground2.b = 20;
+            if(u16_wall == t16_wall){
+                color_bdark_wall.r = 0;
+                color_bdark_wall.g = 0;
+                color_bdark_wall.b = 0;
+                color_door_sub.r = color_light_wall.r;
+                color_door_sub.g = color_light_wall.g;
+                color_door_sub.b = color_light_wall.b;
+                color_door_main.r = 0;
+                color_door_main.g = 0;
+                color_door_main.b = 0;
+            }    
+            if(u16_wall == t28_wall){
+                color_bdark_wall.r = color_light_wall.r;
+                color_bdark_wall.g = color_light_wall.g;
+                color_bdark_wall.b = color_light_wall.b;
+            }    
         } else if(color_light_wall.r == 255){ // pink
             color_light_wall.r = 250;
             color_light_wall.g = 0;
@@ -3913,6 +3982,22 @@ int handle_keys(Object_player &duh) {
             color_light_ground2.r = 186;
             color_light_ground2.g = 16;
             color_light_ground2.b = 158;
+            if(u16_wall == t16_wall){
+                color_bdark_wall.r = 0;
+                color_bdark_wall.g = 0;
+                color_bdark_wall.b = 0;
+                color_door_sub.r = color_light_wall.r;
+                color_door_sub.g = color_light_wall.g;
+                color_door_sub.b = color_light_wall.b;
+                color_door_main.r = 0;
+                color_door_main.g = 0;
+                color_door_main.b = 0;
+            }
+            if(u16_wall == t28_wall){
+                color_bdark_wall.r = color_light_wall.r;
+                color_bdark_wall.g = color_light_wall.g;
+                color_bdark_wall.b = color_light_wall.b;
+            }
         } else if(color_light_wall.r == 250){ // blue
             color_light_wall.r = 0;
             color_light_wall.g = 0;
@@ -3926,6 +4011,22 @@ int handle_keys(Object_player &duh) {
             color_light_ground2.r = 90;
             color_light_ground2.g = 50;
             color_light_ground2.b = 150;
+            if(u16_wall == t16_wall){
+                color_bdark_wall.r = 0;
+                color_bdark_wall.g = 0;
+                color_bdark_wall.b = 0;
+                color_door_sub.r = color_light_wall.r;
+                color_door_sub.g = color_light_wall.g;
+                color_door_sub.b = color_light_wall.b;
+                color_door_main.r = 0;
+                color_door_main.g = 0;
+                color_door_main.b = 0;
+            }
+            if(u16_wall == t28_wall){
+                color_bdark_wall.r = color_light_wall.r;
+                color_bdark_wall.g = color_light_wall.g;
+                color_bdark_wall.b = color_light_wall.b;
+            }
         } else if(color_light_wall.r == 0){ // demake
             color_light_wall.r = 1;
             color_light_wall.g = 146;
@@ -3939,6 +4040,22 @@ int handle_keys(Object_player &duh) {
             color_light_ground2.r = 1;
             color_light_ground2.g = 146;
             color_light_ground2.b = 170;
+            if(u16_wall == t16_wall){
+                color_bdark_wall.r = 0;
+                color_bdark_wall.g = 0;
+                color_bdark_wall.b = 0;
+                color_door_sub.r = color_light_wall.r;
+                color_door_sub.g = color_light_wall.g;
+                color_door_sub.b = color_light_wall.b;
+                color_door_main.r = 0;
+                color_door_main.g = 0;
+                color_door_main.b = 0;
+            }
+            if(u16_wall == t28_wall){
+                color_bdark_wall.r = color_light_wall.r;
+                color_bdark_wall.g = color_light_wall.g;
+                color_bdark_wall.b = color_light_wall.b;
+            }
         }   
 
         //Sleep(4000);
@@ -5210,6 +5327,11 @@ int main() {
     u16_doorv = t28_door; // same door 
     u16_player = t28_player; 
     u16_wall = t28_wall; 
+    u16_vwall = t28_nwall;
+    u16_trwall = t28_nwall;
+    u16_tlwall = t28_nwall;
+    u16_bwall = t28_wall;
+    u16_ibwall = t28_wall;
     u16_floor1 = t28_floor1; 
     u16_floor2 = t28_floor2; 
     u16_orc = t28_orc; 
