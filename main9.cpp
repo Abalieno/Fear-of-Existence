@@ -55,6 +55,30 @@ int u16_orc = 0; // orc
 int u16_troll = 0; // troll
 int u16_corpse = 0; // corpse
 
+// 8 universal
+int u8_door = 0; // door
+int u8_doorv = 0; // doorv
+int u8_player = 0; // player
+int u8_wall = 0; // wall
+int u8_vwall = 0; // v.wall
+int u8_trwall = 0; // t-r.wall
+int u8_tlwall = 0; // t-l.wall
+int u8_bwall = 0; // B.wall
+int u8_ibwall = 0; // B.wall
+int u8_floor1 = 0; // floor1
+int u8_floor2 = 0; // floor2
+int u8_orc = 0; // orc
+int u8_troll = 0; // troll
+int u8_corpse = 0; // corpse
+int u8_hwall = 0;
+
+TCODColor u8_wallCa; // black
+TCODColor u8_wallCb;
+TCODColor u8_wallCc; // black
+TCODColor u8_wallCd;
+TCODColor u8_floorCa;
+TCODColor u8_floorCb;
+
 
 int imageinit = 1;
 float whattime = 0;
@@ -186,7 +210,9 @@ int wid_rpanel_open = 0;
 
 TCODMap * fov_map = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 TCODMap * fov_map_mons = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
-TCODMap * fov_map_mons_path = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
+
+TCODMap * fov_map_mons_path0 = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
+TCODMap * fov_map_mons_path1 = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 
 // bool used for background color presence
 struct msg_log { char message [94]; TCODColor color1; TCODColor color2; TCODColor color3; TCODColor color4; TCODColor
@@ -583,7 +609,9 @@ public: // public should be moved down, but I keep it here for debug messages
 
     int pl_x; // these are for monster current target/destination
     int pl_y;
-    TCODPath *path;
+    TCODPath *path0;
+    TCODPath *path1;
+    int path_mode; // 0 = standard 1 = path with monster positions
 
     bool stuck;
     int bored;
@@ -660,15 +688,18 @@ public: // public should be moved down, but I keep it here for debug messages
                 con->setCharBackground(x, y, colorb, TCOD_BKGND_SET);
 
                 if (selfchar == 'T'){
-                    
-                    con->putChar(x, y, 450, TCOD_BKGND_SET);
+                   
+                    con->putChar(x, y, u8_troll, TCOD_BKGND_SET);
+                    //con->putChar(x, y, 450, TCOD_BKGND_SET);
                     //std::cout << "TROLL";
                 } else if (selfchar == 'o'){
-                    con->putChar(x, y, 449, TCOD_BKGND_SET);
+                    con->putChar(x, y, u8_orc, TCOD_BKGND_SET);
+                    //con->putChar(x, y, 449, TCOD_BKGND_SET);
                     //std::cout << "ORC";
                 } else if (selfchar == '%'){
+                    con->putChar(x, y, u8_corpse, TCOD_BKGND_SET);
                     con->setCharBackground(x, y, con->getCharBackground(x, y), TCOD_BKGND_SET);
-                    con->putChar(x, y, 451, TCOD_BKGND_SET);
+                    //con->putChar(x, y, 451, TCOD_BKGND_SET);
                     //std::cout << "ORC";
                 }
 
@@ -874,7 +905,8 @@ public: // public should be moved down, but I keep it here for debug messages
                 //con->putChar((x*2), (y*2)+1, 702, TCOD_BKGND_SET);
                 //con->putChar((x*2)+1, (y*2)+1, 802, TCOD_BKGND_SET);
             } else {
-                con->putChar(x, y, 445, TCOD_BKGND_SET);
+                //con->putChar(x, y, 445, TCOD_BKGND_SET);
+                con->putChar(x, y, u8_player, TCOD_BKGND_SET);
             }
         }
         con->setDefaultBackground(TCODColor::black); // reset background for smaller map
@@ -1188,6 +1220,7 @@ bool is_blocked(int x, int y){
         }
     }
 
+    // prevent monsters moving atop the player
     if(player.x == x && player.y == y) return true;    
 
     return false;
@@ -1209,6 +1242,9 @@ void Object_monster::move(int dx, int dy, bool p_dir) {
       
 
         //std::cout << "BEFORE" << std::endl;
+        //
+        TCODPath *path;
+        path = path0;
         
         stuck = false;
 
@@ -1317,6 +1353,7 @@ void place_objects(Rect room){
             monster.bored = 500;
             monster.boren = false;
             monster.in_sight = false;
+            monster.path_mode = 0;
             monster.combat_move = 6;
             monster.c_mode = false;
             monster.speed = 4; // for initiative
@@ -1329,7 +1366,8 @@ void place_objects(Rect room){
 
             monster.stats.ML = 35;
 
-            monster.path = new TCODPath(fov_map_mons_path, 0.0f);
+            monster.path0 = new TCODPath(fov_map_mons_path0, 0.0f);
+            monster.path1 = new TCODPath(fov_map_mons_path1, 0.0f);
           
         }
         else {
@@ -1351,6 +1389,7 @@ void place_objects(Rect room){
             monster.bored = 500;
             monster.boren = false;
             monster.in_sight = false;
+            monster.path_mode = 0;
             monster.combat_move = 10;
             monster.c_mode = false;
             monster.speed = 8;
@@ -1363,7 +1402,8 @@ void place_objects(Rect room){
 
             monster.stats.ML = 50;
 
-            monster.path = new TCODPath(fov_map_mons_path, 0.0f);
+            monster.path0 = new TCODPath(fov_map_mons_path1, 0.0f);
+            monster.path1 = new TCODPath(fov_map_mons_path0, 0.0f);
 
         }  
         monvector.push_back(monster);
@@ -1514,6 +1554,7 @@ void make_map2(Object_player &duh){
             monster.bored = 500;
             monster.boren = false;
             monster.in_sight = false;
+            monster.path_mode = 0;
             monster.combat_move = 6;
             monster.c_mode = false;
             monster.speed = 4; // for initiative
@@ -1538,6 +1579,7 @@ void make_map2(Object_player &duh){
             monster.bored = 500;
             monster.boren = false;
             monster.in_sight = false;
+            monster.path_mode = 0;
             monster.combat_move = 10;
             monster.c_mode = false;
             monster.speed = 8;
@@ -1953,24 +1995,7 @@ void make_map(Object_player &duh){
                 load->print(win_x/2, (win_y/2)-3, "Generating new level");
             
             }    
-            /* 
-            load->setAlignment(TCOD_CENTER);
-            if (cycle){
-                load->print(win_x/2, (win_y/2)-1, " %c ",TCOD_CHAR_HLINE);
-                load->print(win_x/2, win_y/2,     "%c%c%c",TCOD_CHAR_VLINE,TCOD_CHAR_CHECKBOX_UNSET,TCOD_CHAR_VLINE);
-                load->print(win_x/2, (win_y/2)+1, " %c ", TCOD_CHAR_HLINE);
-                //load->print(win_x/2, (win_y/2)-1, " %c ",TCOD_CHAR_ARROW2_N);
-                //load->print(win_x/2, win_y/2,     "%c%c%c",TCOD_CHAR_ARROW2_W,TCOD_CHAR_CHECKBOX_UNSET,TCOD_CHAR_ARROW2_E);
-                //load->print(win_x/2, (win_y/2)+1, " %c ", TCOD_CHAR_ARROW2_S);
-                load->print(win_x/2, (win_y/2)-3, "Generating new level");
-            cycle = false;
-            } else {
-                load->print(win_x/2, (win_y/2)-1, "%c %c",TCOD_CHAR_NW,TCOD_CHAR_NE);
-                load->print(win_x/2, win_y/2,     " %c ", TCOD_CHAR_CHECKBOX_UNSET);
-                load->print(win_x/2, (win_y/2)+1, "%c %c",TCOD_CHAR_SW,TCOD_CHAR_SE);
-                load->print(win_x/2, (win_y/2)-3, "Generating new level");
-            cycle = true;
-            } */
+            
         TCODConsole::blit(load,0,0,0,0,TCODConsole::root,0,0);
         TCODConsole::flush(); // this updates the screen
         ++cycle;
@@ -3224,55 +3249,65 @@ void render_all (){
                             }
 
                             if(!(map_array[(i * MAP_WIDTH + l)-1].blocked) && 
-                                    !(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked)){ // isometric walls
+                                    !(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked)){ // L NE
                                 //con->putChar(l, i, 668, TCOD_BKGND_SET);
-                                con->putChar(l, i, 446, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, demake_sub_wall, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, demake_main_wall);
+                                con->putChar(l, i, u8_wall, TCOD_BKGND_SET);
+                                con->setCharBackground(l, i, u8_wallCa, TCOD_BKGND_SET);
+                                con->setCharForeground(l, i, u8_wallCb);
+                                //con->setCharBackground(l, i, demake_sub_wall, TCOD_BKGND_SET);
+                                //con->setCharForeground(l, i, demake_main_wall);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall); 
                             } else if( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
                                     (map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked) && 
                                     !(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH-1].blocked) ){ // upR corner
-                                con->putChar(l, i, 669, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, demake_main_wall, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, demake_main_wall);
+                                //con->putChar(l, i, 669, TCOD_BKGND_SET);
+                                con->putChar(l, i, u8_trwall, TCOD_BKGND_SET);
+                                con->setCharBackground(l, i, u8_wallCb, TCOD_BKGND_SET);
+                                con->setCharForeground(l, i, u8_wallCa);
+                                //con->setCharBackground(l, i, demake_main_wall, TCOD_BKGND_SET);
+                                //con->setCharForeground(l, i, demake_main_wall);
                                 //con->setCharBackground(l, i, color_light_wall, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_dark_wallF);
 
-                            } else if(!(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked)){ // h wall
+                            } else if(!(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked)){ // h wall top
                                 //con->putChar(l, i, 666, TCOD_BKGND_SET);
-                                con->putChar(l, i, 446, TCOD_BKGND_SET);
+                                //con->putChar(l, i, 446, TCOD_BKGND_SET);
+                                con->putChar(l, i, u8_hwall, TCOD_BKGND_SET);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall); 
-                                con->setCharBackground(l, i, demake_sub_wall, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, demake_main_wall);
-                            } else if(!(map_array[(i * MAP_WIDTH + l)-1].blocked)){ // v wall
+                                con->setCharBackground(l, i, u8_wallCa, TCOD_BKGND_SET);
+                                con->setCharForeground(l, i, u8_wallCb);
+                            } else if(!(map_array[(i * MAP_WIDTH + l)-1].blocked)){ // v wall (right)
                                 //con->putChar(l, i, 667, TCOD_BKGND_SET);
-                                con->putChar(l, i, ' ', TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, demake_main_wall, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, demake_main_wall);
+                                con->putChar(l, i, u8_vwall, TCOD_BKGND_SET);
+                                con->setCharBackground(l, i, u8_wallCc, TCOD_BKGND_SET);
+                                con->setCharForeground(l, i, u8_wallCd);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall);
                             } else if(!(map_array[(i * MAP_WIDTH + l)+1].blocked)){ // v wall left
                                 //con->putChar(l, i, 667, TCOD_BKGND_SET);
                                 con->putChar(l, i, ' ', TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, demake_main_wall, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, demake_main_wall);
+                                con->setCharBackground(l, i, u8_wallCb, TCOD_BKGND_SET);
+                                con->setCharForeground(l, i, u8_wallCa);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall);
-                            } else if(!fov_map->isInFov(l,i+1)){ // v wall left
+                            } else if(!fov_map->isInFov(l,i+1)){ // h wall bottom
                                 //con->putChar(l, i, 667, TCOD_BKGND_SET);
-                                con->putChar(l, i, 446, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, demake_sub_wall, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, demake_main_wall);
+                                //con->putChar(l, i, 446, TCOD_BKGND_SET);
+                                con->putChar(l, i, u8_bwall, TCOD_BKGND_SET);
+                                con->setCharBackground(l, i, u8_wallCd, TCOD_BKGND_SET);
+                                con->setCharForeground(l, i, u8_wallCc);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall);
-                            } else if( !(map_array[(i * MAP_WIDTH + l)+MAP_WIDTH+1].blocked) ){ // v wall left
+                            } else if( !(map_array[(i * MAP_WIDTH + l)+MAP_WIDTH+1].blocked) ){ // upL corner
                                 //con->putChar(l, i, 667, TCOD_BKGND_SET);
-                                con->putChar(l, i, 446, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, demake_main_wall, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, demake_main_wall);
+                                //con->putChar(l, i, 446, TCOD_BKGND_SET);
+                                con->putChar(l, i, u8_tlwall, TCOD_BKGND_SET);
+                                con->setCharBackground(l, i, u8_wallCb, TCOD_BKGND_SET);
+                                con->setCharForeground(l, i, u8_wallCa);
+                                //con->setCharBackground(l, i, demake_main_wall, TCOD_BKGND_SET);
+                                //con->setCharForeground(l, i, demake_main_wall);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall);
                             } else {    
@@ -3320,15 +3355,17 @@ void render_all (){
                             //con->putChar(l, i, '.', TCOD_BKGND_SET);
                             if(l%2==1){
                             if(l%3==1 || i%3==1){
-                                if(l%3==1)con->putChar(l, i, 447, TCOD_BKGND_SET);
-                                if(i%3==1)con->putChar(l, i, 448, TCOD_BKGND_SET);
-                            }else con->putChar(l, i, 447, TCOD_BKGND_SET);} 
-                            else if(l%2==1)con->putChar(l, i, 447, TCOD_BKGND_SET); 
-                            else con->putChar(l, i, 448, TCOD_BKGND_SET);
+                                if(l%3==1)con->putChar(l, i, u8_floor1, TCOD_BKGND_SET);
+                                if(i%3==1)con->putChar(l, i, u8_floor2, TCOD_BKGND_SET);
+                            }else con->putChar(l, i, u8_floor1, TCOD_BKGND_SET);} 
+                            else if(l%2==1)con->putChar(l, i, u8_floor2, TCOD_BKGND_SET); 
+                            else con->putChar(l, i, u8_floor2, TCOD_BKGND_SET);
                             //con->setCharForeground(l, i, TCODColor::white);
-                            con->setCharForeground(l, i, demake_main_floor);
+                            //con->setCharForeground(l, i, demake_main_floor);
                             //con->setCharBackground(l, i, color_light_ground, TCOD_BKGND_SET);
-                            con->setCharBackground(l, i, demake_sub_floor, TCOD_BKGND_SET);
+                            //con->setCharBackground(l, i, demake_sub_floor, TCOD_BKGND_SET);
+                            con->setCharForeground(l, i, u8_floorCa);
+                            con->setCharBackground(l, i, u8_floorCb, TCOD_BKGND_SET);
                         }
                         if (bigg2){
                             con_mini->putChar(l+1, i+1, '.', TCOD_BKGND_SET);
@@ -3395,7 +3432,9 @@ void render_all (){
                 con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2)+1, color_door_main);
             } else {    
                 //con->putChar(doors[i].x, doors[i].y, TCOD_CHAR_CROSS, TCOD_BKGND_SET);
-                con->putChar(doors[i].x, doors[i].y, 444, TCOD_BKGND_SET);
+                //con->putChar(doors[i].x, doors[i].y, 444, TCOD_BKGND_SET);
+                con->putChar(doors[i].x, doors[i].y, u8_door, TCOD_BKGND_SET);
+                // door color swwitches wrong between 8tile and 8ASCII
                 con->setCharBackground(doors[i].x, doors[i].y, TCODColor::black, TCOD_BKGND_SET);
                 con->setCharForeground(doors[i].x, doors[i].y, door_c);
             }    
@@ -3927,7 +3966,50 @@ int handle_keys(Object_player &duh) {
                 u16_troll = t28_troll; 
                 u16_corpse = t28_corpse;
             }    
-        }
+        } else { // block to swap basic 8 mode
+            if(u8_door == TCOD_CHAR_CROSS){
+                u8_door = 444;
+                u8_player = 445;
+                u8_floor1 = 447;
+                u8_floor2 = 448;   
+                u8_wall = 446;
+                u8_hwall = 446;
+                u8_trwall = ' ';
+                u8_tlwall = ' ';
+                u8_vwall = ' ';
+                u8_bwall = 446;
+                u8_orc = 449; 
+                u8_troll = 450; 
+                u8_corpse = 451;
+                u8_wallCa = demake_sub_wall;
+                u8_wallCb = demake_main_wall;
+                u8_wallCd = demake_sub_wall;
+                u8_wallCc = demake_main_wall;
+                u8_floorCa = demake_main_floor;
+                u8_floorCb = demake_sub_floor;
+            } else {
+                u8_door = TCOD_CHAR_CROSS;
+                u8_player = '@';
+                u8_floor1 = '.';
+                u8_floor2 = '.';
+                u8_wall = 668;
+                u8_hwall = 666;
+                u8_trwall = 669;
+                u8_tlwall = ' ';
+                u8_vwall = 667;
+                u8_bwall = ' ';
+                u8_orc = 'o'; 
+                u8_troll = 'T'; 
+                u8_corpse = '%';
+
+                u8_wallCa = color_dark_wallF;
+                u8_wallCb = color_light_wall;
+                u8_wallCc = color_dark_wallF;
+                u8_wallCd = color_light_wall;
+                u8_floorCa = TCODColor::white;
+                u8_floorCb = color_light_ground;
+            }    
+        }    
 
     }    
 
@@ -3938,7 +4020,8 @@ int handle_keys(Object_player &duh) {
 
         std::cout << " Monster array: " << monvector.size() << std::endl;
         for (unsigned int i = 0; i < monvector.size(); ++i){
-            delete monvector[i].path;
+            delete monvector[i].path0;
+            delete monvector[i].path1;
             monvector.erase (monvector.begin()+i); // erase monster vector on map regen
              
         }    
@@ -4064,7 +4147,26 @@ int handle_keys(Object_player &duh) {
                 color_bdark_wall.g = color_light_wall.g;
                 color_bdark_wall.b = color_light_wall.b;
             }
-        }   
+        }  
+
+        // set colors for 8 mode
+        //if(!bigg){
+            if(u8_door != TCOD_CHAR_CROSS){ // demake (is this needed if colors don't change?)
+                u8_wallCa = demake_sub_wall;
+                u8_wallCb = demake_main_wall;
+                u8_wallCd = demake_sub_wall;
+                u8_wallCc = demake_main_wall;
+                u8_floorCa = demake_main_floor;
+                u8_floorCb = demake_sub_floor;
+            } else { // ASCII   
+                u8_wallCa = color_dark_wallF;
+                u8_wallCb = color_light_wall;
+                u8_wallCc = color_dark_wallF;
+                u8_wallCd = color_light_wall;
+                u8_floorCa = TCODColor::white;
+                u8_floorCb = color_light_ground;
+            }   
+        //}    
 
         //Sleep(4000);
         if (mapmode == 1){
@@ -4097,7 +4199,13 @@ int handle_keys(Object_player &duh) {
         }
         for (int i = 0; i < MAP_HEIGHT ;++i){
             for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        !(map_array[i * MAP_WIDTH + l].blocked));
+            }
+        }
+        for (int i = 0; i < MAP_HEIGHT ;++i){
+            for (int l = 0; l < MAP_WIDTH ;++l) {
+                fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                         !(map_array[i * MAP_WIDTH + l].blocked));
             }
         }
@@ -4123,7 +4231,9 @@ int handle_keys(Object_player &duh) {
         mesg->setDefaultForeground(TCODColor::white);
         mesg->setDefaultBackground(TCODColor::black);
         mesg->print(1, 1, "Give a direction to dig dungeon");
-        myvector[1]->draw(0);
+       
+        // CRASH , why?
+        //myvector[1]->draw(0);
        
         if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
         else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
@@ -4167,7 +4277,9 @@ int handle_keys(Object_player &duh) {
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                                !(map_array[i * MAP_WIDTH + l].blocked));
+                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         //map_array[row * MAP_WIDTH + l] = Tile(1,1);
                     }
@@ -4186,7 +4298,9 @@ int handle_keys(Object_player &duh) {
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                                !(map_array[i * MAP_WIDTH + l].blocked));
+                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         //map_array[row * MAP_WIDTH + l] = Tile(1,1);
                     }
@@ -4205,7 +4319,9 @@ int handle_keys(Object_player &duh) {
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                                !(map_array[i * MAP_WIDTH + l].blocked));
+                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         //map_array[row * MAP_WIDTH + l] = Tile(1,1);
                     }
@@ -4322,7 +4438,13 @@ int handle_combat(Object_player &duh) {
         }
         for (int i = 0; i < MAP_HEIGHT ;++i){
             for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        !(map_array[i * MAP_WIDTH + l].blocked));
+            }
+        }
+        for (int i = 0; i < MAP_HEIGHT ;++i){
+            for (int l = 0; l < MAP_WIDTH ;++l) {
+                fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                         !(map_array[i * MAP_WIDTH + l].blocked));
             }
         }
@@ -4349,7 +4471,9 @@ int handle_combat(Object_player &duh) {
         mesg->setDefaultForeground(TCODColor::white);
         mesg->setDefaultBackground(TCODColor::black);
         mesg->print(1, 1, "Give a direction to dig dungeon");
-        myvector[1]->draw(0);
+
+        // may CRASH
+        //myvector[1]->draw(0);
        
         if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
         else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
@@ -4370,7 +4494,9 @@ int handle_combat(Object_player &duh) {
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                                !(map_array[i * MAP_WIDTH + l].blocked));
+                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                     }
                 }
@@ -4388,7 +4514,9 @@ int handle_combat(Object_player &duh) {
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                                !(map_array[i * MAP_WIDTH + l].blocked));
+                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                     }
                 }
@@ -4406,7 +4534,9 @@ int handle_combat(Object_player &duh) {
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                                !(map_array[i * MAP_WIDTH + l].blocked));
+                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                     }
                 }
@@ -4424,7 +4554,9 @@ int handle_combat(Object_player &duh) {
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                                !(map_array[i * MAP_WIDTH + l].blocked));
+                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                     }
                 }
@@ -5298,7 +5430,14 @@ int main() {
 
     for (int i = 0; i < MAP_HEIGHT ;++i){
         for (int l = 0; l < MAP_WIDTH ;++l) {
-            fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+            fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+        }
+    }
+
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
                         l].blocked));
         }
     }
@@ -5391,6 +5530,32 @@ int main() {
     u16_orc = t28_orc; 
     u16_troll = t28_troll; 
     u16_corpse = t28_corpse;
+
+    //standard 8mode: ASCII 
+    u8_door = TCOD_CHAR_CROSS;
+    u8_doorv = TCOD_CHAR_CROSS; // same door 
+    u8_player = '@'; // 445 
+    u8_wall = 668; 
+    u8_vwall = 667;
+    u8_trwall = 669;
+    u8_tlwall = ' ';
+    u8_bwall = ' ';
+    u8_ibwall = t28_wall;
+    u8_floor1 = '.'; 
+    u8_floor2 = '.'; 
+    u8_orc = 'o'; 
+    u8_troll = 'T'; 
+    u8_corpse = '%';
+    u8_hwall = 666;
+
+    u8_wallCa = color_dark_wallF;
+    u8_wallCb = color_light_wall;
+    u8_wallCc = color_dark_wallF;
+    u8_wallCd = color_light_wall;
+    u8_floorCa = TCODColor::white;
+    u8_floorCb = TCODColor::grey;
+    color_light_ground = TCODColor::grey;
+    
 
     /* 
     msg_log msg1;
@@ -5616,13 +5781,16 @@ int main() {
             
             // updates monster map so that pathing includes monsters position
             for (unsigned int i = 0; i<monvector.size(); ++i){
-                fov_map_mons_path->setProperties(monvector[i].x, monvector[i].y, 1, 0);
+                if(monvector[i].alive){ // dead monsters don't block pathing
+                    fov_map_mons_path1->setProperties(monvector[i].x, monvector[i].y, 1, 0);
+                }    
             }  
             
             
 
             for (unsigned int i = 0; i<monvector.size(); ++i){
                 in_sight = fov_map->isInFov(monvector[i].x,monvector[i].y);
+                if(!in_sight) monvector[i].in_sight = false; else monvector[i].in_sight = true;
                 if( (in_sight && monvector[i].alive) || (monvector[i].chasing && monvector[i].alive) ){
                     monvector[i].c_mode = true;
                     monvector[i].pl_x = player.x; // if player in sight, store player pos
@@ -5632,7 +5800,7 @@ int main() {
                     monvector[i].boren = false;
                     monvector[i].stuck = false;
 
-                    monvector[i].path->compute(monvector[i].x,monvector[i].y,monvector[i].pl_x,monvector[i].pl_y);
+                    monvector[i].path0->compute(monvector[i].x,monvector[i].y,monvector[i].pl_x,monvector[i].pl_y);
                     
                     /*
                     int path_x, path_y;
@@ -5653,7 +5821,7 @@ int main() {
                     //    << " path step: " << path_x << " " << path_y << std::endl; 
                         
                    
-                    std::cout << "Monster path size: " << monvector[i].path->size() << std::endl;
+                    std::cout << "Monster path size: " << monvector[i].path0->size() << std::endl;
 
                     // trying to exit combat if no monster in sight EVEN while letting monster out of FoV chasing
                     if( in_sight && monvector[i].alive ){
@@ -5671,17 +5839,23 @@ int main() {
                     monsters.push_back(tempm);
 
                     msg_log msg1;
-                    sprintf(msg1.message, "%c>%c%s initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
-                        TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
-                        monvector[i].name, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
-                        *tempm.speed, monvector[i].initiative);        
+                    if(monvector[i].in_sight)
+                        sprintf(msg1.message, "%c>%c%s initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
+                            TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
+                            monvector[i].name, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
+                            *tempm.speed, monvector[i].initiative); 
+                    else 
+                        sprintf(msg1.message, "%c>***%c%s initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
+                            TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
+                            monvector[i].name, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
+                            *tempm.speed, monvector[i].initiative);
                     msg1.color1 = TCODColor::yellow;
                     msg_log_list.push_back(msg1);
                 }
             }
 
             for (unsigned int i = 0; i<monvector.size(); ++i){
-                fov_map_mons_path->setProperties(monvector[i].x, monvector[i].y, 1, 1);
+                fov_map_mons_path1->setProperties(monvector[i].x, monvector[i].y, 1, 1);
             }
             
             if (break_combat) {wid_combat_open = 0; 
@@ -5734,11 +5908,19 @@ int main() {
                 } else {
                     for (unsigned int b = 0; b<monvector.size(); ++b) {
                         unsigned int monster_ini =  monvector[b].initiative;
-                        if ((i+1) == monster_ini){
-                            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(i), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
+                        if(monvector[b].in_sight){
+                            if ((i+1) == monster_ini){
+                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(i), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
                                     monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
                                     monvector[b].name, TCOD_COLCTRL_STOP);
-                        }
+                            }    
+                        } else {
+                            if ((i+1) == monster_ini){
+                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(i), "***[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
+                                    monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
+                                    monvector[b].name, TCOD_COLCTRL_STOP);
+                            }
+                        }    
                     }
                 }
             }  
@@ -5826,25 +6008,25 @@ int main() {
                                 monvector[n].bored = 400;
                                 monvector[n].boren = false;
                                 monvector[n].stuck = false;
-                                monvector[n].path->compute(monvector[n].x,monvector[n].y,monvector[n].pl_x,monvector[n].pl_y);
+                                monvector[n].path0->compute(monvector[n].x,monvector[n].y,monvector[n].pl_x,monvector[n].pl_y);
                                 
                                 int path_x, path_y;
-                                monvector[n].path->get(0,&path_x,&path_y);
+                                monvector[n].path0->get(0,&path_x,&path_y);
                                 if( is_blocked(path_x, path_y) ){
                                     for (unsigned int u = 0; u<monvector.size(); ++u){
-                                        fov_map_mons_path->setProperties(monvector[u].x, monvector[u].y, 1, 0);
+                                        fov_map_mons_path1->setProperties(monvector[u].x, monvector[u].y, 1, 0);
                                     }
-                                    monvector[n].path->compute(monvector[n].x,monvector[n].y,monvector[n].pl_x,monvector[n].pl_y);
+                                    monvector[n].path0->compute(monvector[n].x,monvector[n].y,monvector[n].pl_x,monvector[n].pl_y);
                                     for (unsigned int u = 0; u<monvector.size(); ++u){
-                                        fov_map_mons_path->setProperties(monvector[u].x, monvector[u].y, 1, 1);
+                                        fov_map_mons_path1->setProperties(monvector[u].x, monvector[u].y, 1, 1);
                                     }
                                 }
 
-                                std::cout << "Monster path size: " << monvector[n].path->size() << std::endl;
+                                std::cout << "Monster path size: " << monvector[n].path0->size() << std::endl;
                             }
                         }
                             for (unsigned int u = 0; u<monvector.size(); ++u){
-                                fov_map_mons_path->setProperties(monvector[u].x, monvector[u].y, 1, 1);
+                                fov_map_mons_path1->setProperties(monvector[u].x, monvector[u].y, 1, 1);
                             }
                         }
 
@@ -5867,26 +6049,31 @@ int main() {
                             if (n == (player_own - 1)){
                                 r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] Player <", TCOD_COLCTRL_1, 
                                     player.temp_init, TCOD_COLCTRL_STOP);
-                                //TCODConsole::root->print(win_x-2, 5+(n), "[%c%d%c] Player <", TCOD_COLCTRL_1, 
-                                //    player.temp_init, TCOD_COLCTRL_STOP);
                             } else {
                                 for (unsigned int b = 0; b<monvector.size(); ++b) {
                                     unsigned int monster_ini = monvector[b].initiative;
                                     if ((n+1) == monster_ini){
-                                        if(monster_ini < player_own){
-                                            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "%c[%d] %s%c", TCOD_COLCTRL_3,
+                                        if(monvector[b].in_sight){
+                                            if(monster_ini < player_own){
+                                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "%c[%d] %s%c", TCOD_COLCTRL_3,
                                                 monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
-                                            //TCODConsole::root->print(win_x-2, 5+(n), "%c[%d] %s%c", TCOD_COLCTRL_3,
-                                            //    monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
                                             
-                                        } else {  
-                                            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
-                                                monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
-                                                monvector[b].name, TCOD_COLCTRL_STOP);
-                                            //TCODConsole::root->print(win_x-2, 5+(n), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
-                                            //    monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
-                                            //    monvector[b].name, TCOD_COLCTRL_STOP);
-                                        }
+                                            } else {  
+                                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
+                                                    monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
+                                                    monvector[b].name, TCOD_COLCTRL_STOP);
+                                            }
+                                        } else {
+                                            if(monster_ini < player_own){
+                                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "***%c[%d] %s%c", TCOD_COLCTRL_3,
+                                                monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
+                                            
+                                            } else {  
+                                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "***[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
+                                                    monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
+                                                    monvector[b].name, TCOD_COLCTRL_STOP);
+                                            }
+                                        }    
                                     }
                                 }
                             }
@@ -5985,19 +6172,35 @@ int main() {
                                 for (unsigned int b = 0; b<monvector.size(); ++b) {
                                     unsigned int monster_ini = monvector[b].initiative;
                                     if ((n+1) == monster_ini){
-                                        if(monster_ini < (i+1)){
-                                            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "%c[%d] %s%c", TCOD_COLCTRL_3,
-                                                monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
+                                        if(monvector[b].in_sight){
+                                            if(monster_ini < (i+1)){
+                                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "%c[%d] %s%c", TCOD_COLCTRL_3,
+                                                    monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
                                             
-                                        } else if(monster_ini == (i+1)){
-                                            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] %c%s%c <", TCOD_COLCTRL_1,
-                                                monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
-                                                monvector[b].name, TCOD_COLCTRL_STOP);
-                                        } else {   
-                                            r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
-                                                monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
-                                                monvector[b].name, TCOD_COLCTRL_STOP);
-                                        }
+                                            } else if(monster_ini == (i+1)){
+                                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] %c%s%c <", TCOD_COLCTRL_1,
+                                                    monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
+                                                    monvector[b].name, TCOD_COLCTRL_STOP);
+                                            } else {   
+                                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
+                                                    monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
+                                                    monvector[b].name, TCOD_COLCTRL_STOP);
+                                            }
+                                        } else {
+                                            if(monster_ini < (i+1)){
+                                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "***%c[%d] %s%c", TCOD_COLCTRL_3,
+                                                    monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
+                                            
+                                            } else if(monster_ini == (i+1)){
+                                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "***[%c%d%c] %c%s%c <", TCOD_COLCTRL_1,
+                                                    monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
+                                                    monvector[b].name, TCOD_COLCTRL_STOP);
+                                            } else {   
+                                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "***[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
+                                                    monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
+                                                    monvector[b].name, TCOD_COLCTRL_STOP);
+                                            }
+                                        }    
                                     }
                                 }
                             }
@@ -6092,8 +6295,11 @@ int main() {
                 if (monvector[i].alive){ // take turn for every monster alive
 
                     for (unsigned int u = 0; u<monvector.size(); ++u){
-                        //1 = you can, see, walk
-                        fov_map_mons_path->setProperties(monvector[u].x, monvector[u].y, 1, 0);
+                        // check if alive or dead monsters block path
+                        if(monvector[i].alive){
+                            //1 = you can, see, walk
+                            fov_map_mons_path1->setProperties(monvector[u].x, monvector[u].y, 1, 0);
+                        }    
                     }
 
                     bool in_sight;
@@ -6128,8 +6334,8 @@ int main() {
 
                             monvector[i].pl_x = vagab_x; // pick a random spot in FoV
                             monvector[i].pl_y = vagab_y;
-                            monvector[i].path->compute(monvector[i].x,monvector[i].y,vagab_x,vagab_y);
-                            std::cout << "Monster path size: " << monvector[i].path->size() << std::endl;
+                            monvector[i].path0->compute(monvector[i].x,monvector[i].y,vagab_x,vagab_y);
+                            std::cout << "Monster path size: " << monvector[i].path0->size() << std::endl;
                         } 
 
                         --monvector[i].bored;
@@ -6142,13 +6348,13 @@ int main() {
                             monvector[i].boren = false;
                             monvector[i].bored = 400;
                             monvector[i].stuck = false;
-                            monvector[i].path->compute(monvector[i].x,monvector[i].y,monvector[i].pl_x,monvector[i].pl_y);
-                            std::cout << "Monster path size: " << monvector[i].path->size() << std::endl;
+                            monvector[i].path0->compute(monvector[i].x,monvector[i].y,monvector[i].pl_x,monvector[i].pl_y);
+                            std::cout << "Monster path size: " << monvector[i].path0->size() << std::endl;
                         }
 
                         for (unsigned int u = 0; u<monvector.size(); ++u){
-                fov_map_mons_path->setProperties(monvector[u].x, monvector[u].y, 1, 1);
-            }
+                            fov_map_mons_path1->setProperties(monvector[u].x, monvector[u].y, 1, 1);
+                        }
                      
                         if (monvector[i].myai->take_turn(monvector[i], player, monvector[i].pl_x,
                                 monvector[i].pl_y,in_sight)); //render_all();
