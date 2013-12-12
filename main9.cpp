@@ -9,6 +9,7 @@
 // #include <process.h> //used for threading?
 
 bool combat_mode = false;
+bool is_handle_combat = false;
 
 int t8_player = 0; //global player sprite
 
@@ -2197,7 +2198,7 @@ void threadm( void* pParams )
       //  }
     }
 
-// in combat
+// (was only) in combat
 void I_am_moused(){
     //TCOD_key_t key;
     //TCOD_mouse_t mouse;
@@ -2365,173 +2366,6 @@ void I_am_moused(){
     }
 }
 
-
-// out of combat
-void I_am_moused2(){ // doubled because of main loop, changes where messages are printed
-    //TCOD_key_t key;
-    //TCOD_mouse_t mouse;
-    //TCOD_event_t ev = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
-    mousez = TCODMouse::getStatus();
-    int x = mousez.cx;
-    int y = mousez.cy;
-
-    char *whatis;
-
-    if(!release_button){
-        if(!mousez.lbutton){
-            release_button = 1;
-        }
-
-    } else {   
-
-        // extended msg log
-        if(mousez.lbutton && mousez.cy == 73 && (mousez.cx == 33 || mousez.cx == 34)) {
-            if(MSG_MODE_XTD){ 
-                MSG_MODE_XTD=0; 
-            } else {
-                MSG_MODE_XTD = 1; 
-            }
-            release_button = 0;
-        }
-
-        if(mousez.lbutton && mousez.cy == 0 && (mousez.cx == 0 || mousez.cx == 1 || mousez.cx == 2)) {
-            if(wid_top_open){ 
-                wid_top_open=0; 
-            } else {
-                wid_top_open = 1; 
-            }
-            release_button = 0;
-        }
-
-        if(mousez.lbutton && mousez.cy > (win_y-2) && mousez.cx > (win_x-4) ) {
-            if(wid_combat_open){ 
-                wid_combat_open=0; 
-            } else {
-            wid_combat_open = 1; 
-            }
-        release_button = 0;
-        }
-
-        if( (mousez.lbutton && mousez.cy == 3 && mousez.cx == 127) ||
-                (mousez.lbutton && mousez.cy == 3 && mousez.cx == 126) ||
-                (mousez.lbutton && mousez.cy == 3 && mousez.cx == 125) ) {
-            if(wid_rpanel_open){ 
-                wid_rpanel_open=0; 
-            } else {
-            wid_rpanel_open = 1; 
-            }
-        release_button = 0;
-        } 
-    
-
-    if(wid_top_open){
-        if(mousez.lbutton && mousez.cy == 0 && (mousez.cx >= 92 && mousez.cx <= 94)) {
-            wid_help = 1;
-        }
-        if(mousez.lbutton && mousez.cx == 4 && mousez.cy == 0) {stance_pos = 1; bigg = 0; fov_recompute = true;}
-        if(mousez.lbutton && mousez.cx == 5 && mousez.cy == 0) {stance_pos = 2; bigg = 1; fov_recompute = true;}
-        //if(mousez.lbutton && mousez.cx == 2 && mousez.cy == 0) stance_pos = 3;
-        if(mousez.cx == 6 && mousez.cy == 0) {
-            bigg2 = 1;
-            fov_recompute = true;
-        } else {
-            bigg2 = 0;
-        }
-        if(mousez.cx == 7 && mousez.cy == 0) {
-            bigg3 = 1;
-            fov_recompute = true;
-        } else {
-            bigg3 = 0;
-        }
-        if( (mousez.cx >= 10 && mousez.cx < 18) && mousez.cy == 0) {
-            stance_pos2 = 1;
-        } else {
-            stance_pos2 = 0;
-        }
-    }
-    if(wid_help){
-        if(mousez.lbutton && mousez.cy == 10 && (mousez.cx >= 92 && mousez.cx <= 95)) {
-            wid_help = 0;
-        }    
-    }    
-    } // release button
-
-    //std::cout << "MOUSE " << x << " " << y << std::endl;
-
-    bool found = false;
-    TCODColor col_obj; // color of object
-
-    if(!bigg){
-    
-    if ((!bigg && x == player.x && y == player.y) || (bigg && (x/2) == player.x && (y/2) == player.y)){
-        TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->setAlignment(TCOD_LEFT);
-        TCODConsole::root->print(1, win_y-5, "Mouse on [Player] at [%d.%d]", x, y);
-        TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
-    } else {
-        for (unsigned int n = 0; n<monvector.size(); ++n) {
-        if( (!bigg && (x == monvector[n].x && y == monvector[n].y && monvector[n].alive) 
-                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
-                (bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y && monvector[n].alive) 
-                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ){
-            whatis = &(monvector[n].name[0]);
-            TCODConsole::root->setDefaultForeground(TCODColor::white);
-            TCODConsole::root->setAlignment(TCOD_LEFT);
-            col_obj = monvector[n].color;
-            TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-            TCODConsole::root->print(1, win_y-5, "Mouse on [%c%s%c] at [%d.%d]",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
-            TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
-            found = true;
-        } 
-    }
-        if (!found){ // only if no moster alive found
-        for (unsigned int n = 0; n<monvector.size(); ++n) {
-        if(( (!bigg && (x == monvector[n].x && y == monvector[n].y) && !(monvector[n].alive) 
-                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
-                (bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y) && !(monvector[n].alive) 
-                    && fov_map->isInFov(monvector[n].x,monvector[n].y))    )){
-            whatis = &(monvector[n].name[0]);
-            TCODConsole::root->setDefaultForeground(TCODColor::white);
-            TCODConsole::root->setAlignment(TCOD_LEFT);
-            col_obj = monvector[n].color;
-            TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-            TCODConsole::root->print(1, win_y-5, "Mouse on [dead %c%s%c] at [%d.%d]",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
-            TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
-            found = true;
-        } 
-    }
-    }
-    
-    if (!found){
-        TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->setAlignment(TCOD_LEFT);
-        TCODConsole::root->print(1, win_y-5, "Mouse on [Nothing] at [%d.%d]", x, y);
-        TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
-        found = false;
-    }
-    }
-
-    }
-
-    int asciiwhat = 0;
-    if(bigg){
-        TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->setAlignment(TCOD_LEFT);
-        asciiwhat= TCODConsole::root->getChar(x, y);
-        if (asciiwhat == 502 || asciiwhat == 602 || asciiwhat == 702 || asciiwhat == 802){
-            TCODConsole::root->print(1, win_y-5, "Mouse on [Player] at [%d.%d]", x, y);
-        } else if(asciiwhat == 501 || asciiwhat == 601 || asciiwhat == 701 || asciiwhat == 801){
-            TCODConsole::root->print(1, win_y-5, "Mouse on [Floor] at [%d.%d]", x, y);
-        } else if(asciiwhat == 504 || asciiwhat == 604 || asciiwhat == 704 || asciiwhat == 804){
-            TCODConsole::root->print(1, win_y-5, "Mouse on [Troll] at [%d.%d]", x, y);
-        } else if(asciiwhat == 505 || asciiwhat == 605 || asciiwhat == 705 || asciiwhat == 805){
-            TCODConsole::root->print(1, win_y-5, "Mouse on [Orc] at [%d.%d]", x, y);
-        } else if(asciiwhat == 506 || asciiwhat == 606 || asciiwhat == 706 || asciiwhat == 806){
-            TCODConsole::root->print(1, win_y-5, "Mouse on [Remains] at [%d.%d]", x, y);
-        }
-        TCODConsole::root->setDefaultBackground(TCODColor::black);
-    }
-}
 
 // HP bar during combat
 //def render_bar(x, y, total_width, name, value, maximum, bar_color, back_color):
@@ -4022,16 +3856,18 @@ int handle_keys(Object_player &duh) {
 
     if (bloodycount < 0) bloodycount = 0; // if ... change color 
   
-    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'q' ) return quit;
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'q' ) return quit;
 
-    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'y' ) combat_mode = true;
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'x' ) return quit2; // quit combat
 
-    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'v' ){ if (revealdungeon) revealdungeon = false; else revealdungeon = true; Sleep (100); fov_recompute = true;}
+    //if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'y' ) combat_mode = true;
 
-    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'd' ){ if (debug) debug = false; else debug = true;
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'v' ){ if (revealdungeon) revealdungeon = false; else revealdungeon = true; Sleep (100); fov_recompute = true;}
+
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'd' ){ if (debug) debug = false; else debug = true;
         fov_recompute = true; Sleep (100);}
 
-    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'w' ){
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'w' ){
 
         fov_recompute = true;
 
@@ -4132,7 +3968,7 @@ int handle_keys(Object_player &duh) {
 
     }    
 
-    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'r' ){
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'r' ){
 
         m_x = 0;
         m_y = 0;
@@ -4338,11 +4174,12 @@ int handle_keys(Object_player &duh) {
         //    fov_recompute = true;
         render_all();
         TCODConsole::flush(); // this updates the screen
+        if(is_handle_combat) return quit2; // regenerates everything and quits combat
     }
 
     if (game_state == playing) {
 
-    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'p' ){
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'p' ){
         m_x = 0;
         m_y = 0;
         TCODConsole::root->clear();
@@ -4484,240 +4321,6 @@ int handle_keys(Object_player &duh) {
         player_move_attack(1, 0);
     }
 
-    else {
-        m_x = 0;
-        m_y = 0;
-        return no_turn;
-    }
-    
-    // end KEY RIGHT cycle
-    }
-    //std::cout << "player.x: " << duh.x << " player.y: " << duh.y << std::endl; 
-    return 0;
-}    
-
-int handle_combat(Object_player &duh) {
-
-    bool mycase_p;
-    mycase_p = 0;
-
-    TCOD_key_t keyr;
-    TCOD_mouse_t mouser;
-    //TCOD_key_t key = TCODConsole::waitForKeypress(true);
-    TCOD_event_t eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&keyr,&mouser);
-    
-    //TCOD_key_t key = TCODConsole::waitForKeypress(true); 
-
-    if (bloodycount < 0) bloodycount = 0; // if ... change color 
-  
-    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'x' ) return quit; // quit combat
-
-    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'q' ) return quit2;
-
-    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'd' ){ if (debug) debug = false; else debug = true; 
-        fov_recompute = false; Sleep (100);}
-
-    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'r' ){
-
-        m_x = 0;
-        m_y = 0;
-
-        std::cout << " Monster array: " << monvector.size() << std::endl;
-        unsigned int b = monvector.size();
-        for (unsigned int i = 0; i < b; ++i) monvector.erase (monvector.begin()+i); // erase monster vector on map regen
-        std::cout << " Monster array: " << monvector.size() << std::endl; // 0
-        doors.clear();
-
-        //Sleep(4000);
-        
-        if (mapmode == 1){
-            BSProoms.clear();
-            make_map_BSP(duh);
-            //make_map(duh);
-            mapmode = 0;
-        } else {
-            BSProoms.clear();
-            make_map_BSP(duh);
-            //make_map2(duh);
-            mapmode = 1;
-        }
-        duh.bloody = 0;
-        for (int i = 0; i < MAP_HEIGHT ;++i){
-            for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                        !(map_array[i * MAP_WIDTH + l].blocked));
-                //map_array[row * MAP_WIDTH + l] = Tile(1,1);
-            }
-        }
-        for (int i = 0; i < MAP_HEIGHT ;++i){
-            for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                        !(map_array[i * MAP_WIDTH + l].blocked));
-            }
-        }
-        for (int i = 0; i < MAP_HEIGHT ;++i){
-            for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                        !(map_array[i * MAP_WIDTH + l].blocked));
-            }
-        }
-        for (int i = 0; i < MAP_HEIGHT ;++i){
-            for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                        !(map_array[i * MAP_WIDTH + l].blocked));
-            }
-        }
-        fov_recompute = true;
-        player.stats.hp = 30;
-        player.selfchar = '@';
-        player.combat_move = 8;
-        game_state = playing;
-        set_black();
-        alreadydead = 0;
-        //    fov_recompute = true;
-        render_all();
-        TCODConsole::flush(); // this updates the screen
-        return quit;
-    }
-
-    if (game_state == playing) {
-
-    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'p' ){
-        m_x = 0;
-        m_y = 0;
-        TCODConsole::root->clear();
-        mesg->setAlignment(TCOD_LEFT);
-        mesg->setDefaultForeground(TCODColor::white);
-        mesg->setDefaultBackground(TCODColor::black);
-        mesg->print(1, 1, "Give a direction to dig dungeon");
-
-        // may CRASH
-        //myvector[1]->draw(0);
-       
-        if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
-        else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
-
-        TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
-
-        TCODConsole::flush();
-        while (!mycase_p){
-            TCODConsole::waitForKeypress(true);
-            if (TCODConsole::isKeyPressed(TCODK_UP)){ 
-                std::cout << "Dig up." << std::endl; mycase_p = 1;
-                map_array[(duh.y - 1)*MAP_WIDTH +duh.x].blocked = 0;
-                map_array[(duh.y - 1)*MAP_WIDTH +duh.x].block_sight = 0;
-                mesg->clear();
-                for (int i = 0; i < MAP_HEIGHT ;++i){
-                    for (int l = 0; l < MAP_WIDTH ;++l) {
-                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                    }
-                }
-                fov_recompute = true;
-                return false;
-            }
-            if (TCODConsole::isKeyPressed(TCODK_DOWN)){ 
-                std::cout << "Dig down." << std::endl;mycase_p = 1; 
-                map_array[(duh.y + 1)*MAP_WIDTH +duh.x].blocked = 0;
-                map_array[(duh.y + 1)*MAP_WIDTH +duh.x].block_sight = 0;
-                mesg->clear();
-                for (int i = 0; i < MAP_HEIGHT ;++i){
-                    for (int l = 0; l < MAP_WIDTH ;++l) {
-                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                    }
-                }
-                fov_recompute = true;
-                return false; 
-            }
-            if (TCODConsole::isKeyPressed(TCODK_LEFT)){
-                std::cout << "Dig left." << std::endl;mycase_p = 1;
-                map_array[duh.y*MAP_WIDTH +(duh.x -1)].blocked = 0;
-                map_array[duh.y*MAP_WIDTH +(duh.x -1)].block_sight = 0;
-                mesg->clear();
-                for (int i = 0; i < MAP_HEIGHT ;++i){
-                    for (int l = 0; l < MAP_WIDTH ;++l) {
-                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                    }
-                }
-                fov_recompute = true;
-                return false;
-            }
-            if (TCODConsole::isKeyPressed(TCODK_RIGHT)){ 
-                std::cout << "Dig right." << std::endl;mycase_p = 1;
-                map_array[duh.y*MAP_WIDTH +(duh.x + 1)].blocked = 0;
-                map_array[duh.y*MAP_WIDTH +(duh.x + 1)].block_sight = 0;
-                mesg->clear();
-                for (int i = 0; i < MAP_HEIGHT ;++i){
-                    for (int l = 0; l < MAP_WIDTH ;++l) {
-                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                    }
-                }
-                fov_recompute = true;
-                return false;
-            }
-        }
-    }
-
-    // end of KEY DIG cycle
-
-    if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_UP){
-        --bloodycount;
-        --duh.bloody;  
-        player_move_attack(0, -1);
-        //std::cout << " Monster array: " << myvector.size() << std::endl;
-    }
-
-    // end KEY UP cycle
-
-    else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_DOWN){
-        --bloodycount;
-        --duh.bloody; 
-        player_move_attack(0, 1);
-    }
-
-    // end KEY DOWN cycle
-
-    else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_LEFT){
-        --bloodycount;
-        --duh.bloody;   
-        player_move_attack(-1, 0);
-    }
-
-    // end KEY LEFT cycle
-
-    else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_RIGHT){
-        --bloodycount; 
-        --duh.bloody; 
-        player_move_attack(1, 0);
-    }
-
     // end KEY RIGHT cycle
 
     else if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == '.'){
@@ -4729,15 +4332,14 @@ int handle_combat(Object_player &duh) {
     else {
         m_x = 0;
         m_y = 0;
-        //std::cout << "playern.x: " << duh.x << " playern.y: " << duh.y << std::endl;
         return no_turn;
     }
     
     
     }
-    std::cout << "player.x: " << duh.x << " player.y: " << duh.y << std::endl; 
+    //std::cout << "player.x: " << duh.x << " player.y: " << duh.y << std::endl; 
     return 0;
-}
+}    
 
 void player_death(){
     Fighter fighter_component(0, 0, 0, 0);
@@ -5851,7 +5453,7 @@ int main() {
         render_all(); 
       
         
-        I_am_moused2();
+        I_am_moused();
 
         //TCODConsole::root->putChar( 10,10, 0x2500 );
         
@@ -5884,6 +5486,8 @@ int main() {
 
         //player.combat_move = 8; // 1 cost for movement, 4 for attack
         while (combat_mode){
+
+            is_handle_combat = true;
             
             // resets initiative & attack counts on all monsters
             for (unsigned int i = 0; i<monvector.size(); ++i) { 
@@ -6096,18 +5700,18 @@ int main() {
 
                         bool didmove = false; // flag if player moved in this loop
 
-                        player_action = handle_combat(player);
+                        player_action = handle_keys(player);
 
-                        if (player_action == quit){
+                        if (player_action == quit2){ // quit combat
                             Sleep(100);
                             combat_mode = false;
                             r_panel->clear();
                             goto jump;
                             break;
                         } // exits combat? 
-                        if (player_action == quit2 || TCODConsole::isWindowClosed()){
-                        quit_now = true;
-                        goto end;
+                        if (player_action == quit || TCODConsole::isWindowClosed()){
+                            quit_now = true;
+                            goto end;
                         } // exits program
 
                         if ((m_x != 0 || m_y != 0 || combat_null) && player.combat_move > 0){
@@ -6403,8 +6007,8 @@ int main() {
 
         end:
         if (quit_now) break;
-
-        
+       
+        is_handle_combat = false;
 
         // maybe needed for death
         player.move(0, 0, monvector);
