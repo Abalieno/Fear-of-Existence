@@ -195,12 +195,14 @@ TCODConsole *widget_2 = new TCODConsole(8, 1);  // UI top widget for objects in 
 TCODConsole *widget_2_p = new TCODConsole(80, MAP_HEIGHT-10); // UI pop up object widget
 
 TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT_AREA));  // combat UI panel (includes Message Log)
+TCODConsole *panel_xtd = new TCODConsole(win_x-32, (win_y - MAP_HEIGHT_AREA)+60);  // Message Log extended
 TCODConsole *r_panel = new TCODConsole((win_x - MAP_WIDTH_AREA), MAP_HEIGHT_AREA-3); // panel on right of map 
 // 30, 46 message log
 int BAR_WIDTH = 20;
 int MSG_X = 30; // BAR_WIDTH + 2;
 int MSG_WIDTH = 93; // SCREEN_WIDTH - BAR_WIDTH - 2 | was 63!
 unsigned int MSG_HEIGHT = 15;// PANEL_HEIGHT - 1 | was 12!
+bool MSG_MODE_XTD = false; // flag for extended msg log panel
 
 // UI panel toggles
 int wid_top_open = 1; // is top widget open?
@@ -221,7 +223,10 @@ struct msg_log { char message [94]; TCODColor color1; TCODColor color2; TCODColo
     TCODColor bcolor1; TCODColor bcolor2; TCODColor bcolor3; TCODColor bcolor4; TCODColor bcolor5; TCODColor bcolor6;
     TCODColor bcolor7; TCODColor bcolor8; TCODColor bcolor9; TCODColor bcolor10;};
 
+struct msg_log_c { bool is_context; int ltype;}; 
+
 std::vector<msg_log> msg_log_list;
+std::vector<msg_log_c> msg_log_context;
 
 void map_16x16_tile(){
     TCODConsole::mapAsciiCodeToFont(501,14,16);
@@ -621,10 +626,13 @@ public: // public should be moved down, but I keep it here for debug messages
     bool hit;
 
     int combat_move;
+    int combat_move_max;
+    int move_counter; // how many steps moved in the turn
     bool c_mode; // flag monsters for active combat mode
     int speed;
     int initiative;
     int temp_init; // total initiative value for messages/list
+    unsigned int cflag_attacks; // combat-flag, attacks during turn received
 
     Object_monster(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
         x = a;
@@ -852,13 +860,16 @@ public: // public should be moved down, but I keep it here for debug messages
     Statistics sts;
 
     int combat_move;
+    int combat_move_max;
+    int move_counter; // how many steps moved in the turn
     int speed;
     int initiative;
     int temp_init; // total initiative value for messages/list
+    unsigned int cflag_attacks; // combat-flag - number of attacks received in current turn
 
-    Object_player(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter, Statistics
-            loc_sts) :
-        stats(loc_fighter), sts(loc_sts) {
+    Object_player(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter, 
+            Statistics loc_sts) : stats(loc_fighter), sts(loc_sts) {
+            
         x = a;
         y = b;
         selfchar = pchar;
@@ -866,6 +877,7 @@ public: // public should be moved down, but I keep it here for debug messages
         colorb = oc2;
         h = health;
         bloody = 0;
+        combat_move_max = 8;
     }
 
     void move(int dx, int dy, std::vector<Object_monster> smonvector); 
@@ -948,14 +960,15 @@ public:
         
             std::cout << "The " << monster.name << " is active! " << std::endl;
             //dist = monster.distance_to(p_x, p_y);
-            
 
             // 1.1 so the monster attacks, but still moves closer instead of stopping diagonally
             if ( (monster.distance_to(p_x, p_y) >= 1.1) || (monster.chasing && !myfov)){
 
                 if (no_combat || monster.combat_move >= 1){ // move up to and including player pos    
                     monster.move_towards(p_x, p_y);
-                    if(!no_combat)monster.combat_move -= 1;
+                    if(!no_combat){
+                        monster.combat_move -= 1;
+                    }    
                     std::cout << "The " << monster.name << " is moving." << std::endl;
                     return false;
                 }
@@ -994,7 +1007,7 @@ public:
                 fov_recompute = true;
                 //render_all();
                 
-                monster.stats.attack(player, monster, 1);
+                monster.stats.attack(player, monster, 1); // calls attack function for monsters
                 TCODConsole::flush();
                 if(!no_combat)monster.combat_move -= 4; // decrease the movement points for attack
                 return true;
@@ -1017,11 +1030,28 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
 
         // calculate AML
         int p_AML = monster.stats.ML; // basic skill
-        p_AML += monster.stats.wpn1.wpn_AC; // adding weapon Attack class
+        p_AML += monster.stats.wpn1.wpn_AC; // adding weapon Attack Class
         // should check for walls here
         int m_DML = player.stats.ML; // basic monster skill
-        m_DML += player.stats.wpn1.wpn_AC; // adding weapon Attack class
+        m_DML += player.stats.wpn1.wpn_AC; // adding weapon Attack Class
 
+        // for every attack the player defends from or does, a -10 penality is applied
+        if(player.cflag_attacks >= 1){
+            m_DML += (player.cflag_attacks * 10) * -1;
+            std::cout << "playerD: BASIC " << player.stats.ML << " WEAPON " << player.stats.wpn1.wpn_AC
+                << " TOTAL " << m_DML << std:: endl;
+        }  
+        player.cflag_attacks++; // increment counter (reset at beginning of combat turn)
+
+        // for every attack the monster defends from or does, a -10 penality is applied
+        if(monster.cflag_attacks >= 1){
+            p_AML += (monster.cflag_attacks * 10) * -1;
+            std::cout << "monsterD: BASIC " << monster.stats.ML << " WEAPON " << monster.stats.wpn1.wpn_AC
+                << " TOTAL " << p_AML << std:: endl;
+        }  
+        monster.cflag_attacks++; // increment counter (reset at beginning of combat turn)
+
+        // roll two 1d100, one for player, one for monster
         TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
         short int p_d100 = wtf->getInt(1, 100, 0);
         short int m_d100 = wtf->getInt(1, 100, 0);
@@ -1042,6 +1072,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
             }
         }
 
+        // this is player
         short int m_success_level = 0;
         crit_val = m_d100 % 10;
         if (m_d100 <= m_DML){
@@ -1262,6 +1293,14 @@ void Object_monster::move(int dx, int dy, bool p_dir) {
         path->get(0,&newx,&newy);
         if (!is_blocked(newx,newy)){
             if (path->walk(&newx,&newy,true)) {
+                if( (newx != x) || (newy != y) ){ 
+                    move_counter++; // increment move counter, even out of combat tho
+                    if(move_counter == (combat_move_max/2)){
+                        std::cout << "PMONSTER " << combat_move_max/2 << std::endl;
+                        cflag_attacks++;
+                        move_counter = 0;
+                    }    
+                }    
                 x = newx;
                 y = newy;
             }    
@@ -1287,12 +1326,24 @@ void Object_player::move(int dx, int dy, std::vector<Object_monster> smonvector)
        
         int tempx = 0;
         int tempy = 0;
+
+        // check for actual movement happening
+        bool override = false;
+        if( (dx == 0) && (dy == 0) ) override = true;
+
         tempx = x + dx;
         tempy = y + dy;
 
         if (!is_blocked(tempx,tempy)){
             x += dx;
             y += dy;
+            if(!override){
+                move_counter++; // only add used movement point if actually moved
+                if(move_counter == 4){
+                    cflag_attacks++;
+                    move_counter = 0;
+                }    
+            }        
             if (bloody > 0){
                 if (bloody >= map_array[y * MAP_WIDTH + x].bloodyt)
                 map_array[y * MAP_WIDTH + x].bloodyt = bloody;
@@ -1306,7 +1357,7 @@ void Object_player::move(int dx, int dy, std::vector<Object_monster> smonvector)
 
         bloody = (map_array[y * MAP_WIDTH + x].bloodyt);
         if (map_array[y * MAP_WIDTH + x].bloodyt > 1) --map_array[y * MAP_WIDTH + x].bloodyt;
-    }
+}
 
 BasicMonster orc_ai;
 
@@ -1355,6 +1406,7 @@ void place_objects(Rect room){
             monster.in_sight = false;
             monster.path_mode = 0;
             monster.combat_move = 6;
+            monster.combat_move_max = 6;
             monster.c_mode = false;
             monster.speed = 4; // for initiative
             monster.hit = false;
@@ -1391,6 +1443,7 @@ void place_objects(Rect room){
             monster.in_sight = false;
             monster.path_mode = 0;
             monster.combat_move = 10;
+            monster.combat_move_max = 10;
             monster.c_mode = false;
             monster.speed = 8;
             monster.hit = false;
@@ -2162,6 +2215,16 @@ void I_am_moused(){
 
     } else {    
 
+        // extended msg log
+        if(mousez.lbutton && mousez.cy == 73 && (mousez.cx == 33 || mousez.cx == 34)) {
+            if(MSG_MODE_XTD){ 
+                MSG_MODE_XTD=0; 
+            } else {
+                MSG_MODE_XTD = 1; 
+            }
+            release_button = 0;
+        }    
+
         if(mousez.lbutton && mousez.cy == 0 && (mousez.cx == 0 || mousez.cx == 1 || mousez.cx == 2)) {
             if(wid_top_open){ 
                 wid_top_open=0; 
@@ -2319,7 +2382,17 @@ void I_am_moused2(){ // doubled because of main loop, changes where messages are
             release_button = 1;
         }
 
-    } else {    
+    } else {   
+
+        // extended msg log
+        if(mousez.lbutton && mousez.cy == 73 && (mousez.cx == 33 || mousez.cx == 34)) {
+            if(MSG_MODE_XTD){ 
+                MSG_MODE_XTD=0; 
+            } else {
+                MSG_MODE_XTD = 1; 
+            }
+            release_button = 0;
+        }
 
         if(mousez.lbutton && mousez.cy == 0 && (mousez.cx == 0 || mousez.cx == 1 || mousez.cx == 2)) {
             if(wid_top_open){ 
@@ -2522,75 +2595,94 @@ void render_bar_s2(int x, int y, int total_width, const char *name,
 
 
 void Message_Log(){
+
+    int panel_offset = 0;
+    TCODConsole *whatpanel;
+    if(MSG_MODE_XTD){
+        MSG_HEIGHT = 75; // 5 times the 15 standard
+        whatpanel = panel_xtd;
+        panel_offset = 0;
+    } else {
+        MSG_HEIGHT = 15;
+        whatpanel = panel;
+        panel_offset = 34;
+    }    
+
+    panel->print(33, 1, ">");
+
     if(msg_log_list.size() > 0){
-        panel->setDefaultForeground(TCODColor::white);
-        panel->setBackgroundFlag(TCOD_BKGND_SET);
-        panel->print(34, 2, ">");
-         while(msg_log_list.size() > MSG_HEIGHT){
+        whatpanel->setDefaultForeground(TCODColor::white);
+        whatpanel->setBackgroundFlag(TCOD_BKGND_SET);
+        whatpanel->print(panel_offset, 2, ">");
+        /* 
+        while(msg_log_list.size() > 80){
             msg_log_list.erase(msg_log_list.begin(),msg_log_list.begin()+1);
         }
+        */
         //int i = msg_log_list.size() + 1
-         int a =2;
-         int first = 1;
-        for(int i = (msg_log_list.size()-1); i >= 0 ; i--){
+        int a = 2;
+        int first = 1;
+        int howmany = 0;
+        howmany = (msg_log_list.size())- MSG_HEIGHT;
+        //std::cout << "Quantity " << howmany << std::endl;
+        if(howmany < 0) howmany = 0;
+        for(int i = (msg_log_list.size()-1); i >= howmany ; i--){
             if (first){
                 if (!msg_log_list[i].c1)
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,TCODColor::black);
+                    TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,TCODColor::black);
                 else TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,msg_log_list[i].bcolor1);
                 if (!msg_log_list[i].c2)
-                TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,TCODColor::black);
+                    TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,TCODColor::black);
                 else TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,msg_log_list[i].bcolor2);
                 if (!msg_log_list[i].c3)
-                TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,TCODColor::black);
+                    TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,TCODColor::black);
                 else TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,msg_log_list[i].bcolor3);
                 if (!msg_log_list[i].c4)
-                TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,TCODColor::black);
+                    TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,TCODColor::black);
                 else TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,msg_log_list[i].bcolor4);
                 if (!msg_log_list[i].c5)
-                TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,TCODColor::black);
+                    TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,TCODColor::black);
                 else TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,msg_log_list[i].bcolor5);
-        panel->print(35, a, msg_log_list[i].message,TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
-            TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP,TCOD_COLCTRL_4,
-            TCOD_COLCTRL_STOP,TCOD_COLCTRL_5, TCOD_COLCTRL_STOP );
-        a++;
-        first = 0;
+                whatpanel->print(panel_offset+1, a, msg_log_list[i].message,TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP,TCOD_COLCTRL_4,
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_5, TCOD_COLCTRL_STOP );
+                a++;
+                first = 0;
             } else{
             if (!msg_log_list[i].c1)
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,TCODColor::black);
+                    TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,TCODColor::black);
                 else TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,msg_log_list[i].bcolor1);
                 if (!msg_log_list[i].c2)
-                TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,TCODColor::black);
+                    TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,TCODColor::black);
                 else TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,msg_log_list[i].bcolor2);
                 if (!msg_log_list[i].c3)
-                TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,TCODColor::black);
+                    TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,TCODColor::black);
                 else TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,msg_log_list[i].bcolor3);
                 if (!msg_log_list[i].c4)
-                TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,TCODColor::black);
+                    TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,TCODColor::black);
                 else TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,msg_log_list[i].bcolor4);
                 if (!msg_log_list[i].c5)
-                TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,TCODColor::black);
+                    TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,TCODColor::black);
                 else TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,msg_log_list[i].bcolor5);
-            panel->print(35, a+1, msg_log_list[i].message,TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
-            TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP,TCOD_COLCTRL_4,
-            TCOD_COLCTRL_STOP,TCOD_COLCTRL_5, TCOD_COLCTRL_STOP );
-        a++;
+                whatpanel->print(panel_offset+1, a+1, msg_log_list[i].message,TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP,TCOD_COLCTRL_4,
+                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_5, TCOD_COLCTRL_STOP );
+                a++;
             }
         }
 
+        // just draws frame (not on extended panel)
         for (int n = 0; n < 7; ++n){
             panel->setDefaultForeground(TCODColor::lighterGrey);
             panel->setDefaultBackground(TCODColor::black);
             panel->print(32, n+1, "%c", TCOD_CHAR_VLINE);
-        //TCODConsole::root->print(win_x-1, n, "%c", TCOD_CHAR_VLINE);
         }
-    for (int n = 0; n < 20; ++n){
-        panel->setDefaultForeground(TCODColor::lighterGrey);
-        panel->setDefaultBackground(TCODColor::black);
-        panel->print(n+33, 0, "%c", TCOD_CHAR_HLINE);
-        //TCODConsole::root->print(n, win_y-1, "%c", TCOD_CHAR_HLINE);
-    } 
-    
-    panel->print(32, 0, "%c", TCOD_CHAR_NW);
+        for (int n = 0; n < 20; ++n){
+            panel->setDefaultForeground(TCODColor::lighterGrey);
+            panel->setDefaultBackground(TCODColor::black);
+            panel->print(n+33, 0, "%c", TCOD_CHAR_HLINE);
+        } 
+        panel->print(32, 0, "%c", TCOD_CHAR_NW);
 
         /*
         panel->setDefaultForeground(TCODColor::grey);
@@ -2604,7 +2696,7 @@ void Message_Log(){
         for (int n = 1; n < (16); n++) panel->print(90, n, "%c",TCOD_CHAR_VLINE);
         */
     } else {
-        panel->print(34, 2, ">Message Log currently empty");
+        whatpanel->print(panel_offset, 2, ">Message Log currently empty");
     }
 
 }
@@ -2612,6 +2704,7 @@ void Message_Log(){
 void render_messagelog(){
     if(wid_combat_open){
             panel->clear();
+            panel_xtd->clear();
             Message_Log();
             panel->setDefaultForeground(TCODColor::white);
             //panel->print(win_x-1, (win_y - MAP_HEIGHT_AREA)-4, "^");
@@ -2630,6 +2723,7 @@ void render_messagelog(){
             render_bar_s2(1, 2, BAR_WIDTH, "Mov", player.combat_move, 8,
                 TCODColor::lightPurple, TCODColor::darkerPurple, mov_bar);
             TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT_AREA+2);
+            if(MSG_MODE_XTD) TCODConsole::blit(panel_xtd,0,0,0,0,TCODConsole::root,34,(MAP_HEIGHT_AREA+2)-60);
         } else {
             //win_x, (win_y - MAP_HEIGHT_AREA
             //panel->setDefaultForeground(TCODColor::red);
@@ -3618,14 +3712,20 @@ int player_action = 0;
 
 int m_x = 0;
 int m_y = 0;
+bool combat_null = false; // set if waiting instead of moving, in combat
 
 void player_move_attack(int dx, int dy){
+
+    // add movement penalty if player moved
+    //int temp_cmove = 0; 
+    //if(player.combat_move == 4) {player.cflag_attacks++; temp_cmove++;}
+    //if(player.combat_move == 1) {player.cflag_attacks++; temp_cmove++;}
     
     int x = player.x + dx;
     int y = player.y + dy;
 
     //Object *target;
-     unsigned   int target = 0;
+     unsigned int target = 0;
      bool is_it = false;
     
     for (unsigned int i = 0; i<monvector.size(); ++i){ // checks if monster is in next cell
@@ -3640,6 +3740,7 @@ void player_move_attack(int dx, int dy){
 
     if (is_it && monvector[target].alive && player.combat_move >= 4){
 
+
         // calculate AML
         int p_AML = player.stats.ML; // basic skill
         p_AML += player.stats.wpn1.wpn_AC; // adding weapon Attack class
@@ -3647,10 +3748,28 @@ void player_move_attack(int dx, int dy){
         int m_DML = monvector[target].stats.ML; // basic monster skill
         m_DML += monvector[target].stats.wpn1.wpn_AC; // adding weapon Attack class
 
+        // for every attack the player defends from or does, a -10 penality is applied
+        if(player.cflag_attacks >= 1){
+            p_AML += (player.cflag_attacks * 10) * -1;
+            std::cout << "playerA: BASIC " << player.stats.ML << " WEAPON " << player.stats.wpn1.wpn_AC
+                << " TOTAL " << p_AML << std:: endl;
+        }  
+        player.cflag_attacks++; // increment counter (reset at beginning of combat turn)
+
+        // for every attack the monster defends from or does, a -10 penality is applied
+        if(monvector[target].cflag_attacks >= 1){
+            m_DML += (monvector[target].cflag_attacks * 10) * -1;
+            std::cout << "monsterD: BASIC " << monvector[target].stats.ML << " WEAPON " << monvector[target].stats.wpn1.wpn_AC
+                << " TOTAL " << m_DML << std:: endl;
+        }  
+        monvector[target].cflag_attacks++; // increment counter (reset at beginning of combat turn)
+
         TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
         short int p_d100 = wtf->getInt(1, 100, 0);
         short int m_d100 = wtf->getInt(1, 100, 0);
 
+
+        // player (attack)
         short int p_success_level = 0;
         short int crit_val = p_d100 % 10;
         if (p_d100 <= p_AML){
@@ -4599,6 +4718,14 @@ int handle_combat(Object_player &duh) {
         player_move_attack(1, 0);
     }
 
+    // end KEY RIGHT cycle
+
+    else if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == '.'){
+        // wasted one mov point without moving
+        player_move_attack(0, 0);
+        combat_null = true;
+    }
+
     else {
         m_x = 0;
         m_y = 0;
@@ -4606,7 +4733,7 @@ int handle_combat(Object_player &duh) {
         return no_turn;
     }
     
-    // end KEY RIGHT cycle
+    
     }
     std::cout << "player.x: " << duh.x << " player.y: " << duh.y << std::endl; 
     return 0;
@@ -5758,10 +5885,15 @@ int main() {
         //player.combat_move = 8; // 1 cost for movement, 4 for attack
         while (combat_mode){
             
-            // resets initiative on all monsters
+            // resets initiative & attack counts on all monsters
             for (unsigned int i = 0; i<monvector.size(); ++i) { 
                 monvector[i].initiative = -1;
-            }    
+                monvector[i].cflag_attacks = 0; // resets attacks received
+                monvector[i].move_counter = 0; // resets number of movements during turn
+            } 
+
+            player.cflag_attacks = 0; // resets number of attacks received
+            player.move_counter = 0; // resets number of movements during turn
 
             if (alreadydead) break;
          
@@ -5978,11 +6110,12 @@ int main() {
                         goto end;
                         } // exits program
 
-                        if ((m_x != 0 || m_y != 0) && player.combat_move > 0){
+                        if ((m_x != 0 || m_y != 0 || combat_null) && player.combat_move > 0){
                             player.move(m_x, m_y, monvector);
                             --player.combat_move;
                             fov_recompute = true;
                             didmove = true;
+                            combat_null = false; // reset waiting action
                         } else didmove = false; // player action
 
                         //con->clear();
@@ -6214,7 +6347,7 @@ int main() {
                             while (monvector[b].combat_move > 0){
                                 std::cout << "monster move: " << monvector[b].combat_move;
 
-                                // take turn
+                                // take turn (monster)
                                 if (monvector[b].myai->take_turn(monvector[b], player, monvector[b].pl_x,
                                         monvector[b].pl_y,seehere) );// render_all();
 
@@ -6255,10 +6388,11 @@ int main() {
             std::cout << "END COMBAT TURN" << std::endl;
             std::cout << std::endl;
             msg_log msg2;
-                sprintf(msg2.message, "%cTURN END%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-                msg2.color1 = TCODColor::magenta;
+            sprintf(msg2.message, "%cTURN END%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            msg2.color1 = TCODColor::magenta;
                 //if(msg_log_list.size() > 0) msg_log_list.pop_back();
-                msg_log_list.push_back(msg2);
+            msg_log_list.push_back(msg2);
+            
             
         } // while combat_move
 
