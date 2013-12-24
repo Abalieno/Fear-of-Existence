@@ -4,6 +4,7 @@ INCDIR=$(LIBTCODDIR)/include
 LIBDIR=$(LIBTCODDIR)/lib 
 TEMP=./temp
 
+# I. loads .h in the directory
 CFLAGS=-I$(INCDIR) -I$(SRCDIR) -Wall  
 CC=mingw32-gcc
 CPP=mingw32-g++
@@ -14,11 +15,11 @@ $(TEMP)/%.o : $(SRCDIR)/%.cpp
 $(TEMP)/%.o : $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -o $@ -c $< 
 
-CPP_OBJS=$(TEMP)/main9.o
+CPP_OBJS=$(TEMP)/main.o $(TEMP)/fileops.o $(TEMP)/map16.o $(TEMP)/rng.o
 
-all : main9
+all : main  
 
-main9 : $(CPP_OBJS)
+main : $(CPP_OBJS) 
 	$(CPP) $(CPP_OBJS) -o $@ -L${LIBDIR} -ltcod-mingw -static  
 
 clean :
