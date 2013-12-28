@@ -1,11 +1,14 @@
 // WHALES!
 
-
+#include <random>
 #include "rng.h"
 
 long rng(long low, long high)
 {
- return low + long((high - low + 1) * double(rand() / double(RAND_MAX + 1.0)));
+    //static std::default_random_engine rnumber; // uses minstd_rand0 ?
+    static std::mt19937 rnumber; // uses Mersenne Twister
+    std::uniform_int_distribution<uint32_t> u(low, high);
+    return u(rnumber);
 }
 
 bool one_in(int chance)

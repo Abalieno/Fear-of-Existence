@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "libtcod.hpp"
 #include <windows.h> // for Sleep() and not currently used
+#include <random>
 
 #include "fileops.h"
 #include "tilevalues.h"
@@ -4938,19 +4939,52 @@ int main() {
 
     if(load_from("dummy.txt")) std::cout << "yay!" << std::endl;
     else std::cout << "nay!" << std::endl;
+
     int random_n = 0;
-    random_n = rng(1, 10);
+    random_n = rng(1,10);
     std::cout << "1-10: " << random_n << std::endl;
-    random_n = rng(0, 10);
+    random_n = rng(1,10);
+    std::cout << "1-10: " << random_n << std::endl;
+    random_n = rng(1,10);
+    std::cout << "1-10: " << random_n << std::endl;
+    random_n = rng(1,10);
+    std::cout << "1-10: " << random_n << std::endl;
+    random_n = rng(1,10);
+    std::cout << "1-10: " << random_n << std::endl;
+    random_n = rng(1,10);
+    std::cout << "1-10: " << random_n << std::endl;
+    random_n = rng(1,10);
+    std::cout << "1-10: " << random_n << std::endl;
+    random_n = rng(1,10);
+    std::cout << "1-10: " << random_n << std::endl;
+    random_n = rng(1,10);
+    std::cout << "1-10: " << random_n << std::endl;
+    random_n = rng(1,10);
+    std::cout << "1-10: " << random_n << std::endl;
+    random_n = rng(0,10);
     std::cout << "0-10: " << random_n << std::endl;
-    random_n = rng(1, 100);
+    random_n = rng(1,100);
     std::cout << "1-100: " << random_n << std::endl;
-    random_n = rng(0, 100);
+    random_n = rng(1,100);
+    std::cout << "1-100: " << random_n << std::endl;
+    random_n = rng(1,100);
+    std::cout << "1-100: " << random_n << std::endl;
+    random_n = rng(1,100);
+    std::cout << "1-100: " << random_n << std::endl;
+    random_n = rng(1,100);
+    std::cout << "1-100: " << random_n << std::endl;
+    random_n = rng(1,100);
+    std::cout << "1-100: " << random_n << std::endl;
+    random_n = rng(1,100);
+    std::cout << "1-100: " << random_n << std::endl;
+    random_n = rng(0,100);
     std::cout << "0-100: " << random_n << std::endl;
-    random_n = dice(1, 10);
+    random_n = dice(1,10);
     std::cout << "1d10: " << random_n << std::endl;
-    random_n = dice(1, 10);
+    random_n = dice(1,10);
     std::cout << "1d10: " << random_n << std::endl;
+    random_n = dice(2,10);
+    std::cout << "2d10: " << random_n << std::endl;
     char ecco;
     std::cin >> ecco;
 
