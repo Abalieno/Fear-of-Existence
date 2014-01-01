@@ -5,7 +5,7 @@ LIBDIR=$(LIBTCODDIR)/lib
 TEMP=./temp
 
 # I. loads .h in the directory
-CFLAGS=-I$(INCDIR) -I$(SRCDIR) -Wall -std=c++11 
+CFLAGS=-I$(INCDIR) -I$(SRCDIR) -Wall -std=c++11 -O3 
 CC=mingw32-gcc
 CPP=mingw32-g++
 .SUFFIXES: .o .h .c .hpp .cpp

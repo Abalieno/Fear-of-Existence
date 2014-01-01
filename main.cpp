@@ -4985,6 +4985,62 @@ int main() {
     std::cout << "1d10: " << random_n << std::endl;
     random_n = dice(2,10);
     std::cout << "2d10: " << random_n << std::endl;
+
+    int rndcount = 100;
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    int dice5 = 0;
+    long int divergence2 = 0;
+
+    for (int xa = 1; xa <= 200000; ++xa){ 
+    do {
+        random_n = rng(1,5);
+        switch (random_n){
+            case 1:
+                dice1++;
+                break;    
+            case 2:
+                dice2++;
+                break;
+            case 3:
+                dice3++;
+                break;
+            case 4:
+                dice4++;
+                break;
+            case 5:
+                dice5++;
+                break;
+        }    
+        rndcount--;
+    } while (rndcount != 0);  
+    //std::cout << "dice1: " << dice1 << " dice2: " << dice2 << " dice3: " << dice3 ;
+    //std::cout << " dice4: " << dice4 << " dice5: " << dice5 << std::endl;
+    int divergence = 0;
+    if (dice1 > 24) divergence += dice1 - 24;
+    if (dice1 < 16) divergence += 16 - dice1;
+    if (dice2 > 24) divergence += dice2 - 24;
+    if (dice2 < 16) divergence += 16 - dice2;
+    if (dice3 > 24) divergence += dice3 - 24;
+    if (dice3 < 16) divergence += 16 - dice3;
+    if (dice4 > 24) divergence += dice4 - 24;
+    if (dice4 < 16) divergence += 16 - dice4;
+    if (dice5 > 24) divergence += dice5 - 24;
+    if (dice5 < 16) divergence += 16 - dice5;
+    //std::cout << "divergence: " << divergence << std::endl;
+    divergence2 += divergence;
+    dice1 = 0;
+    dice2 = 0;
+    dice3 = 0;
+    dice4 = 0;
+    dice5 = 0;
+    rndcount = 100;
+    divergence = 0; 
+    }
+    std::cout << "divergence: " << divergence2 << std::endl;
+
     char ecco;
     std::cin >> ecco;
 
@@ -5276,13 +5332,74 @@ int main() {
     }
     }
 
-    //uint32 timin1 = 0;
-    //uint32 timin2 = 0; 
+    uint32 timin1 = 0;
+    uint32 timin2 = 0; 
 
     //int fpscount = 0;
     //TCODConsole::setKeyboardRepeat(1, 1);
 
     while (! TCODConsole::isWindowClosed()) {
+
+        timin1 = TCODSystem::getElapsedMilli();
+
+        int rndcount = 100;
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    int dice5 = 0;
+    long int divergence2 = 0;
+
+    for (int xa = 1; xa <= 200000; ++xa){ 
+    do {
+        random_n = rng(1,100);
+        switch (random_n){
+            case 1:
+                dice1++;
+                break;    
+            case 2:
+                dice2++;
+                break;
+            case 3:
+                dice3++;
+                break;
+            case 4:
+                dice4++;
+                break;
+            case 5:
+                dice5++;
+                break;
+        }    
+        rndcount--;
+    } while (rndcount != 0);  
+    //std::cout << "dice1: " << dice1 << " dice2: " << dice2 << " dice3: " << dice3 ;
+    //std::cout << " dice4: " << dice4 << " dice5: " << dice5 << std::endl;
+    int divergence = 0;
+    if (dice1 > 24) divergence += dice1 - 24;
+    if (dice1 < 16) divergence += 16 - dice1;
+    if (dice2 > 24) divergence += dice2 - 24;
+    if (dice2 < 16) divergence += 16 - dice2;
+    if (dice3 > 24) divergence += dice3 - 24;
+    if (dice3 < 16) divergence += 16 - dice3;
+    if (dice4 > 24) divergence += dice4 - 24;
+    if (dice4 < 16) divergence += 16 - dice4;
+    if (dice5 > 24) divergence += dice5 - 24;
+    if (dice5 < 16) divergence += 16 - dice5;
+    //std::cout << "divergence: " << divergence << std::endl;
+    divergence2 += divergence;
+    dice1 = 0;
+    dice2 = 0;
+    dice3 = 0;
+    dice4 = 0;
+    dice5 = 0;
+    rndcount = 100;
+    divergence = 0; 
+    }
+    std::cout << "divergence: " << divergence2 << std::endl;
+
+    timin2 = TCODSystem::getElapsedMilli();
+std::cout << "UI block: " << timin2 - timin1 << std::endl;
+
 
         // FPS debug
         /* 
