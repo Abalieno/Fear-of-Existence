@@ -15,7 +15,7 @@ $(TEMP)/%.o : $(SRCDIR)/%.cpp
 $(TEMP)/%.o : $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -o $@ -c $< 
 
-CPP_OBJS=$(TEMP)/main.o $(TEMP)/fileops.o $(TEMP)/map16.o $(TEMP)/rng.o
+CPP_OBJS=$(TEMP)/main.o $(TEMP)/fileops.o $(TEMP)/map16.o $(TEMP)/rng.o $(TEMP)/loader.o $(TEMP)/debug.o
 
 all : main  
 

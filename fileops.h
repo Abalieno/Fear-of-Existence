@@ -4,6 +4,7 @@
 #include <string>
 
 bool load_from(std::string filename);
-
+bool load_element(std::istream &data);
+bool load_data(std::istream&);
 
 #endif
