@@ -11,6 +11,7 @@
 #include "tilevalues.h"
 #include "map16.h"
 #include "rng.h" // dice(number of rolls, sides)
+#include "fileops.h" // mob_enc template struct
 
 // #include <process.h> //used for threading?
 
@@ -357,7 +358,7 @@ public:
     int wpn_AC;
     int wpn_DC;
 
-    int wpn_B;
+    int wpn_B; // blunt
     int wpn_E;
     int wpn_P;
 
@@ -371,7 +372,7 @@ public:
 // used both on monsters & players
 class Fighter {
 public:
-    int speed;
+    int speed; // used for initiative SPD
     int max_hp;
     int hp;
     int defense;
@@ -834,63 +835,63 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
     if (who){       
 
         // calculate AML
-        int p_AML = monster.stats.ML; // basic skill
-        p_AML += monster.stats.wpn1.wpn_AC; // adding weapon Attack Class
+        int a_AML = monster.stats.ML; // basic skill
+        a_AML += monster.stats.wpn1.wpn_AC; // adding weapon Attack Class
         // should check for walls here
-        int m_DML = player.stats.ML; // basic monster skill
-        m_DML += player.stats.wpn1.wpn_AC; // adding weapon Attack Class
+        int d_DML = player.stats.ML; // basic monster skill
+        d_DML += player.stats.wpn1.wpn_AC; // adding weapon Attack Class
 
         // for every attack the player defends from or does, a -10 penality is applied
         if(player.cflag_attacks >= 1){
-            m_DML += (player.cflag_attacks * 10) * -1;
+            d_DML += (player.cflag_attacks * 10) * -1;
             std::cout << "playerD: BASIC " << player.stats.ML << " WEAPON " << player.stats.wpn1.wpn_AC
-                << " TOTAL " << m_DML << std:: endl;
+                << " TOTAL " << d_DML << std:: endl;
         }  
         player.cflag_attacks++; // increment counter (reset at beginning of combat turn)
 
         // for every attack the monster defends from or does, a -10 penality is applied
         if(monster.cflag_attacks >= 1){
-            p_AML += (monster.cflag_attacks * 10) * -1;
+            a_AML += (monster.cflag_attacks * 10) * -1;
             std::cout << "monsterD: BASIC " << monster.stats.ML << " WEAPON " << monster.stats.wpn1.wpn_AC
-                << " TOTAL " << p_AML << std:: endl;
+                << " TOTAL " << a_AML << std:: endl;
         }  
         monster.cflag_attacks++; // increment counter (reset at beginning of combat turn)
 
         // roll two 1d100, one for player, one for monster
         TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
-        short int p_d100 = wtf->getInt(1, 100, 0);
-        short int m_d100 = wtf->getInt(1, 100, 0);
+        short int a_d100 = wtf->getInt(1, 100, 0);
+        short int d_d100 = wtf->getInt(1, 100, 0);
 
-        short int p_success_level = 0;
-        short int crit_val = p_d100 % 10;
-        if (p_d100 <= p_AML){
+        short int a_success_level = 0;
+        short int crit_val = a_d100 % 10;
+        if (a_d100 <= a_AML){
             if ( crit_val == 0 || crit_val == 5 ){
-                p_success_level = 0; // CS Critical Success
+                a_success_level = 0; // CS Critical Success
             } else {    
-                p_success_level = 1; // MS Marginal Success
+                a_success_level = 1; // MS Marginal Success
             }    
-        } else if (p_d100 > p_AML){
+        } else if (a_d100 > a_AML){
             if ( crit_val == 0 || crit_val == 5){
-                p_success_level = 3; // CF Critical Failure
+                a_success_level = 3; // CF Critical Failure
             } else {
-                p_success_level = 2; // MF Marginal Failure
+                a_success_level = 2; // MF Marginal Failure
             }
         }
 
         // this is player
-        short int m_success_level = 0;
-        crit_val = m_d100 % 10;
-        if (m_d100 <= m_DML){
+        short int d_success_level = 0;
+        crit_val = d_d100 % 10;
+        if (d_d100 <= d_DML){
             if ( crit_val == 0 || crit_val == 5 ){
-                m_success_level = 0; // CS Critical Success
+                d_success_level = 0; // CS Critical Success
             } else {    
-                m_success_level = 1; // MS Marginal Success
+                d_success_level = 1; // MS Marginal Success
             }    
-        } else if (m_d100 > m_DML){
+        } else if (d_d100 > d_DML){
             if ( crit_val == 0 || crit_val == 5){
-                m_success_level = 3; // CF Critical Failure
+                d_success_level = 3; // CF Critical Failure
             } else {
-                m_success_level = 2; // MF Marginal Failure
+                d_success_level = 2; // MF Marginal Failure
             }
         }
 
@@ -902,23 +903,23 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
             { 2, 2, 2, 1, }
         };
 
-        std::cout << "pML: " << monster.stats.ML << " p_AML: " << p_AML << " p_d100: " << p_d100 << std::endl;
-        std::cout << "mML: " << player.stats.ML << " m_DML: " << m_DML << " m_d100: " << m_d100 << std::endl;
-        std::cout << "P Success Level: " << p_success_level << std::endl;
-        std::cout << "M Success Level: " << m_success_level << std::endl;
-        std::cout << "Melee Result: " << melee_res[p_success_level][m_success_level] << std::endl;
+        std::cout << "aML: " << monster.stats.ML << " a_AML: " << a_AML << " a_d100: " << a_d100 << std::endl;
+        std::cout << "dML: " << player.stats.ML << " d_DML: " << d_DML << " d_d100: " << d_d100 << std::endl;
+        std::cout << "A Success Level: " << a_success_level << std::endl;
+        std::cout << "D Success Level: " << d_success_level << std::endl;
+        std::cout << "Melee Result: " << melee_res[a_success_level][d_success_level] << std::endl;
 
         msg_log msgd;
         sprintf(msgd.message, "%c*%cMonster's skill(%c%d%c) %c1d100%c(%c%d%c) VS Player's defense(%c%d%c) %c1d100%c(%c%d%c)",
                 TCOD_COLCTRL_5, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_1, p_AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_3, p_d100, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_1, m_DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_4, m_d100, TCOD_COLCTRL_STOP);
+                TCOD_COLCTRL_1, a_AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_3, a_d100, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, d_DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_4, d_d100, TCOD_COLCTRL_STOP);
         msgd.color1 = TCODColor::cyan;
         msgd.color2 = TCODColor::yellow;
         msgd.color5 = TCODColor::red;
-        switch(p_success_level){
+        switch(a_success_level){
             case 0:
                 msgd.c3 = 1;
                 msgd.color3 = TCODColor::white;
@@ -936,7 +937,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
                 msgd.bcolor3 = TCODColor::red;
                 break;
         }        
-        switch(m_success_level){
+        switch(d_success_level){
             case 0:
                 msgd.c4 = 1;
                 msgd.color4 = TCODColor::white;
@@ -957,7 +958,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
         msg_log_list.push_back(msgd);        
 
         msg_log msg1;
-        switch(melee_res[p_success_level][m_success_level]){
+        switch(melee_res[a_success_level][d_success_level]){
             case 1:
                 monster.stats.hp -= 1;
                 player.stats.hp -= 1;
@@ -1183,8 +1184,9 @@ void place_objects(Rect room){
 
     int x, y;
 
+    // make monster object + figter component
     Fighter fighter_component(0, 0, 0, 0);
-    Object_monster monster(0, 0, 'i', TCODColor::black, TCODColor::black, 0, fighter_component);
+    Object_monster monster(0, 0, 'i', TCODColor::white, TCODColor::black, 0, fighter_component);
 
     for (int i = 0; i < num_mosters; ++i){
         x = wtf->getInt((room.x1+1), (room.x2-1), 0);
@@ -1755,6 +1757,10 @@ void make_map_BSP(Object_player &duh){
     //myBSP->splitRecursive(NULL,17,3,2,1.5f,1.5f);
     
     myBSP->traverseInvertedLevelOrder(new MyCallback(),NULL);
+
+    // load monster values?
+    mob_enc myenc; 
+    load_stuff();
   
     for (unsigned int i = 0; i<BSProoms.size(); ++i){
         if(BSProoms[i].reround) create_round_room(BSProoms[i]);
@@ -1764,7 +1770,7 @@ void make_map_BSP(Object_player &duh){
     }
     delete myBSP;
 
-    killall = monvector.size();
+    killall = monvector.size(); // how many monsters on map
     while(map_array[player.y * MAP_WIDTH + player.x].blocked){
         player.x++;
         player.y++;
@@ -4937,8 +4943,6 @@ int menu_1(){
 
 int main() {
 
-    load_stuff();
-
     
     //TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE);
     TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
@@ -4991,9 +4995,10 @@ int main() {
     TCODConsole::initRoot(win_x, win_y, "FoE", false);
 
     game_state = playing;
+
+    // SETS MORE PLAYER ATTRIBUTES
     player.combat_move = 8; // movement points
     player.speed = 6;
-
     // wrapon setup
     player.stats.wpn1.wpn_AC = 15;
     player.stats.wpn1.wpn_DC = 10;

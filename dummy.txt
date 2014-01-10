@@ -1,0 +1,50 @@
+CAVE LVL 1
+[
+  e[1:30]
+  e[1,1:25]
+  e[1,1,1:10]
+  e[1,1,2:15]
+  e[1,1,1,2:15]
+  e[1,1,1,2,2:5]
+]
+
+1
+  [
+  s_hp: 10
+  s_defense: 0
+  s_power: 2
+  s_speed: 2
+  name: Orc
+  selfchar: o
+  color:
+  colorb:
+  h: 4
+  combat_move: 6
+  speed: 4
+  wpn_AC: 12
+  wpn_DC: 4
+  wpn_B: 3
+  wpn_aspect: 1
+  ML: 35
+  ]
+
+2
+  [
+  s_hp: 12
+  s_defense: 1
+  s_power: 4
+  s_speed: 4
+  name: Troll
+  selfchar: T
+  color:
+  colorb:
+  h: 5
+  combat_move: 10
+  speed: 8 
+  wpn_AC: 15
+  wpn_DC: 5 
+  wpn_B: 4
+  wpn_aspect: 1
+  ML: 50
+  ]
+end
