@@ -1,7 +1,9 @@
 #ifndef _LOADER_H_
 #define _LOADER_H_
 
-void load_stuff();
+#include "fileops.h"
+
+void load_stuff(lvl1 &enc);
 
 
 #endif

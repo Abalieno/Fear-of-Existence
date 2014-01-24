@@ -1759,8 +1759,9 @@ void make_map_BSP(Object_player &duh){
     myBSP->traverseInvertedLevelOrder(new MyCallback(),NULL);
 
     // load monster values?
-    mob_enc myenc; 
-    load_stuff();
+    lvl1 myenc; 
+    load_stuff(myenc);
+    //std::cout << "check: " << myenc.check << std::endl;
   
     for (unsigned int i = 0; i<BSProoms.size(); ++i){
         if(BSProoms[i].reround) create_round_room(BSProoms[i]);

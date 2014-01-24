@@ -9,6 +9,7 @@
 std::string no_caps(const std::string &orig);
 std::string trim(const std::string &orig);
 
+// each room has one
 struct room_enc {
     std::vector<int> enc;
     int probability; // probability of each encounter
@@ -35,8 +36,8 @@ struct lvl1 {
     std::vector<mob_types> vmob_types; // all monsters on level
 };    
 
-bool load_from(std::string filename);
-bool load_element(std::istream &data);
-bool load_data(std::istream &data);
+bool load_from(std::string filename, lvl1 &enc);
+bool load_element(std::istream &data, lvl1 &enc);
+bool load_data(std::istream &data, lvl1 &enc);
 
 #endif

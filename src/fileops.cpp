@@ -38,7 +38,7 @@ std::string trim(const std::string &orig)
   return ret;
 }
 
-bool load_from(std::string filename)
+bool load_from(std::string filename, lvl1 &enc)
 {
     std::ifstream fin;
     fin.open(filename.c_str());
@@ -48,7 +48,7 @@ bool load_from(std::string filename)
     }
      
     while (!fin.eof()) {
-      if (!load_element(fin)) {
+      if (!load_element(fin, enc)) {
         return false;
       }
     }
@@ -56,9 +56,9 @@ bool load_from(std::string filename)
     return true;
 }
 
-bool load_element(std::istream &data)
+bool load_element(std::istream &data, lvl1 &enc)
 {
-    if (!load_data(data)) {
+    if (!load_data(data, enc)) {
         debugmsg("Failed taking data from file!");
         return false;
     }
@@ -77,7 +77,8 @@ bool load_element(std::istream &data)
     */
   }
 
-bool load_data(std::istream &data){
+
+bool load_data(std::istream &data, lvl1 &enc){
     std::string ident, junk;
     //do {
         for(int x = 0; x < 3; x++){
@@ -101,7 +102,9 @@ bool load_data(std::istream &data){
             } 
         } 
         // encounter block
-        char parse; 
+        char parse;
+        int parseint = 0;
+
         data >> parse;
         while (parse != '[') {
             data >> parse;
@@ -111,40 +114,24 @@ bool load_data(std::istream &data){
             if(parse == ']') break; // break while, hopefully
             if(parse == 'e'){
                 data >> parse; // [
-                data >> parse; // load first element after e
-                int countnum;
-                countnum = 0;
-                char tempnum[5] = {'0','0','0','0','\0'};
+                data >> parseint; // load first element after e
+                std::cout << "countnum: " << parseint << std::endl;
+                data >> parse;
                 while(parse != ':'){
                     if(parse == ','){
-                        tempnum[countnum] = '\0';
-                        std::cout << "countnum: " << countnum << " tempnum: " << tempnum << std::endl;
-                        countnum = 0;
-                    } else {
-                        tempnum[countnum] = parse;
-                        countnum++;
-                    }
+                        data >> parseint;
+                        std::cout << "countnum: " << parseint << std::endl;
+                    }  
+                    data >> parse; // load anothr char for the while
+                }        
+                if(parse == ':'){     
+                    data >> parseint;
+                    std::cout << "percent: " << parseint << std::endl;
                     data >> parse;
-                }
-                if(parse == ':'){
-                        tempnum[countnum] = '\0';
-                        std::cout << "countnum: " << countnum << " tempnum: " << tempnum << std::endl;
-                        countnum = 0;
-                        data >> parse;
-                        while(parse != ']'){
-                            tempnum[countnum] = parse;
-                            countnum++;
-                            data >> parse;
-                        }    
-                        tempnum[countnum] = '\0';
-                        std::cout << "countnum: " << countnum << " enc: " << tempnum << std::endl;
-                        countnum = 0;
                 }    
-                
             }
             data >> parse;
         }
-
         
         // monster types block
         data >> ident; // monster number type ID (not used?)
