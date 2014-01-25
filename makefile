@@ -1,11 +1,11 @@
 LIBTCODDIR=D:/foe/libtcod-svn
-SRCDIR=.
+SRCDIR=./src
 INCDIR=$(LIBTCODDIR)/include
 LIBDIR=$(LIBTCODDIR)/lib 
 TEMP=./temp
 
 # I. loads .h in the directory
-CFLAGS=-I$(INCDIR) -I$(SRCDIR) -Wall -std=c++11 -O3 
+CFLAGS=-I$(INCDIR) -I$(SRCDIR) -Wall -std=c++11 
 CC=mingw32-gcc
 CPP=mingw32-g++
 .SUFFIXES: .o .h .c .hpp .cpp

@@ -1168,111 +1168,84 @@ void Object_player::move(int dx, int dy, std::vector<Object_monster> smonvector)
 BasicMonster orc_ai;
 
 
-void place_objects(Rect room){
+void place_objects(Rect room, lvl1 myenc){
 
     if (monvector.size() >= MAX_TOTAL_MONSTERS) return ;
 
-    TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
+    // 1 every 4 rooms has monsters
+    int skip = rng(0, 3);
+    if(skip == 3){
 
-    //int empty_room = wtf->getInt(0, 100, 0);
-    //if (empty_room < 60){
-    int num_mosters = wtf->getInt(0, MAX_ROOM_MONSTERS, 0);
-   
-    // 1 every 3 rooms has monsters
-    int skip = wtf->getInt(0, 2, 0);
-    if(skip == 2){
+        int rollenc = rng(0,100);
+        int bottomenc = 0;
+        int num_mosters = 0;
+        //std::cout << "myenc.cave1.size: " << myenc.cave1.size() << std::endl;
+        for (unsigned u = 0; u < myenc.cave1.size(); u++){
+            //std::cout << "u: " << u << std::endl;
+            //std::cout << "types: " << myenc.vmob_types.size() << std::endl;
+            if(rollenc < myenc.cave1[u].probability && rollenc > bottomenc){
+                num_mosters = myenc.cave1[u].enc.size();   
+                std::cout << "enc type: " << u << std::endl;
 
-    int x, y;
+                int x, y;
 
-    // make monster object + figter component
-    Fighter fighter_component(0, 0, 0, 0);
-    Object_monster monster(0, 0, 'i', TCODColor::white, TCODColor::black, 0, fighter_component);
+                // make monster object + figter component
+                Fighter fighter_component(0, 0, 0, 0);
+                Object_monster monster(0, 0, 'i', TCODColor::white, TCODColor::black, 0, fighter_component);
 
-    for (int i = 0; i < num_mosters; ++i){
-        x = wtf->getInt((room.x1+1), (room.x2-1), 0);
-        y = wtf->getInt((room.y1+1), (room.y2-1), 0);
-        if (!is_blocked(x,y)){
-        if ( wtf->getInt(0, 100, 0) < 80){
-            Fighter fighter_component(10, 0, 2, 2); // hp, defense, power, speed
-            monster.x = x;
-            monster.y = y;
-            monster.selfchar= 'o';
-            monster.color = orc;
-            monster.colorb = TCODColor::black;
-            monster.h = 4;
-            monster.blocks = true;
-            //monster.name[] = "orc";
-            strcpy(monster.name, "Orc");
-            monster.stats = fighter_component;
-            monster.myai = &orc_ai;
-            monster.alive = true;
-            monster.chasing = false;
-            monster.stuck = 0;
-            monster.bored = 500;
-            monster.boren = false;
-            monster.in_sight = false;
-            monster.path_mode = 0;
-            monster.combat_move = 6;
-            monster.combat_move_max = 6;
-            monster.c_mode = false;
-            monster.speed = 4; // for initiative
-            monster.hit = false;
+                for (int i = 0; i < num_mosters; ++i){
+                    x = rng((room.x1+1), (room.x2-1));
+                    y = rng((room.y1+1), (room.y2-1));
+                    int overrider = 0;
+                    while( is_blocked(x,y) ){
+                        x = rng((room.x1+1), (room.x2-1));
+                        y = rng((room.y1+1), (room.y2-1));
+                        overrider++;
+                        if (overrider > 50) break; // maybe the room too small, so stop trying
+                    }    
+                    monster.x = x;
+                    monster.y = y;
+                    Fighter fighter_component(myenc.vmob_types[myenc.cave1[u].enc[i]].s_hp,
+                        myenc.vmob_types[myenc.cave1[u].enc[i]].s_defense,
+                        myenc.vmob_types[myenc.cave1[u].enc[i]].s_power,
+                        myenc.vmob_types[myenc.cave1[u].enc[i]].s_speed); // hp, defense, power, speed
+                    monster.stats = fighter_component;
+                    monster.myai = &orc_ai;
+                    monster.selfchar = myenc.vmob_types[myenc.cave1[u].enc[i]].selfchar;
+                    monster.color = orc;
+                    monster.colorb = TCODColor::black;
+                    monster.h = myenc.vmob_types[myenc.cave1[u].enc[i]].h;
+                    monster.blocks = true;
+                    strcpy(monster.name, myenc.vmob_types[myenc.cave1[u].enc[i]].name);
+                    std::cout << "name: " << monster.name << std::endl;
+                    monster.alive = true;
+                    monster.chasing = false;
+                    monster.stuck = 0;
+                    monster.bored = 500;
+                    monster.boren = false;
+                    monster.in_sight = false;
+                    monster.path_mode = 0;
+                    monster.combat_move = myenc.vmob_types[myenc.cave1[u].enc[i]].combat_move;
+                    monster.combat_move_max = myenc.vmob_types[myenc.cave1[u].enc[i]].combat_move;
+                    monster.c_mode = false;
+                    monster.speed = myenc.vmob_types[myenc.cave1[u].enc[i]].speed;
+                    monster.hit = false;
 
-            monster.stats.wpn1.wpn_AC = 12;
-            monster.stats.wpn1.wpn_DC = 4;
-            monster.stats.wpn1.wpn_B = 3;
-            monster.stats.wpn1.wpn_aspect = 1;
+                    monster.stats.wpn1.wpn_AC =     myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_AC;
+                    monster.stats.wpn1.wpn_DC =     myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_DC;
+                    monster.stats.wpn1.wpn_B =      myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_B;
+                    monster.stats.wpn1.wpn_aspect = myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_aspect;
 
-            monster.stats.ML = 35;
+                    monster.stats.ML = myenc.vmob_types[myenc.cave1[u].enc[i]].ML;
 
-            monster.path0 = new TCODPath(fov_map_mons_path0, 0.0f);
-            monster.path1 = new TCODPath(fov_map_mons_path1, 0.0f);
-          
-        }
-        else {
-            Fighter fighter_component(12, 1, 4, 4); // hp, defense, power, speed
-            monster.x = x;
-            monster.y = y;
-            monster.selfchar= 'T';
-            monster.color = troll;
-            monster.colorb = TCODColor::black;
-            monster.h = 5;  
-            monster.blocks = true;
-            //monster.name[] = "troll";
-            strcpy(monster.name, "Troll");
-            monster.stats = fighter_component;
-            monster.myai = &orc_ai;
-            monster.alive = true;
-            monster.chasing = false;
-            monster.stuck = 0;
-            monster.bored = 500;
-            monster.boren = false;
-            monster.in_sight = false;
-            monster.path_mode = 0;
-            monster.combat_move = 10;
-            monster.combat_move_max = 10;
-            monster.c_mode = false;
-            monster.speed = 8;
-            monster.hit = false;
-
-            monster.stats.wpn1.wpn_AC = 15;
-            monster.stats.wpn1.wpn_DC = 5;
-            monster.stats.wpn1.wpn_B = 4;
-            monster.stats.wpn1.wpn_aspect = 1;
-
-            monster.stats.ML = 50;
-
-            monster.path0 = new TCODPath(fov_map_mons_path1, 0.0f);
-            monster.path1 = new TCODPath(fov_map_mons_path0, 0.0f);
-
-        }  
-        monvector.push_back(monster);
-        }
-     }
- 
-    //std::cout << " Monster array: " << myvector.size() << std::endl;
-    }
-   // }
+                    monster.path0 = new TCODPath(fov_map_mons_path0, 0.0f);
+                    monster.path1 = new TCODPath(fov_map_mons_path1, 0.0f);
+                    monvector.push_back(monster);
+                }
+            }
+            bottomenc = myenc.cave1[u].probability;
+        }   
+    }  
 }
 
 int killall = 0; // monster count
@@ -1761,13 +1734,17 @@ void make_map_BSP(Object_player &duh){
     // load monster values?
     lvl1 myenc; 
     load_stuff(myenc);
-    //std::cout << "check: " << myenc.check << std::endl;
+    std::cout << "encounters: " << myenc.cave1.size() << std::endl;
+    std::cout << "monster types: " << myenc.vmob_types.size() << std::endl;
+    std::cout << "monster1 ML: " << myenc.vmob_types[0].ML << std::endl;
+    std::cout << "monster1 name: " << myenc.vmob_types[0].name << std::endl;
+    std::cout << "monster2 name: " << myenc.vmob_types[1].name << std::endl;
   
     for (unsigned int i = 0; i<BSProoms.size(); ++i){
         if(BSProoms[i].reround) create_round_room(BSProoms[i]);
         place_doors(BSProoms[i]);
         place_column(BSProoms[i]);
-        if(i > 5) place_objects(BSProoms[i]); // don't place monsters on player start
+        if(i > 5) place_objects(BSProoms[i], myenc); // don't place monsters on player start (within 5 rooms)
     }
     delete myBSP;
 
@@ -1924,8 +1901,11 @@ void make_map(Object_player &duh){
             } else {
                // npc.x = new_room.center_x;
                // npc.y = new_room.center_y; // new npc coordinates from whatever room
-              
-                place_objects(new_room); // only add monsters if not first room
+             
+                // TEMP!!!!
+                lvl1 myenc; 
+                load_stuff(myenc);
+                place_objects(new_room, myenc); // only add monsters if not first room
                 prev_x = rooms[num_rooms-1].center_x;
                 prev_y = rooms[num_rooms-1].center_y;
 

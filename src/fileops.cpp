@@ -103,8 +103,7 @@ bool load_data(std::istream &data, lvl1 &enc){
         } 
         // encounter block
         char parse;
-        int parseint = 0;
-
+        int parseint = 0; // temp int to use in push back
         data >> parse;
         while (parse != '[') {
             data >> parse;
@@ -113,50 +112,62 @@ bool load_data(std::istream &data, lvl1 &enc){
         while (parse != 'e' || parse != ']') {
             if(parse == ']') break; // break while, hopefully
             if(parse == 'e'){
+                std::vector<int> l_enc;
+                room_enc t_room; // temp object
                 data >> parse; // [
                 data >> parseint; // load first element after e
+                l_enc.push_back(parseint);
                 std::cout << "countnum: " << parseint << std::endl;
                 data >> parse;
                 while(parse != ':'){
                     if(parse == ','){
                         data >> parseint;
+                        l_enc.push_back(parseint);
                         std::cout << "countnum: " << parseint << std::endl;
                     }  
                     data >> parse; // load anothr char for the while
                 }        
                 if(parse == ':'){     
-                    data >> parseint;
-                    std::cout << "percent: " << parseint << std::endl;
+                    data >> t_room.probability;
+                    t_room.enc = l_enc;
+                    enc.cave1.push_back(t_room);
+                    std::cout << "percent: " << t_room.probability << std::endl;
                     data >> parse;
                 }    
             }
             data >> parse;
         }
+
+        // check if all encounters fill all possibilities
+        std::cout << "total percent: " << enc.cave1[enc.cave1.size()-1].probability << std::endl;
+        if (enc.cave1[enc.cave1.size()-1].probability != 100) return false; // fail
         
         // monster types block
         data >> ident; // monster number type ID (not used?)
         while(ident != "end" && !data.eof()){ // stops on "end" or end of file
             debugmsg("%s", ident.c_str());
             data >> ident; // [
+            mob_types tempmob; // object
             while(ident != "]"){
-                if (ident == "s_hp:") {data >> ident;}
-                else if (ident == "s_defense:") {data >> ident;}
-                else if (ident == "s_power:") {data >> ident;}
-                else if (ident == "s_speed:") {data >> ident;}
-                else if (ident == "name:") {data >> ident; debugmsg("%s", ident.c_str());}
-                else if (ident == "selfchar:") {data >> ident;}
+                if (ident == "s_hp:") {data >> tempmob.s_hp;}
+                else if (ident == "s_defense:") {data >> tempmob.s_defense;}
+                else if (ident == "s_power:") {data >> tempmob.s_power;}
+                else if (ident == "s_speed:") {data >> tempmob.s_speed;}
+                else if (ident == "name:") {data >> ident; strcpy(tempmob.name, ident.c_str());}
+                else if (ident == "selfchar:") {data >> tempmob.selfchar;}
                 else if (ident == "color:") {data >> ident;}
                 else if (ident == "colorb:") {data >> ident;}
-                else if (ident == "h:") {data >> ident;}
-                else if (ident == "combat_move:") {data >> ident;}
-                else if (ident == "speed:") {data >> ident;}
-                else if (ident == "wpn_AC:") {data >> ident;}
-                else if (ident == "wpn_DC:") {data >> ident;}
-                else if (ident == "wpn_B:") {data >> ident;}
-                else if (ident == "wpn_aspect:") {data >> ident;}
-                else if (ident == "ML:") {data >> ident; }   
+                else if (ident == "h:") {data >> tempmob.h;}
+                else if (ident == "combat_move:") {data >> tempmob.combat_move;}
+                else if (ident == "speed:") {data >> tempmob.speed;}
+                else if (ident == "wpn_AC:") {data >> tempmob.wpn_AC;}
+                else if (ident == "wpn_DC:") {data >> tempmob.wpn_DC;}
+                else if (ident == "wpn_B:") {data >> tempmob.wpn_B;}
+                else if (ident == "wpn_aspect:") {data >> tempmob.wpn_aspect;}
+                else if (ident == "ML:") {data >> tempmob.ML; }   
                 data >> ident;
-            }   
+            } 
+            enc.vmob_types.push_back(tempmob);
             data >> ident;
         }
         return true;
