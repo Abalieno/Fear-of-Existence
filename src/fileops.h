@@ -21,6 +21,8 @@ struct mob_types {
 
     char name[20];
     char selfchar;
+    int self_8;
+    int self_16;
     TCODColor color;
     TCODColor colorb;
     int h; // temp hit points
@@ -33,7 +35,7 @@ struct mob_types {
 
 struct lvl1 {
     std::vector<room_enc> cave1; // types of encounters
-    std::vector<mob_types> vmob_types; // all monsters on level
+    std::vector<mob_types> vmob_types; // all monsters on level (0,1)
 };    
 
 bool load_from(std::string filename, lvl1 &enc);

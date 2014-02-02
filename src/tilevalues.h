@@ -3,6 +3,8 @@
 
 #include "libtcod.hpp"
 
+bool U8 = false; // sprite or ASCII, false = ASCII
+
 int t8_player = 0; //global player sprite
 
 // sprite 8 made into 16

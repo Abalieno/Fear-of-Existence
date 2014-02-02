@@ -407,6 +407,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int x;
     int y;
     char selfchar;
+    int self_8; // int of the corresponding tile 
+    int self_16; // int of the first tile of 4
     TCODColor color;
     TCODColor colorb;
     int h; // temp hit points
@@ -471,55 +473,33 @@ public: // public should be moved down, but I keep it here for debug messages
 
         con->setDefaultBackground(colorb);
 
-        if (fov_map->isInFov(x,y) || debug == 1){
+        if (fov_map->isInFov(x,y) || debug == 1){ 
             if(bigg){ // if 16x16  
                
                 // sets color only if sprite isn't colored (lame check)
-                if(u16_troll == 525) con->setDefaultForeground(color);
+                con->setDefaultForeground(color);
                 
-                if (selfchar == 'T'){
-                    con->putChar((x*2), (y*2), u16_troll, TCOD_BKGND_SET);
-                    con->putChar((x*2)+1, (y*2), u16_troll+100, TCOD_BKGND_SET);
-                    con->putChar((x*2), (y*2)+1, u16_troll+200, TCOD_BKGND_SET);
-                    con->putChar((x*2)+1, (y*2)+1, u16_troll+300, TCOD_BKGND_SET);
-                } else if (selfchar == 'o'){
-                    con->putChar((x*2), (y*2), u16_orc, TCOD_BKGND_SET);
-                    con->putChar((x*2)+1, (y*2), u16_orc+100, TCOD_BKGND_SET);
-                    con->putChar((x*2), (y*2)+1, u16_orc+200, TCOD_BKGND_SET);
-                    con->putChar((x*2)+1, (y*2)+1, u16_orc+300, TCOD_BKGND_SET);
-                } else if (selfchar == '%'){
-                    con->putChar((x*2), (y*2), u16_corpse, TCOD_BKGND_SET);
-                    con->putChar((x*2)+1, (y*2), u16_corpse+100, TCOD_BKGND_SET);
-                    con->putChar((x*2), (y*2)+1, u16_corpse+200, TCOD_BKGND_SET);
-                    con->putChar((x*2)+1, (y*2)+1, u16_corpse+300, TCOD_BKGND_SET);
-                } 
+                    con->putChar((x*2), (y*2), self_16, TCOD_BKGND_SET);
+                    con->putChar((x*2)+1, (y*2), self_16+100, TCOD_BKGND_SET);
+                    con->putChar((x*2), (y*2)+1, self_16+200, TCOD_BKGND_SET);
+                    con->putChar((x*2)+1, (y*2)+1, self_16+300, TCOD_BKGND_SET);
+             
             } else {
-                
                 con->setDefaultForeground(color);
                 if(hit) colorb = TCODColor::red;
-                else colorb = TCODColor::black;
+                else colorb = con->getCharBackground(x, y);
 
                 con->setCharBackground(x, y, colorb, TCOD_BKGND_SET);
 
-                if (selfchar == 'T'){
-                   
-                    con->putChar(x, y, u8_troll, TCOD_BKGND_SET);
-                    //con->putChar(x, y, 450, TCOD_BKGND_SET);
-                    //std::cout << "TROLL";
-                } else if (selfchar == 'o'){
-                    con->putChar(x, y, u8_orc, TCOD_BKGND_SET);
-                    //con->putChar(x, y, 449, TCOD_BKGND_SET);
-                    //std::cout << "ORC";
-                } else if (selfchar == '%'){
-                    con->putChar(x, y, u8_corpse, TCOD_BKGND_SET);
-                    con->setCharBackground(x, y, con->getCharBackground(x, y), TCOD_BKGND_SET);
-                    //con->putChar(x, y, 451, TCOD_BKGND_SET);
-                    //std::cout << "ORC";
-                }
-
-                //con->putChar(x, y, selfchar, TCOD_BKGND_SET);
+                if (U8 == true){
+                    con->putChar(x, y, self_8, TCOD_BKGND_SET);
+                    //con->setCharBackground(x, y, con->getCharBackground(x, y), TCOD_BKGND_SET);
+                    //con->putChar(x, y, u8_orc, TCOD_BKGND_SET);
+                } else {
+                    con->putChar(x, y, selfchar, TCOD_BKGND_SET);
+                }    
             }
-        }
+        }    
         con->setDefaultBackground(TCODColor::black); // reset background for smaller map
     }
 
@@ -1212,7 +1192,9 @@ void place_objects(Rect room, lvl1 myenc){
                     monster.stats = fighter_component;
                     monster.myai = &orc_ai;
                     monster.selfchar = myenc.vmob_types[myenc.cave1[u].enc[i]].selfchar;
-                    monster.color = orc;
+                    monster.self_8 = myenc.vmob_types[myenc.cave1[u].enc[i]].self_8;
+                    monster.self_16 = myenc.vmob_types[myenc.cave1[u].enc[i]].self_16;
+                    monster.color = myenc.vmob_types[myenc.cave1[u].enc[i]].color;
                     monster.colorb = TCODColor::black;
                     monster.h = myenc.vmob_types[myenc.cave1[u].enc[i]].h;
                     monster.blocks = true;
@@ -1226,7 +1208,7 @@ void place_objects(Rect room, lvl1 myenc){
                     monster.in_sight = false;
                     monster.path_mode = 0;
                     monster.combat_move = myenc.vmob_types[myenc.cave1[u].enc[i]].combat_move;
-                    monster.combat_move_max = myenc.vmob_types[myenc.cave1[u].enc[i]].combat_move;
+                    monster.combat_move_max = monster.combat_move;
                     monster.c_mode = false;
                     monster.speed = myenc.vmob_types[myenc.cave1[u].enc[i]].speed;
                     monster.hit = false;
@@ -3561,6 +3543,10 @@ void player_move_attack(int dx, int dy){
                 monvector[target].color = monsterdead;
                 monvector[target].blocks = false;
                 monvector[target].alive = false;
+
+                monvector[target].self_16 = 526;
+                monvector[target].self_8 = 506;
+
                 //monvector[target].x=-365;
                 //monvector[target].y=-365; // teleport out of map   
                 player.move(0, 0, monvector); // updates player position so feet get bloody
@@ -3714,6 +3700,7 @@ int handle_keys(Object_player &duh) {
             }    
         } else { // block to swap basic 8 mode
             if(u8_door == TCOD_CHAR_CROSS){
+                U8 = true; // sprite
                 u8_door = 444;
                 u8_player = 445;
                 u8_floor1 = 447;
@@ -3735,6 +3722,7 @@ int handle_keys(Object_player &duh) {
                 u8_floorCb = demake_sub_floor;
             } else {
                 u8_door = TCOD_CHAR_CROSS;
+                U8 = false; // ASCII
                 u8_player = '@';
                 u8_floor1 = '.';
                 u8_floor2 = '.';
@@ -5940,8 +5928,7 @@ int main() {
         // recuperates turns off combat
         for (unsigned int i = 0; i<monvector.size(); ++i) {
             if (monvector[i].alive){
-                if((monvector[i].color == orc) && (monvector[i].combat_move < 6)) ++monvector[i].combat_move;
-                else if (monvector[i].color == troll && monvector[i].combat_move < 10) ++monvector[i].combat_move;
+                if(monvector[i].combat_move < monvector[i].combat_move_max) ++monvector[i].combat_move;
             }    
         }    
         if(player.combat_move < 8) ++player.combat_move; 

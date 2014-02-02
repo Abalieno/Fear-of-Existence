@@ -16,7 +16,9 @@ CAVE LVL 1
   s_speed: 2
   name: Orc
   selfchar: o
-  color:
+  self_8: 449
+  self_16: 524
+  color: 0,200,0
   colorb:
   h: 4
   combat_move: 6
@@ -36,7 +38,9 @@ CAVE LVL 1
   s_speed: 4
   name: Troll
   selfchar: T
-  color:
+  self_8: 450
+  self_16: 525
+  color: 0,255,0
   colorb:
   h: 5
   combat_move: 10

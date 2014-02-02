@@ -155,7 +155,16 @@ bool load_data(std::istream &data, lvl1 &enc){
                 else if (ident == "s_speed:") {data >> tempmob.s_speed;}
                 else if (ident == "name:") {data >> ident; strcpy(tempmob.name, ident.c_str());}
                 else if (ident == "selfchar:") {data >> tempmob.selfchar;}
-                else if (ident == "color:") {data >> ident;}
+                else if (ident == "self_8:") {data >> tempmob.self_8;}
+                else if (ident == "self_16:") {data >> tempmob.self_16;}
+                else if (ident == "color:") {
+                    int a, b, c = 0;
+                    data >> a; data >> parse;
+                    data >> b; data >> parse;
+                    data >> c;
+                    TCODColor tempcolor(a, b, c);
+                    tempmob.color = tempcolor;
+                }    
                 else if (ident == "colorb:") {data >> ident;}
                 else if (ident == "h:") {data >> tempmob.h;}
                 else if (ident == "combat_move:") {data >> tempmob.combat_move;}
