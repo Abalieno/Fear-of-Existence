@@ -3,4 +3,6 @@
 
 void debugmsg(const char *mes, ...);
 
+void g_debugmsg(const char *mes, ...);
+
 #endif

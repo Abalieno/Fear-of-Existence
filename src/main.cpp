@@ -8,10 +8,13 @@
 #include <random>
 
 #include "loader.h"
-#include "tilevalues.h"
+//#include "tilevalues.h"
 #include "map16.h"
 #include "rng.h" // dice(number of rolls, sides)
 #include "fileops.h" // mob_enc template struct
+#include "game.h"
+#include "liventities.h"
+#include "debug.h" // debugmsg()
 
 // #include <process.h> //used for threading?
 
@@ -55,10 +58,6 @@ int release_button = 1; // set to check for mouse button release
 int insto_rows = 3; // rows in in sight UI
 
 
-int bigg = 0; // sets 16x16 font
-int bigg2 = 0; // is in minimap
-int bigg3 = 0; // is in tinymap
-
 //parameters for dungeon generator
 int ROOM_MAX_SIZE = 18;
 int ROOM_MIN_SIZE = 4;
@@ -72,7 +71,7 @@ int TORCH_RADIUS = 10;
 int MON_RADIUS = 8; // used for monster FoV
 
 TCODColor color_dark_wall(50, 50, 50);
-TCODColor color_dark_ground(15, 15, 15);
+
 TCODColor blood(255, 0, 0);
 TCODColor blood1(200, 0, 0);
 TCODColor blood2(160, 0, 0);
@@ -80,10 +79,7 @@ TCODColor blood3(120, 0, 0);
 TCODColor blood4(100, 0, 0);
 TCODColor door_c(222, 136, 0);
 
-int off_xx = 0; // offsets to blit during attacks
-int off_yy = 0;
-int offbig_x = 0;
-int offbig_y = 0;
+
 
 TCODColor demake(0,146,170);
 
@@ -110,16 +106,10 @@ TCODColor orc(0, 200, 0);
 TCODColor troll(0, 255, 0);
 TCODColor monsterdead(TCODColor::lightGrey);
 
-bool fov_recompute;
 
-bool debug = false; // shows all monsters on map, when set
-bool no_combat = false; // disable combat mode
-
-TCODConsole *con = new TCODConsole(440, 280);
 TCODConsole *con_mini = new TCODConsole(MAP_WIDTH+2, MAP_HEIGHT+2);
 
 TCODConsole *con_tini = new TCODConsole(MAP_WIDTH_AREA+2, MAP_HEIGHT_AREA+2); // for tinymap
-TCODConsole *mesg = new TCODConsole(33, 3);  // message pop-up drawn on top of "con"
 TCODConsole *load = new TCODConsole(win_x, win_y);  // load screen
 
 TCODConsole *widget_top = new TCODConsole(win_x, 1);  // UI topbar
@@ -148,23 +138,12 @@ int wid_combat_open = 0;
 int wid_help = 0;
 int wid_rpanel_open = 0;
 
-TCODMap * fov_map = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 TCODMap * fov_map_mons = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 
 TCODMap * fov_map_mons_path0 = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 TCODMap * fov_map_mons_path1 = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 
-// bool used for background color presence
-struct msg_log { char message [94]; TCODColor color1; TCODColor color2; TCODColor color3; TCODColor color4; TCODColor
-    color5; TCODColor color6; TCODColor color7; TCODColor color8; TCODColor color9; TCODColor color10; bool c1;
-    bool c2; bool c3; bool c4; bool c5; bool c6; bool c7; bool c8; bool c9; bool c10;
-    TCODColor bcolor1; TCODColor bcolor2; TCODColor bcolor3; TCODColor bcolor4; TCODColor bcolor5; TCODColor bcolor6;
-    TCODColor bcolor7; TCODColor bcolor8; TCODColor bcolor9; TCODColor bcolor10;};
 
-struct msg_log_c { bool is_context; int ltype;}; 
-
-std::vector<msg_log> msg_log_list;
-std::vector<msg_log_c> msg_log_context;
 
 
 void map_8x16_font(){
@@ -177,10 +156,10 @@ void map_8x16_font(){
     }
 }
 
-void print_8x16(int where_x, int where_y, const char *msg, TCODColor front, TCODColor back){
+void print_8x16(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back){
 
-    con->setDefaultForeground(front);
-    con->setDefaultBackground(back);
+    loc->setDefaultForeground(front);
+    loc->setDefaultBackground(back);
     int msg_length = 0;
     for (int i = 0; msg[i] != '\0'; i++){
         msg_length = i;
@@ -192,8 +171,8 @@ void print_8x16(int where_x, int where_y, const char *msg, TCODColor front, TCOD
         int step = 0;
         step = 2*(letter - 32);
         // 936 + 65 = 1001
-        con->putChar(where_x + n, where_y, 1001+step, TCOD_BKGND_SET);
-        con->putChar(where_x + n, where_y+1, 1001+(step+1), TCOD_BKGND_SET);
+        loc->putChar(where_x + n, where_y, 1001+step, TCOD_BKGND_SET);
+        loc->putChar(where_x + n, where_y+1, 1001+(step+1), TCOD_BKGND_SET);
         //con->putChar((where_x + (m + 1))-2, where_y+1, 936+(step+1), TCOD_BKGND_SET);
 
     }
@@ -344,675 +323,15 @@ void create_v_tunnel(int y1, int y2, int x){
     }
 }
 
-class AI;
-
-class Object_monster;
-
-
-class Object_player;
-
-class Weapon_use {
-public:
-    char wpn_type[15];
-
-    int wpn_AC;
-    int wpn_DC;
-
-    int wpn_B; // blunt
-    int wpn_E;
-    int wpn_P;
-
-    int wpn_aspect;
-
-    Weapon_use(){    
-    }
-
-};    
-
-// used both on monsters & players
-class Fighter {
-public:
-    int speed; // used for initiative SPD
-    int max_hp;
-    int hp;
-    int defense;
-    int power;
-
-    int ML;
-
-    Weapon_use wpn1;
-
-    Fighter(int inithp, int defval, int powval, int speedval){
-        max_hp = inithp;
-        hp = inithp;
-        defense = defval;
-        power = powval;
-        speed = speedval;
-    }
-
-    void attack(Object_player &player, Object_monster &monster, bool who); 
-
-    void take_damage(int damage){
-        if (damage > 0) hp -= damage;
-    }
-};
-
-
-
-class Object_monster {
-
-public: // public should be moved down, but I keep it here for debug messages
-
-    char name[20];
-    int x;
-    int y;
-    char selfchar;
-    int self_8; // int of the corresponding tile 
-    int self_16; // int of the first tile of 4
-    TCODColor color;
-    TCODColor colorb;
-    int h; // temp hit points
-    int bloody;
-    bool blocks;
-    Fighter stats;
-    AI * myai;
-    bool alive;
-    bool chasing; // used to move monster after player for a short while
-    int active; // used for wandering mode
-
-    int pl_x; // these are for monster current target/destination
-    int pl_y;
-    TCODPath *path0;
-    TCODPath *path1;
-    int path_mode; // 0 = standard 1 = path with monster positions
-
-    bool stuck;
-    int bored;
-    bool boren; // 100 bored, if to 0, boren true, start recuperating
-    bool in_sight;
-
-    bool hit;
-
-    int combat_move;
-    int combat_move_max;
-    int move_counter; // how many steps moved in the turn
-    bool c_mode; // flag monsters for active combat mode
-    int speed;
-    int initiative;
-    int temp_init; // total initiative value for messages/list
-    unsigned int cflag_attacks; // combat-flag, attacks during turn received
-
-    Object_monster(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
-        x = a;
-        y = b;
-        selfchar = pchar;
-        color = oc;
-        colorb = oc2;
-        h = health;
-        bloody = 0;
-         
-    }
-
-    void move(int dx, int dy, bool p_dir); 
-       
-    
-    void draw(bool uh) {
-        //con->setDefaultForeground(color);
-        
-        // executes only outside combat
-        if (!uh){ // if 0
-            if(bigg){
-                colorb = con->getCharBackground((x*2), (y*2));
-            } else {  
-                if (selfchar == '%') colorb = con->getCharBackground(x, y);
-                else colorb = TCODColor::black;
-                //colorb = con->getCharBackground(x, y);
-                
-            }
-        }
-
-        con->setDefaultBackground(colorb);
-
-        if (fov_map->isInFov(x,y) || debug == 1){ 
-            if(bigg){ // if 16x16  
-               
-                // sets color only if sprite isn't colored (lame check)
-                con->setDefaultForeground(color);
-                
-                    con->putChar((x*2), (y*2), self_16, TCOD_BKGND_SET);
-                    con->putChar((x*2)+1, (y*2), self_16+100, TCOD_BKGND_SET);
-                    con->putChar((x*2), (y*2)+1, self_16+200, TCOD_BKGND_SET);
-                    con->putChar((x*2)+1, (y*2)+1, self_16+300, TCOD_BKGND_SET);
-             
-            } else {
-                con->setDefaultForeground(color);
-                if(hit) colorb = TCODColor::red;
-                else colorb = con->getCharBackground(x, y);
-
-                con->setCharBackground(x, y, colorb, TCOD_BKGND_SET);
-
-                if (U8 == true){
-                    con->putChar(x, y, self_8, TCOD_BKGND_SET);
-                    //con->setCharBackground(x, y, con->getCharBackground(x, y), TCOD_BKGND_SET);
-                    //con->putChar(x, y, u8_orc, TCOD_BKGND_SET);
-                } else {
-                    con->putChar(x, y, selfchar, TCOD_BKGND_SET);
-                }    
-            }
-        }    
-        con->setDefaultBackground(TCODColor::black); // reset background for smaller map
-    }
-
-    void move_towards(int target_x, int target_y){
-
-        bool pdir = false;
-        int dx = target_x - x;
-        int dy = target_y - y;
-        float distance = sqrt (pow(dx, 2) + pow(dy, 2));
-        
-        dx = (int)(round(dx / distance));
-        dy = (int)(round(dy / distance));
-
-        if (dx == 0 && target_x > x) pdir = true;
-        if (dy == 0 && target_y > y) pdir = true;
-
-        if ( (dx < 2 && dx > -2) && (dy < 2 && dy > -2) )
-            move(dx, dy, pdir);
-        //std::cout << "move: " << dx << dy << std::endl;
-    }
-
-    float distance_to(int other_x, int other_y){
-        int dx = other_x - x;
-        int dy = other_y - y;
-        return sqrt (pow(dx, 2) + pow(dy, 2));
-    }
-
-    void clear() {
-        if (fov_map->isInFov(x,y)){
-            if(bigg){
-                con->putChar((x*2), (y*2), 503, TCOD_BKGND_NONE);
-                con->putChar((x*2)+1, (y*2), 603, TCOD_BKGND_NONE);
-                con->putChar((x*2), (y*2)+1, 703, TCOD_BKGND_NONE);
-                con->putChar((x*2)+1, (y*2)+1, 803, TCOD_BKGND_NONE);
-            } else {
-                con->putChar(x, y, ' ', TCOD_BKGND_NONE);
-            }
-        }
-    }
-
-    ~Object_monster(){} // ?
-};
-
-class AI {
-public:
-     virtual bool take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y, bool myfov) {return false;} 
-
-};
-
- 
-
-class Statistics {
-
-public:
-
-    int M;
-    int P;
-    int S;
-
-    int MM;
-    int MR;
-    int PM;
-    int PN;
-    int SM;
-    int SP;
-
-    int MMC;
-    int MMP;
-    int MMS;
-
-    int MRC;
-    int MRP;
-    int MRS;
-
-    int PMC;
-    int PMP;
-    int PMS;
-
-    int PNC;
-    int PNP;
-    int PNS;
-
-    int SMC;
-    int SMP;
-    int SMS;
-
-    int SPC;
-    int SPP;
-    int SPS;
-
-    Statistics(int a){ // player characteristics
-        M = 0;
-        P = 0;
-        S = 0;
-
-        MM = 0;
-        MR = 0;
-        PM = 0;
-        PN = 0;
-        SM = 0;
-        SP = 0;
-
-        MMC = 0;
-        MMP = 0;
-        MMS = 0;
-
-        MRC = 0;
-        MRP = 0;
-        MRS = 0;
-
-        PMC = 0;
-        PMP = 0;
-        PMS = 0;
-
-        PNC = 0;
-        PNP = 0;
-        PNS = 0;
-
-        SMC = 0;
-        SMP = 0;
-        SMS = 0;
-
-        SPC = 0;
-        SPP = 0;
-        SPS = 0;
-    }
-
-};
-
-class Object_player {
-
-public: // public should be moved down, but I keep it here for debug messages
-
-    char name[20];
-    int x;
-    int y;
-    char selfchar;
-    TCODColor color;
-    TCODColor colorb;
-    int h; // temp hit points
-    int bloody;
-    bool blocks;
-    Fighter stats;
-    Statistics sts;
-
-    int combat_move;
-    int combat_move_max;
-    int move_counter; // how many steps moved in the turn
-    int speed;
-    int initiative;
-    int temp_init; // total initiative value for messages/list
-    unsigned int cflag_attacks; // combat-flag - number of attacks received in current turn
-
-    Object_player(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter, 
-            Statistics loc_sts) : stats(loc_fighter), sts(loc_sts) {
-            
-        x = a;
-        y = b;
-        selfchar = pchar;
-        color = oc;
-        colorb = oc2;
-        h = health;
-        bloody = 0;
-        combat_move_max = 8;
-    }
-
-    void move(int dx, int dy, std::vector<Object_monster> smonvector); 
-      /* 
-        defined below
-      */ 
-
-    bool attack(Object_monster &foe){
-        /*foe.stats.hp = foe.stats.hp - 1;
-        if (foe.stats.hp == 0) {std::cout << "Killed a foe." << std::endl; return 1;}// killed!
-        return 0; // not killed
-        */
-        return false;
-    }
-
-    void draw(bool uh) {
-        con->setDefaultForeground(color);
-        // uh is for attack animation. if uh is 0 then the background is taken from cell
-        // if uh is 1 then look at colorb 
-        if (!uh){  
-            if(bigg){
-                colorb = con->getCharBackground((x*2), (y*2));
-            } else {    
-                //colorb = con->getCharBackground(x, y);
-                colorb = TCODColor::black; // for sprite
-            }  
-        }    
-        con->setDefaultBackground(colorb);
-        if (fov_map->isInFov(x,y)){
-            if(bigg){
-                con->putChar((x*2), (y*2), u16_player, TCOD_BKGND_SET);
-                con->putChar((x*2)+1, (y*2), u16_player+100, TCOD_BKGND_SET);
-                con->putChar((x*2), (y*2)+1, u16_player+200, TCOD_BKGND_SET);
-                con->putChar((x*2)+1, (y*2)+1, u16_player+300, TCOD_BKGND_SET);
-                //con->putChar((x*2), (y*2), 502, TCOD_BKGND_SET);
-                //con->putChar((x*2)+1, (y*2), 602, TCOD_BKGND_SET);
-                //con->putChar((x*2), (y*2)+1, 702, TCOD_BKGND_SET);
-                //con->putChar((x*2)+1, (y*2)+1, 802, TCOD_BKGND_SET);
-            } else {
-                //con->putChar(x, y, 445, TCOD_BKGND_SET);
-                con->putChar(x, y, u8_player, TCOD_BKGND_SET);
-            }
-        }
-        con->setDefaultBackground(TCODColor::black); // reset background for smaller map
-      
-    }
-
-    void clear() {
-        if (fov_map->isInFov(x,y)){
-        if(bigg){
-        con->putChar((x*2), (y*2), 503, TCOD_BKGND_NONE);
-        con->putChar((x*2)+1, (y*2), 603, TCOD_BKGND_NONE);
-        con->putChar((x*2), (y*2)+1, 703, TCOD_BKGND_NONE);
-        con->putChar((x*2)+1, (y*2)+1, 803, TCOD_BKGND_NONE);
-        } else {
-
-        con->putChar(x, y, ' ', TCOD_BKGND_NONE);
-        }
-        }
-    }
-
-    ~Object_player(){} // ?
-};
+   
 
 
 
 
 std::vector<Object_player*> myvector; // player vector object
 
-class BasicMonster : public AI {
-public:
-
-    BasicMonster(){
-
-    }
-
-    virtual bool take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y, bool myfov){
-            //float dist = 0;
-            //std::cout << monster.combat_move << std::endl; 
-        
-            std::cout << "The " << monster.name << " is active! " << std::endl;
-            //dist = monster.distance_to(p_x, p_y);
-
-            // 1.1 so the monster attacks, but still moves closer instead of stopping diagonally
-            if ( (monster.distance_to(p_x, p_y) >= 1.1) || (monster.chasing && !myfov)){
-
-                if (no_combat || monster.combat_move >= 1){ // move up to and including player pos    
-                    monster.move_towards(p_x, p_y);
-                    if(!no_combat){
-                        monster.combat_move -= 1;
-                    }    
-                    std::cout << "The " << monster.name << " is moving." << std::endl;
-                    return false;
-                }
-
-            } else if (myfov){ 
-                if (no_combat || (monster.combat_move >= 4)) {
-                //TCODConsole::root->clear();
-                mesg->setAlignment(TCOD_LEFT);
-                mesg->setDefaultForeground(TCODColor::yellow);
-                mesg->setDefaultBackground(TCODColor::black);
-                player.colorb = TCODColor::red; // otherwise colorb is set in draw(), by looking at floor
-                monster.colorb = TCODColor::black;
-                player.selfchar = '/';
-                player.draw(1);
-                monster.draw(1);
-                mesg->print(1, 1, "Hit!");
-                //if(!(player.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
-                //else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
-
-                if(bigg){
-                    TCODConsole::blit(con,offbig_x,offbig_y+2,110,68,TCODConsole::root,0,2);
-                } else {    
-                    TCODConsole::blit(con,off_xx,off_yy+1,110,69,TCODConsole::root,0,1);
-                }
-                //std::cout << "SMALLOFF: " << off_xx << " " << off_yy << std::endl;
-
-                TCODConsole::flush();
-
-                Sleep(250); // shitty way for attack "animation", uses windows.h
-                player.colorb = color_dark_ground;
-                monster.colorb = color_dark_ground;
-                player.selfchar = '@';
-                player.draw(0);
-                monster.draw(0);
-                con->clear();
-                fov_recompute = true;
-                //render_all();
-                
-                monster.stats.attack(player, monster, 1); // calls attack function for monsters
-                TCODConsole::flush();
-                if(!no_combat)monster.combat_move -= 4; // decrease the movement points for attack
-                return true;
-            } else if (myfov && !no_combat) monster.combat_move = 0; // movement points to 0 if couldn't make the attack
-            }
-        
-        //else std::cout << "The " << monster.name << " lurks in the dark! " ;
-        return false; 
-    } 
-
-};
 
 
-void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
-
-
-    int damage = 0;
-
-    if (who){       
-
-        // calculate AML
-        int a_AML = monster.stats.ML; // basic skill
-        a_AML += monster.stats.wpn1.wpn_AC; // adding weapon Attack Class
-        // should check for walls here
-        int d_DML = player.stats.ML; // basic monster skill
-        d_DML += player.stats.wpn1.wpn_AC; // adding weapon Attack Class
-
-        // for every attack the player defends from or does, a -10 penality is applied
-        if(player.cflag_attacks >= 1){
-            d_DML += (player.cflag_attacks * 10) * -1;
-            std::cout << "playerD: BASIC " << player.stats.ML << " WEAPON " << player.stats.wpn1.wpn_AC
-                << " TOTAL " << d_DML << std:: endl;
-        }  
-        player.cflag_attacks++; // increment counter (reset at beginning of combat turn)
-
-        // for every attack the monster defends from or does, a -10 penality is applied
-        if(monster.cflag_attacks >= 1){
-            a_AML += (monster.cflag_attacks * 10) * -1;
-            std::cout << "monsterD: BASIC " << monster.stats.ML << " WEAPON " << monster.stats.wpn1.wpn_AC
-                << " TOTAL " << a_AML << std:: endl;
-        }  
-        monster.cflag_attacks++; // increment counter (reset at beginning of combat turn)
-
-        // roll two 1d100, one for player, one for monster
-        TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
-        short int a_d100 = wtf->getInt(1, 100, 0);
-        short int d_d100 = wtf->getInt(1, 100, 0);
-
-        short int a_success_level = 0;
-        short int crit_val = a_d100 % 10;
-        if (a_d100 <= a_AML){
-            if ( crit_val == 0 || crit_val == 5 ){
-                a_success_level = 0; // CS Critical Success
-            } else {    
-                a_success_level = 1; // MS Marginal Success
-            }    
-        } else if (a_d100 > a_AML){
-            if ( crit_val == 0 || crit_val == 5){
-                a_success_level = 3; // CF Critical Failure
-            } else {
-                a_success_level = 2; // MF Marginal Failure
-            }
-        }
-
-        // this is player
-        short int d_success_level = 0;
-        crit_val = d_d100 % 10;
-        if (d_d100 <= d_DML){
-            if ( crit_val == 0 || crit_val == 5 ){
-                d_success_level = 0; // CS Critical Success
-            } else {    
-                d_success_level = 1; // MS Marginal Success
-            }    
-        } else if (d_d100 > d_DML){
-            if ( crit_val == 0 || crit_val == 5){
-                d_success_level = 3; // CF Critical Failure
-            } else {
-                d_success_level = 2; // MF Marginal Failure
-            }
-        }
-
-        const int melee_res[4][4] = 
-        {
-            { 4, 5, 6, 7, },
-            { 4, 4, 5, 6, },
-            { 2, 4, 4, 3, },
-            { 2, 2, 2, 1, }
-        };
-
-        std::cout << "aML: " << monster.stats.ML << " a_AML: " << a_AML << " a_d100: " << a_d100 << std::endl;
-        std::cout << "dML: " << player.stats.ML << " d_DML: " << d_DML << " d_d100: " << d_d100 << std::endl;
-        std::cout << "A Success Level: " << a_success_level << std::endl;
-        std::cout << "D Success Level: " << d_success_level << std::endl;
-        std::cout << "Melee Result: " << melee_res[a_success_level][d_success_level] << std::endl;
-
-        msg_log msgd;
-        sprintf(msgd.message, "%c*%cMonster's skill(%c%d%c) %c1d100%c(%c%d%c) VS Player's defense(%c%d%c) %c1d100%c(%c%d%c)",
-                TCOD_COLCTRL_5, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_1, a_AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_3, a_d100, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_1, d_DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_4, d_d100, TCOD_COLCTRL_STOP);
-        msgd.color1 = TCODColor::cyan;
-        msgd.color2 = TCODColor::yellow;
-        msgd.color5 = TCODColor::red;
-        switch(a_success_level){
-            case 0:
-                msgd.c3 = 1;
-                msgd.color3 = TCODColor::white;
-                msgd.bcolor3 = TCODColor::blue;
-                break;
-            case 1:
-                msgd.color3 = TCODColor::lighterBlue;
-                break;
-            case 2:
-                msgd.color3 = TCODColor::red;
-                break;
-            case 3:
-                msgd.c3 = 1;
-                msgd.color3 = TCODColor::white;
-                msgd.bcolor3 = TCODColor::red;
-                break;
-        }        
-        switch(d_success_level){
-            case 0:
-                msgd.c4 = 1;
-                msgd.color4 = TCODColor::white;
-                msgd.bcolor4 = TCODColor::blue;
-                break;
-            case 1:
-                msgd.color4 = TCODColor::lighterBlue;
-                break;
-            case 2:
-                msgd.color4 = TCODColor::red;
-                break;
-            case 3:
-                msgd.c4 = 1;
-                msgd.color4 = TCODColor::white;
-                msgd.bcolor4 = TCODColor::red;
-                break;
-        }
-        msg_log_list.push_back(msgd);        
-
-        msg_log msg1;
-        switch(melee_res[a_success_level][d_success_level]){
-            case 1:
-                monster.stats.hp -= 1;
-                player.stats.hp -= 1;
-                std::cout << "[CF] Both you and your enemy fumble! -1 to HP for both." << std::endl;
-                sprintf(msg1.message, "%c*%cBoth your enemy and you fumble! %c-1%c to HP for both.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 2:
-                monster.stats.hp -= 1;
-                std::cout << "[CF] You fumble the attack! -1 to HP." <<std::endl;
-                sprintf(msg1.message, "%c*%cThe monster fumbles the attack! %c-1%c to HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 3:
-                player.stats.hp -= 1;
-                std::cout << "[MF] You fail the attack, but the monster fumbles and hits himself! -1 to monster HP." 
-                    << std::endl;
-                sprintf(msg1.message, "%c*%cThe monster misses, but you fumble the parry and hurt yourself! %c-1%c to HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 4:
-                std::cout << "You try to attack, but the monster defends itself!" << std::endl;
-                sprintf(msg1.message, "%c*%cThe monster swings his weapon, but you parry.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 5:
-                player.stats.hp -= monster.stats.power;
-                std::cout << "Your attack does standard damage." << std::endl;
-                sprintf(msg1.message, "%c!%cThe monster hits you for %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, monster.stats.power, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 6:
-                player.stats.hp -= monster.stats.power * 2;
-                std::cout << "You attack does double damage!" << std::endl;
-                sprintf(msg1.message, "%c!%cCritial attack! %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (monster.stats.power * 2), TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 7:
-                player.stats.hp -= monster.stats.power * 3;
-                std::cout << "Your attack does triple damage!" << std::endl;
-                sprintf(msg1.message, "%c!%cTriple damage! %c%d%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (monster.stats.power * 3), TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-        }
-        msg_log_list.push_back(msg1);
-
-        /* old combat 
-        damage = monster.stats.power - player.stats.defense;
-
-        if (damage > 0){
-            std::cout << monster.name << " attacks " << player.name << " for " << damage << " hit points." << std::endl;
-            player.stats.take_damage(damage);
-
-            msg_log msg1;
-                sprintf(msg1.message, "The %c%s%c hits you for %c%d%c damage.",
-                        TCOD_COLCTRL_1, monster.name, TCOD_COLCTRL_STOP,
-                        TCOD_COLCTRL_2, damage, TCOD_COLCTRL_STOP); 
-                msg1.color1 = monster.color;
-                msg1.color2 = TCODColor::red;
-                msg_log_list.push_back(msg1);
-
-        } else std::cout << monster.name << " attacks " << player.name << " but it has no effect!" << std::endl;
-        */
-        
-    } else {
-        damage = player.stats.power - monster.stats.defense;
-
-        if (damage > 0){
-            std::cout << player.name << " attacks " << monster.name << " for " << damage << " hit points." << std::endl;
-            monster.stats.take_damage(damage);
-        } else std::cout << player.name << " attacks " << monster.name << " but it has no effect!" << std::endl;       
-    }
-
-}
 
 
 Fighter fighter_component(30, 2, 5, 8); // hp, defense, power
@@ -1721,13 +1040,16 @@ void make_map_BSP(Object_player &duh){
     std::cout << "monster1 ML: " << myenc.vmob_types[0].ML << std::endl;
     std::cout << "monster1 name: " << myenc.vmob_types[0].name << std::endl;
     std::cout << "monster2 name: " << myenc.vmob_types[1].name << std::endl;
-  
+
+    //LEAK
+    
     for (unsigned int i = 0; i<BSProoms.size(); ++i){
         if(BSProoms[i].reround) create_round_room(BSProoms[i]);
         place_doors(BSProoms[i]);
         place_column(BSProoms[i]);
         if(i > 5) place_objects(BSProoms[i], myenc); // don't place monsters on player start (within 5 rooms)
     }
+    
     delete myBSP;
 
     killall = monvector.size(); // how many monsters on map
@@ -1918,22 +1240,22 @@ void make_map(Object_player &duh){
     ++init;
 }
 
-void set_black(){
+void set_black(Game &tgame){
     for (int i = 0; i < MAP_HEIGHT ;++i){
         for (int l = 0; l < MAP_WIDTH ;++l) {
-            con->putChar(l, i, ' ', TCOD_BKGND_SET);
-                        con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
-                        con->setCharForeground(l, i, TCODColor::black);
+            tgame.gstate.con->putChar(l, i, ' ', TCOD_BKGND_SET);
+            tgame.gstate.con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
+            tgame.gstate.con->setCharForeground(l, i, TCODColor::black);
         }
     } 
 } // fill "con" with black
 
-void set_black_b(){
+void set_black_b(Game &tgame){
     for (int i = 0; i < (MAP_HEIGHT*2) ;++i){
         for (int l = 0; l < (MAP_WIDTH*2) ;++l) {
-            con->putChar(l, i, ' ', TCOD_BKGND_SET);
-                        con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
-                        con->setCharForeground(l, i, TCODColor::black);
+            tgame.gstate.con->putChar(l, i, ' ', TCOD_BKGND_SET);
+            tgame.gstate.con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
+            tgame.gstate.con->setCharForeground(l, i, TCODColor::black);
         }
     } 
 } // fill "con" with black
@@ -1972,7 +1294,7 @@ void threadm( void* pParams )
     }
 
 // (was only) in combat
-void I_am_moused(){
+void I_am_moused(Game &tgame){
     //TCOD_key_t key;
     //TCOD_mouse_t mouse;
     //TCOD_event_t ev = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
@@ -2033,20 +1355,20 @@ void I_am_moused(){
         if(mousez.lbutton && mousez.cy == 0 && (mousez.cx >= 92 && mousez.cx <= 94)) {
             wid_help = 1;
         }
-        if(mousez.lbutton && mousez.cx == 4 && mousez.cy == 0) {stance_pos = 1; bigg = 0; fov_recompute = true;}
-        if(mousez.lbutton && mousez.cx == 5 && mousez.cy == 0) {stance_pos = 2; bigg = 1; fov_recompute = true;}
+        if(mousez.lbutton && mousez.cx == 4 && mousez.cy == 0) {stance_pos = 1; tgame.gstate.bigg = 0; tgame.gstate.fov_recompute = true;}
+        if(mousez.lbutton && mousez.cx == 5 && mousez.cy == 0) {stance_pos = 2; tgame.gstate.bigg = 1; tgame.gstate.fov_recompute = true;}
         //if(mousez.lbutton && mousez.cx == 2 && mousez.cy == 0) stance_pos = 3;
         if(mousez.cx == 6 && mousez.cy == 0) {
-            bigg2 = 1;
-            fov_recompute = true;
+            tgame.gstate.bigg2 = 1;
+            tgame.gstate.fov_recompute = true;
         } else {
-            bigg2 = 0;
+            tgame.gstate.bigg2 = 0;
         }
         if(mousez.cx == 7 && mousez.cy == 0) {
-            bigg3 = 1;
-            fov_recompute = true;
+            tgame.gstate.bigg3 = 1;
+            tgame.gstate.fov_recompute = true;
         } else {
-            bigg3 = 0;
+            tgame.gstate.bigg3 = 0;
         }
         if( (mousez.cx >= 10 && mousez.cx < 18) && mousez.cy == 0) {
             stance_pos2 = 1;
@@ -2066,19 +1388,19 @@ void I_am_moused(){
     bool found = false;
     TCODColor col_obj; // color of object
 
-    if(!bigg){
+    if(!tgame.gstate.bigg){
 
-    if ((!bigg && x == player.x && y == player.y) || (bigg && (x/2) == player.x && (y/2) == player.y)){
+    if ((!tgame.gstate.bigg && x == player.x && y == player.y) || (tgame.gstate.bigg && (x/2) == player.x && (y/2) == player.y)){
         panel->setDefaultForeground(TCODColor::white);
         panel->setAlignment(TCOD_LEFT);
         panel->print(1, 5, "Mouse on [Player] at [%d.%d]", x, y);
         panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
     } else {
         for (unsigned int n = 0; n<monvector.size(); ++n) {
-            if( (!bigg && (x == monvector[n].x && y == monvector[n].y && monvector[n].alive) 
-                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
-                (bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y && monvector[n].alive) 
-                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ){
+            if( (!tgame.gstate.bigg && (x == monvector[n].x && y == monvector[n].y && monvector[n].alive) 
+                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
+                (tgame.gstate.bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y && monvector[n].alive) 
+                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) ){
                 whatis = &(monvector[n].name[0]);
                 panel->setDefaultForeground(TCODColor::white);
                 panel->setAlignment(TCOD_LEFT);
@@ -2092,10 +1414,10 @@ void I_am_moused(){
 
         if (!found){ // only if no moster alive found        
         for (unsigned int n = 0; n<monvector.size(); ++n) {
-            if( (!bigg && (x == monvector[n].x && y == monvector[n].y) && !(monvector[n].alive) 
-                    && fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
-                (bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y) && !(monvector[n].alive) 
-                    && fov_map->isInFov(monvector[n].x,monvector[n].y))    ){
+            if( (!tgame.gstate.bigg && (x == monvector[n].x && y == monvector[n].y) && !(monvector[n].alive) 
+                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
+                (tgame.gstate.bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y) && !(monvector[n].alive) 
+                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y))    ){
                 whatis = &(monvector[n].name[0]);
                 panel->setDefaultForeground(TCODColor::white);
                 panel->setAlignment(TCOD_LEFT);
@@ -2120,7 +1442,7 @@ void I_am_moused(){
     }
 
     int asciiwhat = 0;
-    if(bigg){
+    if(tgame.gstate.bigg){
         panel->setDefaultForeground(TCODColor::white);
         panel->setAlignment(TCOD_LEFT);
         asciiwhat= TCODConsole::root->getChar(x, y);
@@ -2376,7 +1698,7 @@ void render_help(){
 
 }
 
-void render_base(){
+void render_base(Game &tgame){
     TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->print(1, MAP_HEIGHT_AREA+3, "Use arrows to move");
@@ -2387,7 +1709,7 @@ void render_base(){
         TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+6, "Press 'r' to regenerate layout/revive player");
         TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+8, "Press 'd' for DEBUG, Press 'w' to switch tile mode");
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::yellow,TCODColor::black);
-        if (debug) TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+9, "%cMonster count%c: %d",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, killall);
+        if (tgame.gstate.debug) TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+9, "%cMonster count%c: %d",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, killall);
         TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+10, "Press 'CTRL+V' to toggle-reveal the map");
        
         TCODConsole::root->setAlignment(TCOD_CENTER);
@@ -2402,7 +1724,7 @@ void render_base(){
         else TCODConsole::root->print(win_x/2,win_y-1,"%cALL KILLED!%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
 }
 
-void render_minimaps(){
+void render_minimaps(Game &tgame){
     int off_x = 0;
     int off_y = 0;
 
@@ -2414,7 +1736,7 @@ void render_minimaps(){
 
 
     // draws frame of map small
-    if(bigg2){
+    if(tgame.gstate.bigg2){
         con_mini->setDefaultForeground(TCODColor::lighterGrey);
         off_x = player.x - 55; // centered 
         off_y = player.y - 35;
@@ -2451,7 +1773,7 @@ void render_minimaps(){
 
   
     // draws frame of map tiny    
-    if(bigg3){
+    if(tgame.gstate.bigg3){
         con_tini->setDefaultForeground(TCODColor::lighterGrey);
         con_tini->setDefaultBackground(TCODColor::black);
         for (int n = 0; n < MAP_HEIGHT_AREA+1; ++n){
@@ -2488,7 +1810,7 @@ void render_minimaps(){
     } // end bigg3 tinimap
 }
 
-void render_top(){
+void render_top(Game &tgame){
     if(wid_top_open){
     // map modes
         switch(stance_pos){
@@ -2526,7 +1848,7 @@ void render_top(){
             int obj_line;
             obj_line = 0;
             for (unsigned int i = 0; i<monvector.size(); ++i) {
-                if (fov_map->isInFov(monvector[i].x,monvector[i].y)){
+                if (tgame.gstate.fov_map->isInFov(monvector[i].x,monvector[i].y)){
                     obj_line += 1;
                     TCODConsole::setColorControl(TCOD_COLCTRL_2,monvector[i].color,TCODColor::black);     
                     widget_2_p->print(0, obj_line, "%c%c%c> This is one %c%s%c.", 
@@ -2575,7 +1897,7 @@ void render_top(){
         }
 }
 
-void render_all (){
+void render_all (Game &tgame){
 
     //std::cout << fov_recompute << std::endl;
 
@@ -2592,8 +1914,8 @@ void render_all (){
     if (off_x < 0) off_x = 0;
     if (off_y < 0) off_y = 0;
 
-    off_xx = off_x; // used in monster attack cycle
-    off_yy = off_y;
+    tgame.gstate.off_xx = off_x; // used in monster attack cycle
+    tgame.gstate.off_yy = off_y;
 
     int maxmap_y = off_y + win_y;
     int maxmap_x = off_x + win_x;
@@ -2609,8 +1931,8 @@ void render_all (){
     bool visible = false;
     int isbloody = 0;
 
-    if (fov_recompute){
-        fov_map->computeFov(player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO);
+    if (tgame.gstate.fov_recompute){
+        tgame.gstate.fov_map->computeFov(player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO);
 
         //if(bigg){
         //    maxmap_x = maxmap_x/2;
@@ -2621,32 +1943,32 @@ void render_all (){
 
         for (int i = drawmap_off_y; i < maxmap_y ;++i){ // i = column
             for (int l = drawmap_off_x; l < maxmap_x ;++l) { // l = row
-                visible = fov_map->isInFov(l,i);
+                visible = tgame.gstate.fov_map->isInFov(l,i);
                 wall = map_array[i * MAP_WIDTH + l].blocked;
                 isbloody = map_array[i * MAP_WIDTH + l].bloodyt;
 
-                if (bigg){
-                    con->putChar((l*2), (i*2), 503, TCOD_BKGND_SET);
-                    con->putChar((l*2)+1, (i*2), 603, TCOD_BKGND_SET);
-                    con->putChar((l*2), (i*2)+1, 703, TCOD_BKGND_SET);
-                    con->putChar((l*2)+1, (i*2)+1, 803, TCOD_BKGND_SET);
+                if (tgame.gstate.bigg){
+                    tgame.gstate.con->putChar((l*2), (i*2), 503, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((l*2)+1, (i*2), 603, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((l*2), (i*2)+1, 703, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((l*2)+1, (i*2)+1, 803, TCOD_BKGND_SET);
                
-                    con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                    con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                    con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                    con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                    tgame.gstate.con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                    tgame.gstate.con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                    tgame.gstate.con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                    tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
 
-                    con->setCharForeground((l*2), (i*2), TCODColor::black);
-                    con->setCharForeground((l*2)+1, (i*2), TCODColor::black);
-                    con->setCharForeground((l*2), (i*2)+1, TCODColor::black);
-                    con->setCharForeground((l*2)+1, (i*2)+1, TCODColor::black);
+                    tgame.gstate.con->setCharForeground((l*2), (i*2), TCODColor::black);
+                    tgame.gstate.con->setCharForeground((l*2)+1, (i*2), TCODColor::black);
+                    tgame.gstate.con->setCharForeground((l*2), (i*2)+1, TCODColor::black);
+                    tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, TCODColor::black);
 
                 } else {
-                    con->putChar(l, i, ' ', TCOD_BKGND_SET);
-                    con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
-                    con->setCharForeground(l, i, TCODColor::black);
+                    tgame.gstate.con->putChar(l, i, ' ', TCOD_BKGND_SET);
+                    tgame.gstate.con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
+                    tgame.gstate.con->setCharForeground(l, i, TCODColor::black);
                 }
-                if (bigg2){
+                if (tgame.gstate.bigg2){
                     con_mini->putChar(l+1, i+1, ' ', TCOD_BKGND_SET);
                     con_mini->setCharBackground(l+1, i+1, TCODColor::black, TCOD_BKGND_SET);
                     con_mini->setCharForeground(l+1, i+1, TCODColor::black);
@@ -2655,62 +1977,62 @@ void render_all (){
                 if (!visible){ // if NOT visible
                     if (map_array[i * MAP_WIDTH + l].explored || revealdungeon){
                         if (wall){
-                            if(bigg){
-                                con->putChar((l*2), (i*2), 503, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1, (i*2), 603, TCOD_BKGND_SET);
-                                con->putChar((l*2), (i*2)+1, 703, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1, (i*2)+1, 803, TCOD_BKGND_SET);
+                            if(tgame.gstate.bigg){
+                                tgame.gstate.con->putChar((l*2), (i*2), 503, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1, (i*2), 603, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2), (i*2)+1, 703, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1, (i*2)+1, 803, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_dark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_dark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_dark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_dark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_dark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_dark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_dark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_dark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_dark_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_dark_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_dark_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_dark_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_dark_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_dark_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_dark_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_dark_wall);
                             } else {    
-                                con->putChar(l, i, '#', TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, color_dark_wall);
+                                tgame.gstate.con->putChar(l, i, '#', TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground(l, i, color_dark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharForeground(l, i, color_dark_wall);
                             }
-                            if (bigg2){
+                            if (tgame.gstate.bigg2){
                                 con_mini->putChar(l+1, i+1, '#', TCOD_BKGND_SET);
                                 con_mini->setCharBackground(l+1, i+1, color_dark_wall, TCOD_BKGND_SET);
                                 con_mini->setCharForeground(l+1, i+1, color_dark_wall);
                             }
                         } else { // if floor
-                            if(bigg){
-                                con->putChar(l*2,i*2, 509, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, 609, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, 709, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, 809, TCOD_BKGND_SET); 
+                            if(tgame.gstate.bigg){
+                                tgame.gstate.con->putChar(l*2,i*2, 509, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, 609, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, 709, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, 809, TCOD_BKGND_SET); 
                         
-                                con->setCharForeground((l*2), (i*2), color_dark_groundF);
-                                con->setCharForeground((l*2)+1, (i*2), color_dark_groundF);
-                                con->setCharForeground((l*2), (i*2)+1, color_dark_groundF);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_dark_groundF);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_dark_groundF);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_dark_groundF);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_dark_groundF);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_dark_groundF);
 
-                                con->setCharBackground((l*2), (i*2), color_dark_ground, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_dark_ground, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_dark_ground, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_dark_ground, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), tgame.gstate.color_dark_ground, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), tgame.gstate.color_dark_ground, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, tgame.gstate.color_dark_ground, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, tgame.gstate.color_dark_ground, TCOD_BKGND_SET);
                             } else {
-                                con->putChar(l, i, '.', TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, color_dark_groundF);
-                                con->setCharBackground(l, i, color_dark_ground, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l, i, '.', TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharForeground(l, i, color_dark_groundF);
+                                tgame.gstate.con->setCharBackground(l, i, tgame.gstate.color_dark_ground, TCOD_BKGND_SET);
                             }
-                            if (bigg2 ){
+                            if (tgame.gstate.bigg2 ){
                                 con_mini->putChar(l+1, i+1, '.', TCOD_BKGND_SET);
                                 con_mini->setCharForeground(l+1, i+1, color_dark_groundF);
-                                con_mini->setCharBackground(l+1, i+1, color_dark_ground, TCOD_BKGND_SET);
+                                con_mini->setCharBackground(l+1, i+1, tgame.gstate.color_dark_ground, TCOD_BKGND_SET);
                             }
                         }
                     }
                 } else { // if visible
                     if (wall){
-                        if(bigg){
+                        if(tgame.gstate.bigg){
 
                             
                             // make doors as wall to correctly draw
@@ -2721,219 +2043,219 @@ void render_all (){
                             // adark = not hidden in 2*8 mode
                             if( ( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
                                         (map_array[(i * MAP_WIDTH + l)+1].blocked) ) &&
-                                    ( fov_map->isInFov(l+1,i) && fov_map->isInFov(l-1,i) ) ){
-                                con->putChar(l*2,i*2, u16_wall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_wall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_wall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_wall+300, TCOD_BKGND_SET);
+                                    ( tgame.gstate.fov_map->isInFov(l+1,i) && tgame.gstate.fov_map->isInFov(l-1,i) ) ){
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_wall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_wall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_wall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if( ( (map_array[(i * MAP_WIDTH + l)+1].blocked) && 
-                                        fov_map->isInFov(l+1,i) ) &&
+                                        tgame.gstate.fov_map->isInFov(l+1,i) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) &&
-                                      fov_map->isInFov(l,i+1) ) ){
-                                con->putChar(l*2,i*2, u16_trwall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_trwall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_trwall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_trwall+300, TCOD_BKGND_SET);
+                                      tgame.gstate.fov_map->isInFov(l,i+1) ) ){
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_trwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_trwall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_trwall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_trwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if( ( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
-                                    fov_map->isInFov(l-1,i) ) &&
+                                    tgame.gstate.fov_map->isInFov(l-1,i) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) &&
-                                    fov_map->isInFov(l,i+1) ) ){
-                                con->putChar(l*2,i*2, u16_tlwall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_tlwall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_tlwall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_tlwall+300, TCOD_BKGND_SET);
+                                    tgame.gstate.fov_map->isInFov(l,i+1) ) ){
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_tlwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_tlwall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_tlwall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_tlwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if( ( (map_array[(i * MAP_WIDTH + l)+1].blocked) && 
-                                    fov_map->isInFov(l+1,i) ) &&
+                                    tgame.gstate.fov_map->isInFov(l+1,i) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) &&
-                                    fov_map->isInFov(l,i-1) ) ){
-                                con->putChar(l*2,i*2, u16_bwall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_bwall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_bwall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_bwall+300, TCOD_BKGND_SET);
+                                    tgame.gstate.fov_map->isInFov(l,i-1) ) ){
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_bwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_bwall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_bwall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_bwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if( ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) && 
-                                    fov_map->isInFov(l,i-1) ) &&
+                                    tgame.gstate.fov_map->isInFov(l,i-1) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)-1].blocked) &&
-                                    fov_map->isInFov(l-1,i) ) ){
-                                con->putChar(l*2,i*2, u16_ibwall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_ibwall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_ibwall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_ibwall+300, TCOD_BKGND_SET);
+                                    tgame.gstate.fov_map->isInFov(l-1,i) ) ){
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_ibwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_ibwall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_ibwall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_ibwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if( ( (map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) && 
-                                    fov_map->isInFov(l,i+1) ) ||
+                                    tgame.gstate.fov_map->isInFov(l,i+1) ) ||
                                     ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) &&
-                                    fov_map->isInFov(l,i-1) ) ){
-                                con->putChar(l*2,i*2, u16_vwall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_vwall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_vwall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_vwall+300, TCOD_BKGND_SET);
+                                    tgame.gstate.fov_map->isInFov(l,i-1) ) ){
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_vwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_vwall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_vwall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_vwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if( ( !(map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) && 
-                                    fov_map->isInFov(l,i-1) ) &&
+                                    tgame.gstate.fov_map->isInFov(l,i-1) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) &&
-                                    fov_map->isInFov(l,i+1) ) &&
+                                    tgame.gstate.fov_map->isInFov(l,i+1) ) &&
                                     ( (map_array[(i * MAP_WIDTH + l)-MAP_WIDTH-1].blocked) &&
-                                    fov_map->isInFov(l-1,i-1) ) ){
-                                con->putChar(l*2,i*2, u16_tlwall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_tlwall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_tlwall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_tlwall+300, TCOD_BKGND_SET);
+                                    tgame.gstate.fov_map->isInFov(l-1,i-1) ) ){
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_tlwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_tlwall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_tlwall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_tlwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_bdark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if( ( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
                                     (map_array[(i * MAP_WIDTH + l)+1].blocked) ) ||
-                                    ( fov_map->isInFov(l+1,i) && fov_map->isInFov(l-1,i) ) ){
-                                con->putChar(l*2,i*2, u16_wall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_wall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_wall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_wall+300, TCOD_BKGND_SET);
+                                    ( tgame.gstate.fov_map->isInFov(l+1,i) && tgame.gstate.fov_map->isInFov(l-1,i) ) ){
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_wall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_wall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_wall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if( ( (map_array[(i * MAP_WIDTH + l)].blocked) && 
-                                    fov_map->isInFov(l,i) ) &&
+                                    tgame.gstate.fov_map->isInFov(l,i) ) &&
                                     ( !(map_array[(i * MAP_WIDTH + l)-MAP_WIDTH].blocked) && 
-                                    fov_map->isInFov(l,i-1) ) &&
+                                    tgame.gstate.fov_map->isInFov(l,i-1) ) &&
                                     ( !(map_array[(i * MAP_WIDTH + l)+MAP_WIDTH].blocked) && 
-                                    fov_map->isInFov(l,i+1) )
+                                    tgame.gstate.fov_map->isInFov(l,i+1) )
                                      ){
-                                con->putChar(l*2,i*2, u16_vwall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_vwall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_vwall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_vwall+300, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_vwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_vwall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_vwall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_vwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if( ( (map_array[(i * MAP_WIDTH + l)-1].blocked) && 
-                                    fov_map->isInFov(l-1,i) ) ||
+                                    tgame.gstate.fov_map->isInFov(l-1,i) ) ||
                                     ( (map_array[(i * MAP_WIDTH + l)+1].blocked) && 
-                                    fov_map->isInFov(l+1,i)  )
+                                    tgame.gstate.fov_map->isInFov(l+1,i)  )
                                      ){
-                                con->putChar(l*2,i*2, u16_wall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_wall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_wall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_wall+300, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_wall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_wall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_wall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else if(abs(i-player.x) > abs(l-player.y)
                                      ){
-                                con->putChar(l*2,i*2, u16_wall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_wall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_wall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_wall+300, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_wall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_wall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_wall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             } else {
-                                con->putChar(l*2,i*2, u16_vwall, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_vwall+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_vwall+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_vwall+300, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_vwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_vwall+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_vwall+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_vwall+300, TCOD_BKGND_SET);
 
-                                con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
-                                con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2), color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2), (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, color_adark_wall, TCOD_BKGND_SET);
 
-                                con->setCharForeground((l*2), (i*2), color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2), color_light_wall);
-                                con->setCharForeground((l*2), (i*2)+1, color_light_wall);
-                                con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
+                                tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_wall);
+                                tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_wall); 
                             }
 
                             
@@ -2952,9 +2274,9 @@ void render_all (){
                             if(!(map_array[(i * MAP_WIDTH + l)-1].blocked) && 
                                     !(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked)){ // L NE
                                 //con->putChar(l, i, 668, TCOD_BKGND_SET);
-                                con->putChar(l, i, u8_wall, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, u8_wallCa, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, u8_wallCb);
+                                tgame.gstate.con->putChar(l, i, tgame.tileval.u8_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground(l, i, tgame.tileval.u8_wallCa, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharForeground(l, i, tgame.tileval.u8_wallCb);
                                 //con->setCharBackground(l, i, demake_sub_wall, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, demake_main_wall);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
@@ -2963,9 +2285,9 @@ void render_all (){
                                     (map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked) && 
                                     !(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH-1].blocked) ){ // upR corner
                                 //con->putChar(l, i, 669, TCOD_BKGND_SET);
-                                con->putChar(l, i, u8_trwall, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, u8_wallCb, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, u8_wallCa);
+                                tgame.gstate.con->putChar(l, i, tgame.tileval.u8_trwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground(l, i, tgame.tileval.u8_wallCb, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharForeground(l, i, tgame.tileval.u8_wallCa);
                                 //con->setCharBackground(l, i, demake_main_wall, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, demake_main_wall);
                                 //con->setCharBackground(l, i, color_light_wall, TCOD_BKGND_SET);
@@ -2974,101 +2296,101 @@ void render_all (){
                             } else if(!(map_array[(i * MAP_WIDTH + l)+ MAP_WIDTH].blocked)){ // h wall top
                                 //con->putChar(l, i, 666, TCOD_BKGND_SET);
                                 //con->putChar(l, i, 446, TCOD_BKGND_SET);
-                                con->putChar(l, i, u8_hwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l, i, tgame.tileval.u8_hwall, TCOD_BKGND_SET);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall); 
-                                con->setCharBackground(l, i, u8_wallCa, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, u8_wallCb);
+                                tgame.gstate.con->setCharBackground(l, i, tgame.tileval.u8_wallCa, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharForeground(l, i, tgame.tileval.u8_wallCb);
                             } else if(!(map_array[(i * MAP_WIDTH + l)-1].blocked)){ // v wall (right)
                                 //con->putChar(l, i, 667, TCOD_BKGND_SET);
-                                con->putChar(l, i, u8_vwall, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, u8_wallCc, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, u8_wallCd);
+                                tgame.gstate.con->putChar(l, i, tgame.tileval.u8_vwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground(l, i, tgame.tileval.u8_wallCc, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharForeground(l, i, tgame.tileval.u8_wallCd);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall);
                             } else if(!(map_array[(i * MAP_WIDTH + l)+1].blocked)){ // v wall left
                                 //con->putChar(l, i, 667, TCOD_BKGND_SET);
-                                con->putChar(l, i, ' ', TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, u8_wallCb, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, u8_wallCa);
+                                tgame.gstate.con->putChar(l, i, ' ', TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground(l, i, tgame.tileval.u8_wallCb, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharForeground(l, i, tgame.tileval.u8_wallCa);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall);
-                            } else if(!fov_map->isInFov(l,i+1)){ // h wall bottom
+                            } else if(!tgame.gstate.fov_map->isInFov(l,i+1)){ // h wall bottom
                                 //con->putChar(l, i, 667, TCOD_BKGND_SET);
                                 //con->putChar(l, i, 446, TCOD_BKGND_SET);
-                                con->putChar(l, i, u8_bwall, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, u8_wallCd, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, u8_wallCc);
+                                tgame.gstate.con->putChar(l, i, tgame.tileval.u8_bwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground(l, i, tgame.tileval.u8_wallCd, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharForeground(l, i, tgame.tileval.u8_wallCc);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall);
                             } else if( !(map_array[(i * MAP_WIDTH + l)+MAP_WIDTH+1].blocked) ){ // upL corner
                                 //con->putChar(l, i, 667, TCOD_BKGND_SET);
                                 //con->putChar(l, i, 446, TCOD_BKGND_SET);
-                                con->putChar(l, i, u8_tlwall, TCOD_BKGND_SET);
-                                con->setCharBackground(l, i, u8_wallCb, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, u8_wallCa);
+                                tgame.gstate.con->putChar(l, i, tgame.tileval.u8_tlwall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharBackground(l, i, tgame.tileval.u8_wallCb, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharForeground(l, i, tgame.tileval.u8_wallCa);
                                 //con->setCharBackground(l, i, demake_main_wall, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, demake_main_wall);
                                 //con->setCharBackground(l, i, color_dark_wallF, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall);
                             } else {    
-                                con->putChar(l, i, '#', TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l, i, '#', TCOD_BKGND_SET);
                                 //con->setCharBackground(l, i, color_light_wall, TCOD_BKGND_SET);
                                 //con->setCharForeground(l, i, color_light_wall);
-                                con->setCharBackground(l, i, demake_sub_wall, TCOD_BKGND_SET);
-                                con->setCharForeground(l, i, demake_main_wall);
+                                tgame.gstate.con->setCharBackground(l, i, demake_sub_wall, TCOD_BKGND_SET);
+                                tgame.gstate.con->setCharForeground(l, i, demake_main_wall);
                             }
                             for (unsigned int n = 0; n<doors.size(); ++n){
                                 map_array[doors[n].y * MAP_WIDTH + doors[n].x] = Tile(0,1);
                             }
                         }
-                        if (bigg2){
+                        if (tgame.gstate.bigg2){
                             con_mini->putChar(l+1, i+1, '#', TCOD_BKGND_SET);
                             con_mini->setCharBackground(l+1, i+1, color_light_wall, TCOD_BKGND_SET);
                             con_mini->setCharForeground(l+1, i+1, color_light_wall);
                         }
                     }
                     else { // if floor
-                        if(bigg){
+                        if(tgame.gstate.bigg){
                             if(l%2==1){
-                                con->putChar(l*2,i*2, u16_floor2, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_floor2+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_floor2+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_floor2+300, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_floor2, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_floor2+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_floor2+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_floor2+300, TCOD_BKGND_SET);
                             } else {
-                                con->putChar(l*2,i*2, u16_floor1, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,i*2, u16_floor1+100, TCOD_BKGND_SET);
-                                con->putChar(l*2,(i*2)+1, u16_floor1+200, TCOD_BKGND_SET);
-                                con->putChar((l*2)+1,(i*2)+1, u16_floor1+300, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_floor1, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_floor1+100, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_floor1+200, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, tgame.tileval.u16_floor1+300, TCOD_BKGND_SET);
                             }
 
-                            con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                            tgame.gstate.con->setCharBackground((l*2), (i*2), TCODColor::black, TCOD_BKGND_SET);
+                            tgame.gstate.con->setCharBackground((l*2)+1, (i*2), TCODColor::black, TCOD_BKGND_SET);
+                            tgame.gstate.con->setCharBackground((l*2), (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
+                            tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, TCODColor::black, TCOD_BKGND_SET);
 
-                            con->setCharForeground((l*2), (i*2), color_light_ground2);
-                            con->setCharForeground((l*2)+1, (i*2), color_light_ground2);
-                            con->setCharForeground((l*2), (i*2)+1, color_light_ground2);
-                            con->setCharForeground((l*2)+1, (i*2)+1, color_light_ground2); 
+                            tgame.gstate.con->setCharForeground((l*2), (i*2), color_light_ground2);
+                            tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_light_ground2);
+                            tgame.gstate.con->setCharForeground((l*2), (i*2)+1, color_light_ground2);
+                            tgame.gstate.con->setCharForeground((l*2)+1, (i*2)+1, color_light_ground2); 
 
                         } else {
                             //con->putChar(l, i, '.', TCOD_BKGND_SET);
                             if(l%2==1){
                             if(l%3==1 || i%3==1){
-                                if(l%3==1)con->putChar(l, i, u8_floor1, TCOD_BKGND_SET);
-                                if(i%3==1)con->putChar(l, i, u8_floor2, TCOD_BKGND_SET);
-                            }else con->putChar(l, i, u8_floor1, TCOD_BKGND_SET);} 
-                            else if(l%2==1)con->putChar(l, i, u8_floor2, TCOD_BKGND_SET); 
-                            else con->putChar(l, i, u8_floor2, TCOD_BKGND_SET);
+                                if(l%3==1)tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor1, TCOD_BKGND_SET);
+                                if(i%3==1)tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor2, TCOD_BKGND_SET);
+                            }else tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor1, TCOD_BKGND_SET);} 
+                            else if(l%2==1)tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor2, TCOD_BKGND_SET); 
+                            else tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor2, TCOD_BKGND_SET);
                             //con->setCharForeground(l, i, TCODColor::white);
                             //con->setCharForeground(l, i, demake_main_floor);
                             //con->setCharBackground(l, i, color_light_ground, TCOD_BKGND_SET);
                             //con->setCharBackground(l, i, demake_sub_floor, TCOD_BKGND_SET);
-                            con->setCharForeground(l, i, u8_floorCa);
-                            con->setCharBackground(l, i, u8_floorCb, TCOD_BKGND_SET);
+                            tgame.gstate.con->setCharForeground(l, i, tgame.tileval.u8_floorCa);
+                            tgame.gstate.con->setCharBackground(l, i, tgame.tileval.u8_floorCb, TCOD_BKGND_SET);
                         }
-                        if (bigg2){
+                        if (tgame.gstate.bigg2){
                             con_mini->putChar(l+1, i+1, '.', TCOD_BKGND_SET);
                             con_mini->setCharForeground(l+1, i+1, TCODColor::white);
                             con_mini->setCharBackground(l+1, i+1, color_light_ground, TCOD_BKGND_SET);
@@ -3083,13 +2405,13 @@ void render_all (){
                         if (isbloody == 3) blood = blood2;
                         if (isbloody == 2) blood = blood3;
                         if (isbloody < 2) blood = blood4; // sets color
-                        if(bigg){
-                            con->setCharBackground((l*2), (i*2), blood, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2)+1, (i*2), blood, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2), (i*2)+1, blood, TCOD_BKGND_SET);
-                            con->setCharBackground((l*2)+1, (i*2)+1, blood, TCOD_BKGND_SET);
+                        if(tgame.gstate.bigg){
+                            tgame.gstate.con->setCharBackground((l*2), (i*2), blood, TCOD_BKGND_SET);
+                            tgame.gstate.con->setCharBackground((l*2)+1, (i*2), blood, TCOD_BKGND_SET);
+                            tgame.gstate.con->setCharBackground((l*2), (i*2)+1, blood, TCOD_BKGND_SET);
+                            tgame.gstate.con->setCharBackground((l*2)+1, (i*2)+1, blood, TCOD_BKGND_SET);
                         } else {   
-                            con->setCharBackground(l, i, blood, TCOD_BKGND_SET);
+                            tgame.gstate.con->setCharBackground(l, i, blood, TCOD_BKGND_SET);
                         }
                     }
 
@@ -3101,72 +2423,72 @@ void render_all (){
             }
         }
 
-    fov_recompute = false;
+    tgame.gstate.fov_recompute = false;
 
     }
 
     // draw doors
     for (unsigned int i = 0; i<doors.size(); ++i){
-        if(fov_map->isInFov(doors[i].x,doors[i].y)){
-            if(bigg){
+        if(tgame.gstate.fov_map->isInFov(doors[i].x,doors[i].y)){
+            if(tgame.gstate.bigg){
                 if((map_array[(doors[i].y * MAP_WIDTH + doors[i].x)-1].blocked)){
-                    con->putChar(doors[i].x*2,doors[i].y*2, u16_door, TCOD_BKGND_SET);
-                    con->putChar((doors[i].x*2)+1,doors[i].y*2, u16_door+100, TCOD_BKGND_SET);
-                    con->putChar(doors[i].x*2,(doors[i].y*2)+1, u16_door+200, TCOD_BKGND_SET);
-                    con->putChar((doors[i].x*2)+1,(doors[i].y*2)+1, u16_door+300, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar(doors[i].x*2,doors[i].y*2, tgame.tileval.u16_door, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((doors[i].x*2)+1,doors[i].y*2, tgame.tileval.u16_door+100, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar(doors[i].x*2,(doors[i].y*2)+1, tgame.tileval.u16_door+200, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((doors[i].x*2)+1,(doors[i].y*2)+1, tgame.tileval.u16_door+300, TCOD_BKGND_SET);
                 } else {
-                    con->putChar(doors[i].x*2,doors[i].y*2, u16_doorv, TCOD_BKGND_SET);
-                    con->putChar((doors[i].x*2)+1,doors[i].y*2, u16_doorv+100, TCOD_BKGND_SET);
-                    con->putChar(doors[i].x*2,(doors[i].y*2)+1, u16_doorv+200, TCOD_BKGND_SET);
-                    con->putChar((doors[i].x*2)+1,(doors[i].y*2)+1, u16_doorv+300, TCOD_BKGND_SET); 
+                    tgame.gstate.con->putChar(doors[i].x*2,doors[i].y*2, tgame.tileval.u16_doorv, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((doors[i].x*2)+1,doors[i].y*2, tgame.tileval.u16_doorv+100, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar(doors[i].x*2,(doors[i].y*2)+1, tgame.tileval.u16_doorv+200, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((doors[i].x*2)+1,(doors[i].y*2)+1, tgame.tileval.u16_doorv+300, TCOD_BKGND_SET); 
                 }
                     
-                con->setCharBackground((doors[i].x*2), (doors[i].y*2), color_door_sub, TCOD_BKGND_SET);
-                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2), color_door_sub, TCOD_BKGND_SET);
-                con->setCharBackground((doors[i].x*2), (doors[i].y*2)+1, color_door_sub, TCOD_BKGND_SET);
-                con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2)+1, color_door_sub, TCOD_BKGND_SET);
+                tgame.gstate.con->setCharBackground((doors[i].x*2), (doors[i].y*2), color_door_sub, TCOD_BKGND_SET);
+                tgame.gstate.con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2), color_door_sub, TCOD_BKGND_SET);
+                tgame.gstate.con->setCharBackground((doors[i].x*2), (doors[i].y*2)+1, color_door_sub, TCOD_BKGND_SET);
+                tgame.gstate.con->setCharBackground((doors[i].x*2)+1, (doors[i].y*2)+1, color_door_sub, TCOD_BKGND_SET);
                 
                 // black for demake, brown for 28
-                con->setCharForeground((doors[i].x*2), (doors[i].y*2), color_door_main);
-                con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2), color_door_main);
-                con->setCharForeground((doors[i].x*2), (doors[i].y*2)+1, color_door_main);
-                con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2)+1, color_door_main);
+                tgame.gstate.con->setCharForeground((doors[i].x*2), (doors[i].y*2), color_door_main);
+                tgame.gstate.con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2), color_door_main);
+                tgame.gstate.con->setCharForeground((doors[i].x*2), (doors[i].y*2)+1, color_door_main);
+                tgame.gstate.con->setCharForeground((doors[i].x*2)+1, (doors[i].y*2)+1, color_door_main);
             } else {    
                 //con->putChar(doors[i].x, doors[i].y, TCOD_CHAR_CROSS, TCOD_BKGND_SET);
                 //con->putChar(doors[i].x, doors[i].y, 444, TCOD_BKGND_SET);
-                con->putChar(doors[i].x, doors[i].y, u8_door, TCOD_BKGND_SET);
+                tgame.gstate.con->putChar(doors[i].x, doors[i].y, tgame.tileval.u8_door, TCOD_BKGND_SET);
                 // door color swwitches wrong between 8tile and 8ASCII
-                con->setCharBackground(doors[i].x, doors[i].y, TCODColor::black, TCOD_BKGND_SET);
-                con->setCharForeground(doors[i].x, doors[i].y, door_c);
+                tgame.gstate.con->setCharBackground(doors[i].x, doors[i].y, TCODColor::black, TCOD_BKGND_SET);
+                tgame.gstate.con->setCharForeground(doors[i].x, doors[i].y, door_c);
             }    
         }
     }
     
     for (unsigned int i = 0; i<monvector.size(); ++i) {
         if (monvector[i].selfchar == '%')
-        monvector[i].draw(0); // first draws dead bodies
+        monvector[i].draw(0, tgame); // first draws dead bodies
     }
 
     for (unsigned int i = 0; i<monvector.size(); ++i) {
         if (monvector[i].selfchar != '%')
-        monvector[i].draw(0); // then draws monsters still alive
+        monvector[i].draw(0, tgame); // then draws monsters still alive
     }
 
 
-    for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->draw(0); // player vector
+    for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->draw(0, tgame); // player vector
 
 
     // BLIT MAP TO ROOT (both default and bigg map)
-    if(!bigg){
+    if(!tgame.gstate.bigg){
         int smalloff_x = off_x;
         int smalloff_y = off_y;
         if((smalloff_y+MAP_HEIGHT_AREA) > MAP_HEIGHT) smalloff_y = MAP_HEIGHT-MAP_HEIGHT_AREA;
         if((smalloff_x+MAP_WIDTH_AREA) > MAP_WIDTH) smalloff_x = MAP_WIDTH-MAP_WIDTH_AREA;
         // source, source_x, source_y, howmuch_x, howmuch_y, target,
         //std::cout << "SMALLOFF: " << smalloff_x << std::endl;
-        TCODConsole::blit(con,smalloff_x,smalloff_y, win_x, win_y,TCODConsole::root,0,0);
-        off_xx = smalloff_x;
-        off_yy = smalloff_y;
+        TCODConsole::blit(tgame.gstate.con,smalloff_x,smalloff_y, win_x, win_y,TCODConsole::root,0,0);
+        tgame.gstate.off_xx = smalloff_x;
+        tgame.gstate.off_yy = smalloff_y;
         //std::cout << "SMALLOFF: " << off_xx << " " << off_yy << std::endl;
     } else {
         int bigoff_x = (player.x*2)-55;
@@ -3174,20 +2496,20 @@ void render_all (){
         if(bigoff_x < 0) bigoff_x = 0;
         if(bigoff_y < 0) bigoff_y = 0;
         // bigg: *2 to pick the correct source point of the square to copy
-        TCODConsole::blit(con, bigoff_x, bigoff_y, win_x, win_y,TCODConsole::root,0,0);
+        TCODConsole::blit(tgame.gstate.con, bigoff_x, bigoff_y, win_x, win_y,TCODConsole::root,0,0);
         //std::cout << " " << bigoff_x;
-        offbig_x = bigoff_x;
-        offbig_y = bigoff_y; // sets offset to bring during monster attacks
+        tgame.gstate.offbig_x = bigoff_x;
+        tgame.gstate.offbig_y = bigoff_y; // sets offset to bring during monster attacks
     }
    
     
-        render_top();
+        render_top(tgame);
     
 
-        if(!combat_mode && !wid_combat_open) render_base();
+        if(!combat_mode && !wid_combat_open) render_base(tgame);
         render_messagelog();
         render_rpanel();
-        render_minimaps();
+        render_minimaps(tgame);
 
         if(wid_help){
             render_help();
@@ -3321,7 +2643,7 @@ int m_x = 0;
 int m_y = 0;
 bool combat_null = false; // set if waiting instead of moving, in combat
 
-void player_move_attack(int dx, int dy){
+void player_move_attack(int dx, int dy, Game &tgame){
 
     // add movement penalty if player moved
     //int temp_cmove = 0; 
@@ -3518,7 +2840,7 @@ void player_move_attack(int dx, int dy){
 
         //player.stats.attack(player, monvector[target], 0); // attack
 
-        if(!no_combat)player.combat_move -= 4; // decrease combat movement only if in combat mode
+        if(!tgame.gstate.no_combat)player.combat_move -= 4; // decrease combat movement only if in combat mode
         if (monvector[target].stats.hp < 1){
                 //monvector.erase (target); 
                 --killall;
@@ -3545,57 +2867,57 @@ void player_move_attack(int dx, int dy){
                 monvector[target].alive = false;
 
                 monvector[target].self_16 = 526;
-                monvector[target].self_8 = 506;
-
+                monvector[target].self_8 = 451; // was 506, why?
+ 
                 //monvector[target].x=-365;
                 //monvector[target].y=-365; // teleport out of map   
                 player.move(0, 0, monvector); // updates player position so feet get bloody
-                fov_recompute = true;
-                render_all();
+                tgame.gstate.fov_recompute = true;
+                render_all(tgame);
                 TCODConsole::flush();
                 m_x = 0;
                 m_y = 0;
             }
             else {
-                if(!bigg2){
+                if(!tgame.gstate.bigg2){
                     char tchar = monvector[target].selfchar;
                     //TCODConsole::root->clear();
                     monvector[target].colorb = TCODColor::red;
                     monvector[target].hit = true;
                     player.colorb = TCODColor::black;
-                    if (!bigg) monvector[target].selfchar = '-';
-                    player.draw(1);
-                    monvector[target].draw(1);
+                    if (!tgame.gstate.bigg) monvector[target].selfchar = '-';
+                    player.draw(1, tgame);
+                    monvector[target].draw(1, tgame);
 
                      
-                    if (bigg){   
-                        TCODConsole::blit(con,offbig_x,offbig_y+2,110,68,TCODConsole::root,0,2);
+                    if (tgame.gstate.bigg){   
+                        TCODConsole::blit(tgame.gstate.con,tgame.gstate.offbig_x,tgame.gstate.offbig_y+2,110,68,TCODConsole::root,0,2);
                     } else {    
                     //    TCODConsole::blit(con,0,0,110,70,TCODConsole::root,0,0);
                     //} else {
-                        TCODConsole::blit(con,off_xx,off_yy+1,110,69,TCODConsole::root,0,1);
+                        TCODConsole::blit(tgame.gstate.con,tgame.gstate.off_xx,tgame.gstate.off_yy+1,110,69,TCODConsole::root,0,1);
                     }
 
                     //TCODConsole::blit(con,0,0,0,0,TCODConsole::root,0,0);
                     TCODConsole::flush();
                     Sleep(250); // shitty way for attack "animation", uses windows.h
-                    monvector[target].colorb = color_dark_ground;
-                    player.colorb = color_dark_ground;
+                    monvector[target].colorb = tgame.gstate.color_dark_ground;
+                    player.colorb = tgame.gstate.color_dark_ground;
                     monvector[target].hit = false;
-                    if (!bigg) monvector[target].selfchar = tchar;
+                    if (!tgame.gstate.bigg) monvector[target].selfchar = tchar;
                
-                    player.draw(0);
-                    monvector[target].draw(0);
-                    con->clear();
-                    fov_recompute = true;
-                    render_all();
+                    player.draw(0, tgame);
+                    monvector[target].draw(0, tgame);
+                    tgame.gstate.con->clear();
+                    tgame.gstate.fov_recompute = true;
+                    render_all(tgame);
                     TCODConsole::flush();
                 }
 
-                mesg->setAlignment(TCOD_LEFT);
-                mesg->setDefaultForeground(TCODColor::yellow);
-                mesg->setDefaultBackground(TCODColor::black);
-                mesg->print(1, 1, "Hit!");
+                tgame.gstate.mesg->setAlignment(TCOD_LEFT);
+                tgame.gstate.mesg->setDefaultForeground(TCODColor::yellow);
+                tgame.gstate.mesg->setDefaultBackground(TCODColor::black);
+                tgame.gstate.mesg->print(1, 1, "Hit!");
                 /* 
                 msg_log msg1;
                 sprintf(msg1.message, "You've hit a %c%s%c!",TCOD_COLCTRL_1, monvector[target].name, TCOD_COLCTRL_STOP);
@@ -3621,7 +2943,7 @@ void player_move_attack(int dx, int dy){
 
 int alreadydead = 0;
 
-int handle_keys(Object_player &duh) {
+int handle_keys(Object_player &duh, Game &tgame) {
 
     bool mycase_p;
     mycase_p = 0;
@@ -3639,17 +2961,17 @@ int handle_keys(Object_player &duh) {
 
     //if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'y' ) combat_mode = true;
 
-    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'v' ){ if (revealdungeon) revealdungeon = false; else revealdungeon = true; Sleep (100); fov_recompute = true;}
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'v' ){ if (revealdungeon) revealdungeon = false; else revealdungeon = true; Sleep (100); tgame.gstate.fov_recompute = true;}
 
-    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'd' ){ if (debug) debug = false; else debug = true;
-        fov_recompute = true; Sleep (100);}
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'd' ){ if (tgame.gstate.debug) tgame.gstate.debug = false; else tgame.gstate.debug = true;
+        tgame.gstate.fov_recompute = true; Sleep (100);}
 
     if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'w' ){
 
-        fov_recompute = true;
+        tgame.gstate.fov_recompute = true;
 
-        if(bigg){
-            if(u16_door == t28_door){
+        if(tgame.gstate.bigg){
+            if(tgame.tileval.u16_door == tgame.tileval.t28_door){
                 color_bdark_wall.r = 0;
                 color_bdark_wall.g = 0;
                 color_bdark_wall.b = 0;
@@ -3659,20 +2981,20 @@ int handle_keys(Object_player &duh) {
                 color_door_main.r = 0;
                 color_door_main.g = 0;
                 color_door_main.b = 0;
-                u16_door = t16_door;
-                u16_doorv = t16_doorv;
-                //u16_player = t16_player; 
-                u16_wall = t16_wall;
-                u16_vwall = t16_vwall;
-                u16_trwall = t16_trwall;
-                u16_tlwall = t16_tlwall;
-                u16_bwall = t16_bwall;
-                u16_ibwall = t16_ibwall;
-                u16_floor1 = t16_floor1; 
-                u16_floor2 = t16_floor2; 
-                //u16_orc = t16_orc; 
-                //u16_troll = t16_troll; 
-                //u16_corpse = t16_corpse; 
+                tgame.tileval.u16_door = tgame.tileval.t16_door;
+                tgame.tileval.u16_doorv = tgame.tileval.t16_doorv;
+                //tgame.tileval.u16_player = tgame.tileval.t16_player; 
+                tgame.tileval.u16_wall = tgame.tileval.t16_wall;
+                tgame.tileval.u16_vwall = tgame.tileval.t16_vwall;
+                tgame.tileval.u16_trwall = tgame.tileval.t16_trwall;
+                tgame.tileval.u16_tlwall = tgame.tileval.t16_tlwall;
+                tgame.tileval.u16_bwall = tgame.tileval.t16_bwall;
+                tgame.tileval.u16_ibwall = tgame.tileval.t16_ibwall;
+                tgame.tileval.u16_floor1 = tgame.tileval.t16_floor1; 
+                tgame.tileval.u16_floor2 = tgame.tileval.t16_floor2; 
+                //tgame.tileval.u16_orc = tgame.tileval.t16_orc; 
+                //tgame.tileval.u16_troll = tgame.tileval.t16_troll; 
+                //tgame.tileval.u16_corpse = tgame.tileval.t16_corpse; 
             } else {
                 color_bdark_wall.r = color_light_wall.r;
                 color_bdark_wall.g = color_light_wall.g;
@@ -3683,65 +3005,65 @@ int handle_keys(Object_player &duh) {
                 color_door_main.r = 222;
                 color_door_main.g = 136;
                 color_door_main.b = 0;
-                u16_door = t28_door;
-                u16_doorv = t28_door;
-                u16_player = t28_player; 
-                u16_wall = t28_wall; 
-                u16_vwall = t28_nwall;
-                u16_trwall = t28_nwall;
-                u16_tlwall = t28_nwall;
-                u16_bwall = t28_wall;
-                u16_ibwall = t28_wall;
-                u16_floor1 = t28_floor1; 
-                u16_floor2 = t28_floor2; 
-                u16_orc = t28_orc; 
-                u16_troll = t28_troll; 
-                u16_corpse = t28_corpse;
+                tgame.tileval.u16_door = tgame.tileval.t28_door;
+                tgame.tileval.u16_doorv = tgame.tileval.t28_door;
+                tgame.tileval.u16_player = tgame.tileval.t28_player; 
+                tgame.tileval.u16_wall = tgame.tileval.t28_wall; 
+                tgame.tileval.u16_vwall = tgame.tileval.t28_nwall;
+                tgame.tileval.u16_trwall = tgame.tileval.t28_nwall;
+                tgame.tileval.u16_tlwall = tgame.tileval.t28_nwall;
+                tgame.tileval.u16_bwall = tgame.tileval.t28_wall;
+                tgame.tileval.u16_ibwall = tgame.tileval.t28_wall;
+                tgame.tileval.u16_floor1 = tgame.tileval.t28_floor1; 
+                tgame.tileval.u16_floor2 = tgame.tileval.t28_floor2; 
+                tgame.tileval.u16_orc = tgame.tileval.t28_orc; 
+                tgame.tileval.u16_troll = tgame.tileval.t28_troll; 
+                tgame.tileval.u16_corpse = tgame.tileval.t28_corpse;
             }    
         } else { // block to swap basic 8 mode
-            if(u8_door == TCOD_CHAR_CROSS){
-                U8 = true; // sprite
-                u8_door = 444;
-                u8_player = 445;
-                u8_floor1 = 447;
-                u8_floor2 = 448;   
-                u8_wall = 446;
-                u8_hwall = 446;
-                u8_trwall = ' ';
-                u8_tlwall = ' ';
-                u8_vwall = ' ';
-                u8_bwall = 446;
-                u8_orc = 449; 
-                u8_troll = 450; 
-                u8_corpse = 451;
-                u8_wallCa = demake_sub_wall;
-                u8_wallCb = demake_main_wall;
-                u8_wallCd = demake_sub_wall;
-                u8_wallCc = demake_main_wall;
-                u8_floorCa = demake_main_floor;
-                u8_floorCb = demake_sub_floor;
+            if(tgame.tileval.u8_door == TCOD_CHAR_CROSS){
+                tgame.tileval.U8 = true; // sprite
+                tgame.tileval.u8_door = 444;
+                tgame.tileval.u8_player = 445;
+                tgame.tileval.u8_floor1 = 447;
+                tgame.tileval.u8_floor2 = 448;   
+                tgame.tileval.u8_wall = 446;
+                tgame.tileval.u8_hwall = 446;
+                tgame.tileval.u8_trwall = ' ';
+                tgame.tileval.u8_tlwall = ' ';
+                tgame.tileval.u8_vwall = ' ';
+                tgame.tileval.u8_bwall = 446;
+                tgame.tileval.u8_orc = 449; 
+                tgame.tileval.u8_troll = 450; 
+                tgame.tileval.u8_corpse = 451;
+                tgame.tileval.u8_wallCa = demake_sub_wall;
+                tgame.tileval.u8_wallCb = demake_main_wall;
+                tgame.tileval.u8_wallCd = demake_sub_wall;
+                tgame.tileval.u8_wallCc = demake_main_wall;
+                tgame.tileval.u8_floorCa = demake_main_floor;
+                tgame.tileval.u8_floorCb = demake_sub_floor;
             } else {
-                u8_door = TCOD_CHAR_CROSS;
-                U8 = false; // ASCII
-                u8_player = '@';
-                u8_floor1 = '.';
-                u8_floor2 = '.';
-                u8_wall = 668;
-                u8_hwall = 666;
-                u8_trwall = 669;
-                u8_tlwall = ' ';
-                u8_vwall = 667;
-                u8_bwall = ' ';
-                u8_orc = 'o'; 
-                u8_troll = 'T'; 
-                u8_corpse = '%';
+                tgame.tileval.u8_door = TCOD_CHAR_CROSS;
+                tgame.tileval.U8 = false; // ASCII
+                tgame.tileval.u8_player = '@';
+                tgame.tileval.u8_floor1 = '.';
+                tgame.tileval.u8_floor2 = '.';
+                tgame.tileval.u8_wall = 668;
+                tgame.tileval.u8_hwall = 666;
+                tgame.tileval.u8_trwall = 669;
+                tgame.tileval.u8_tlwall = ' ';
+                tgame.tileval.u8_vwall = 667;
+                tgame.tileval.u8_bwall = ' ';
+                tgame.tileval.u8_orc = 'o'; 
+                tgame.tileval.u8_troll = 'T'; 
+                tgame.tileval.u8_corpse = '%';
 
-                u8_wallCa = color_dark_wallF;
-                u8_wallCb = color_light_wall;
-                u8_wallCc = color_dark_wallF;
-                u8_wallCd = color_light_wall;
-                u8_floorCa = TCODColor::white;
-                u8_floorCb = color_light_ground;
+                tgame.tileval.u8_wallCa = color_dark_wallF;
+                tgame.tileval.u8_wallCb = color_light_wall;
+                tgame.tileval.u8_wallCc = color_dark_wallF;
+                tgame.tileval.u8_wallCd = color_light_wall;
+                tgame.tileval.u8_floorCa = TCODColor::white;
+                tgame.tileval.u8_floorCb = color_light_ground;
             }    
         }    
 
@@ -3753,16 +3075,11 @@ int handle_keys(Object_player &duh) {
         m_y = 0;
 
         std::cout << " Monster array: " << monvector.size() << std::endl;
-        for (unsigned int i = 0; i < monvector.size(); ++i){
-            delete monvector[i].path0;
-            delete monvector[i].path1;
-            monvector.erase (monvector.begin()+i); // erase monster vector on map regen
-             
+        for (auto &i : monvector){
+            delete i.path0;
+            delete i.path1;
         }    
         monvector.clear();
-        std::cout << " Monster array: " << monvector.size() << std::endl; // 0
-
-        for (unsigned int i = 0; i < doors.size(); ++i) doors.erase (doors.begin()+i); // erase monster vector on map regen
         doors.clear();
 
         if(color_light_wall.r == 1 || color_light_wall.r == 219){ // organge
@@ -3778,7 +3095,7 @@ int handle_keys(Object_player &duh) {
             color_light_ground2.r = 55;
             color_light_ground2.g = 86;
             color_light_ground2.b = 20;
-            if(u16_wall == t16_wall){
+            if(tgame.tileval.u16_wall == tgame.tileval.t16_wall){
                 color_bdark_wall.r = 0;
                 color_bdark_wall.g = 0;
                 color_bdark_wall.b = 0;
@@ -3789,7 +3106,7 @@ int handle_keys(Object_player &duh) {
                 color_door_main.g = 0;
                 color_door_main.b = 0;
             }    
-            if(u16_wall == t28_wall){
+            if(tgame.tileval.u16_wall == tgame.tileval.t28_wall){
                 color_bdark_wall.r = color_light_wall.r;
                 color_bdark_wall.g = color_light_wall.g;
                 color_bdark_wall.b = color_light_wall.b;
@@ -3807,7 +3124,7 @@ int handle_keys(Object_player &duh) {
             color_light_ground2.r = 186;
             color_light_ground2.g = 16;
             color_light_ground2.b = 158;
-            if(u16_wall == t16_wall){
+            if(tgame.tileval.u16_wall == tgame.tileval.t16_wall){
                 color_bdark_wall.r = 0;
                 color_bdark_wall.g = 0;
                 color_bdark_wall.b = 0;
@@ -3818,7 +3135,7 @@ int handle_keys(Object_player &duh) {
                 color_door_main.g = 0;
                 color_door_main.b = 0;
             }
-            if(u16_wall == t28_wall){
+            if(tgame.tileval.u16_wall == tgame.tileval.t28_wall){
                 color_bdark_wall.r = color_light_wall.r;
                 color_bdark_wall.g = color_light_wall.g;
                 color_bdark_wall.b = color_light_wall.b;
@@ -3836,7 +3153,7 @@ int handle_keys(Object_player &duh) {
             color_light_ground2.r = 90;
             color_light_ground2.g = 50;
             color_light_ground2.b = 150;
-            if(u16_wall == t16_wall){
+            if(tgame.tileval.u16_wall == tgame.tileval.t16_wall){
                 color_bdark_wall.r = 0;
                 color_bdark_wall.g = 0;
                 color_bdark_wall.b = 0;
@@ -3847,7 +3164,7 @@ int handle_keys(Object_player &duh) {
                 color_door_main.g = 0;
                 color_door_main.b = 0;
             }
-            if(u16_wall == t28_wall){
+            if(tgame.tileval.u16_wall == tgame.tileval.t28_wall){
                 color_bdark_wall.r = color_light_wall.r;
                 color_bdark_wall.g = color_light_wall.g;
                 color_bdark_wall.b = color_light_wall.b;
@@ -3865,7 +3182,7 @@ int handle_keys(Object_player &duh) {
             color_light_ground2.r = 1;
             color_light_ground2.g = 146;
             color_light_ground2.b = 170;
-            if(u16_wall == t16_wall){
+            if(tgame.tileval.u16_wall == tgame.tileval.t16_wall){
                 color_bdark_wall.r = 0;
                 color_bdark_wall.g = 0;
                 color_bdark_wall.b = 0;
@@ -3876,7 +3193,7 @@ int handle_keys(Object_player &duh) {
                 color_door_main.g = 0;
                 color_door_main.b = 0;
             }
-            if(u16_wall == t28_wall){
+            if(tgame.tileval.u16_wall == tgame.tileval.t28_wall){
                 color_bdark_wall.r = color_light_wall.r;
                 color_bdark_wall.g = color_light_wall.g;
                 color_bdark_wall.b = color_light_wall.b;
@@ -3885,20 +3202,20 @@ int handle_keys(Object_player &duh) {
 
         // set colors for 8 mode
         //if(!bigg){
-            if(u8_door != TCOD_CHAR_CROSS){ // demake (is this needed if colors don't change?)
-                u8_wallCa = demake_sub_wall;
-                u8_wallCb = demake_main_wall;
-                u8_wallCd = demake_sub_wall;
-                u8_wallCc = demake_main_wall;
-                u8_floorCa = demake_main_floor;
-                u8_floorCb = demake_sub_floor;
+            if(tgame.tileval.u8_door != TCOD_CHAR_CROSS){ // demake (is this needed if colors don't change?)
+                tgame.tileval.u8_wallCa = demake_sub_wall;
+                tgame.tileval.u8_wallCb = demake_main_wall;
+                tgame.tileval.u8_wallCd = demake_sub_wall;
+                tgame.tileval.u8_wallCc = demake_main_wall;
+                tgame.tileval.u8_floorCa = demake_main_floor;
+                tgame.tileval.u8_floorCb = demake_sub_floor;
             } else { // ASCII   
-                u8_wallCa = color_dark_wallF;
-                u8_wallCb = color_light_wall;
-                u8_wallCc = color_dark_wallF;
-                u8_wallCd = color_light_wall;
-                u8_floorCa = TCODColor::white;
-                u8_floorCb = color_light_ground;
+                tgame.tileval.u8_wallCa = color_dark_wallF;
+                tgame.tileval.u8_wallCb = color_light_wall;
+                tgame.tileval.u8_wallCc = color_dark_wallF;
+                tgame.tileval.u8_wallCd = color_light_wall;
+                tgame.tileval.u8_floorCa = TCODColor::white;
+                tgame.tileval.u8_floorCb = color_light_ground;
             }   
         //}    
 
@@ -3920,7 +3237,7 @@ int handle_keys(Object_player &duh) {
         duh.bloody = 0;
         for (int i = 0; i < MAP_HEIGHT ;++i){
             for (int l = 0; l < MAP_WIDTH ;++l) {
-                fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                tgame.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                         !(map_array[i * MAP_WIDTH + l].blocked));
                 //map_array[row * MAP_WIDTH + l] = Tile(1,1);
             }
@@ -3943,15 +3260,15 @@ int handle_keys(Object_player &duh) {
                         !(map_array[i * MAP_WIDTH + l].blocked));
             }
         }
-        fov_recompute = true;
+        tgame.gstate.fov_recompute = true;
         player.stats.hp = 30;
         player.selfchar = '@';
         game_state = playing;
         player.combat_move = 8;
-        set_black();
+        set_black(tgame);
         alreadydead = 0;
         //    fov_recompute = true;
-        render_all();
+        render_all(tgame);
         TCODConsole::flush(); // this updates the screen
         if(is_handle_combat) return quit2; // regenerates everything and quits combat
     }
@@ -3962,18 +3279,18 @@ int handle_keys(Object_player &duh) {
         m_x = 0;
         m_y = 0;
         TCODConsole::root->clear();
-        mesg->setAlignment(TCOD_LEFT);
-        mesg->setDefaultForeground(TCODColor::white);
-        mesg->setDefaultBackground(TCODColor::black);
-        mesg->print(1, 1, "Give a direction to dig dungeon");
+        tgame.gstate.mesg->setAlignment(TCOD_LEFT);
+        tgame.gstate.mesg->setDefaultForeground(TCODColor::white);
+        tgame.gstate.mesg->setDefaultBackground(TCODColor::black);
+        tgame.gstate.mesg->print(1, 1, "Give a direction to dig dungeon");
        
         // CRASH , why?
         //myvector[1]->draw(0);
        
-        if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
-        else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
+        if(!(duh.y > MAP_HEIGHT-8 )) TCODConsole::blit(tgame.gstate.mesg,0,0,33,3,tgame.gstate.con,1,MAP_HEIGHT-4);
+        else TCODConsole::blit(tgame.gstate.mesg,0,0,33,3,tgame.gstate.con,MAP_WIDTH-37,1);
 
-        TCODConsole::blit(con,0,0,win_x,win_y,TCODConsole::root,0,0);
+        TCODConsole::blit(tgame.gstate.con,0,0,win_x,win_y,TCODConsole::root,0,0);
 
         TCODConsole::flush();
         while (!mycase_p){
@@ -3982,8 +3299,8 @@ int handle_keys(Object_player &duh) {
                 std::cout << "Dig up." << std::endl; mycase_p = 1;
                 map_array[(duh.y - 1)*MAP_WIDTH +duh.x].blocked = 0;
                 map_array[(duh.y - 1)*MAP_WIDTH +duh.x].block_sight = 0;
-                mesg->clear();
-                fov_map->setProperties(duh.x, duh.y-1, 1, 1);
+                tgame.gstate.mesg->clear();
+                tgame.gstate.fov_map->setProperties(duh.x, duh.y-1, 1, 1);
                 /*
                 for (int i = 0; i < MAP_HEIGHT ;++i){
                     for (int l = 0; l < MAP_WIDTH ;++l) {
@@ -3998,17 +3315,17 @@ int handle_keys(Object_player &duh) {
                     }
                 }
                 */
-                fov_recompute = true;
+                tgame.gstate.fov_recompute = true;
                 return false;
             }
             if (TCODConsole::isKeyPressed(TCODK_DOWN)){ 
                 std::cout << "Dig down." << std::endl;mycase_p = 1; 
                 map_array[(duh.y + 1)*MAP_WIDTH +duh.x].blocked = 0;
                 map_array[(duh.y + 1)*MAP_WIDTH +duh.x].block_sight = 0;
-                mesg->clear();
+                tgame.gstate.mesg->clear();
                 for (int i = 0; i < MAP_HEIGHT ;++i){
                     for (int l = 0; l < MAP_WIDTH ;++l) {
-                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        tgame.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
@@ -4019,17 +3336,17 @@ int handle_keys(Object_player &duh) {
                         //map_array[row * MAP_WIDTH + l] = Tile(1,1);
                     }
                 }
-                fov_recompute = true;
+                tgame.gstate.fov_recompute = true;
                 return false; 
             }
             if (TCODConsole::isKeyPressed(TCODK_LEFT)){
                 std::cout << "Dig left." << std::endl;mycase_p = 1;
                 map_array[duh.y*MAP_WIDTH +(duh.x -1)].blocked = 0;
                 map_array[duh.y*MAP_WIDTH +(duh.x -1)].block_sight = 0;
-                mesg->clear();
+                tgame.gstate.mesg->clear();
                 for (int i = 0; i < MAP_HEIGHT ;++i){
                     for (int l = 0; l < MAP_WIDTH ;++l) {
-                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        tgame.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
@@ -4040,17 +3357,17 @@ int handle_keys(Object_player &duh) {
                         //map_array[row * MAP_WIDTH + l] = Tile(1,1);
                     }
                 }
-                fov_recompute = true;
+                tgame.gstate.fov_recompute = true;
                 return false;
             }
             if (TCODConsole::isKeyPressed(TCODK_RIGHT)){ 
                 std::cout << "Dig right." << std::endl;mycase_p = 1;
                 map_array[duh.y*MAP_WIDTH +(duh.x + 1)].blocked = 0;
                 map_array[duh.y*MAP_WIDTH +(duh.x + 1)].block_sight = 0;
-                mesg->clear();
+                tgame.gstate.mesg->clear();
                 for (int i = 0; i < MAP_HEIGHT ;++i){
                     for (int l = 0; l < MAP_WIDTH ;++l) {
-                        fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
+                        tgame.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
                         fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
                                 !(map_array[i * MAP_WIDTH + l].blocked));
@@ -4061,7 +3378,7 @@ int handle_keys(Object_player &duh) {
                         //map_array[row * MAP_WIDTH + l] = Tile(1,1);
                     }
                 }
-                fov_recompute = true;
+                tgame.gstate.fov_recompute = true;
                 return false;
             }
         }
@@ -4072,7 +3389,7 @@ int handle_keys(Object_player &duh) {
     if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_UP ){
         --bloodycount;
         --duh.bloody;  
-        player_move_attack(0, -1);
+        player_move_attack(0, -1, tgame);
         //std::cout << " Monster array: " << myvector.size() << std::endl;
     }
 
@@ -4081,7 +3398,7 @@ int handle_keys(Object_player &duh) {
     else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_DOWN){
         --bloodycount;
         --duh.bloody; 
-        player_move_attack(0, 1);
+        player_move_attack(0, 1, tgame);
     }
 
     // end KEY DOWN cycle
@@ -4089,7 +3406,7 @@ int handle_keys(Object_player &duh) {
     else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_LEFT){
         --bloodycount;
         --duh.bloody;   
-        player_move_attack(-1, 0);
+        player_move_attack(-1, 0, tgame);
     }
 
     // end KEY LEFT cycle
@@ -4097,14 +3414,14 @@ int handle_keys(Object_player &duh) {
     else if ( eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_RIGHT){
         --bloodycount; 
         --duh.bloody; 
-        player_move_attack(1, 0);
+        player_move_attack(1, 0, tgame);
     }
 
     // end KEY RIGHT cycle
 
     else if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == '.'){
         // wasted one mov point without moving
-        player_move_attack(0, 0);
+        player_move_attack(0, 0, tgame);
         combat_null = true;
     }
 
@@ -4912,7 +4229,9 @@ int menu_1(){
 
 int main() {
 
-    
+    Game GAME;
+    GAME.setup();
+
     //TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE);
     TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
     //TCODConsole::setCustomFont("sample_full_unicode.png",TCOD_FONT_LAYOUT_ASCII_INROW,32,2048);
@@ -4925,7 +4244,7 @@ int main() {
 
     for (int i = 0; i < MAP_HEIGHT ;++i){
         for (int l = 0; l < MAP_WIDTH ;++l) {
-            fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+            GAME.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
                         l].blocked));
         }
     }
@@ -4951,15 +4270,15 @@ int main() {
         }
     }
 
-    player.colorb = con->getCharBackground(player.x, player.y);
+    player.colorb = GAME.gstate.con->getCharBackground(player.x, player.y);
     //npc.colorb = con->getCharBackground(npc.x, npc.y);
 
-    player.colorb = color_dark_ground;
+    player.colorb = GAME.gstate.color_dark_ground;
     //npc.colorb = color_dark_ground;
 
     strcpy(player.name, "Playername");
 
-    fov_recompute = true;
+    GAME.gstate.fov_recompute = true;
 
     TCODConsole::initRoot(win_x, win_y, "FoE", false);
 
@@ -5018,7 +4337,7 @@ int main() {
 
     TCODConsole::mapAsciiCodeToFont(444,9,16); // door 8x8
     TCODConsole::mapAsciiCodeToFont(445,9,17); // player 8x8
-    t8_player = 445;
+    GAME.tileval.t8_player = 445;
     TCODConsole::mapAsciiCodeToFont(446,9,18); // wall 8x8
     TCODConsole::mapAsciiCodeToFont(447,9,19); // floor 8x8
     TCODConsole::mapAsciiCodeToFont(448,9,20); // floor.b 8x8
@@ -5026,44 +4345,44 @@ int main() {
     TCODConsole::mapAsciiCodeToFont(450,9,22); // troll 8x8
     TCODConsole::mapAsciiCodeToFont(451,9,23); // corpse 8x8
 
-    u16_door = t28_door;
-    u16_doorv = t28_door; // same door 
-    u16_player = t28_player; 
-    u16_wall = t28_wall; 
-    u16_vwall = t28_nwall;
-    u16_trwall = t28_nwall;
-    u16_tlwall = t28_nwall;
-    u16_bwall = t28_wall;
-    u16_ibwall = t28_wall;
-    u16_floor1 = t28_floor1; 
-    u16_floor2 = t28_floor2; 
-    u16_orc = t28_orc; 
-    u16_troll = t28_troll; 
-    u16_corpse = t28_corpse;
+    GAME.tileval.u16_door = GAME.tileval.t28_door;
+    GAME.tileval.u16_doorv = GAME.tileval.t28_door; // same door 
+    GAME.tileval.u16_player = GAME.tileval.t28_player; 
+    GAME.tileval.u16_wall = GAME.tileval.t28_wall; 
+    GAME.tileval.u16_vwall = GAME.tileval.t28_nwall;
+    GAME.tileval.u16_trwall = GAME.tileval.t28_nwall;
+    GAME.tileval.u16_tlwall = GAME.tileval.t28_nwall;
+    GAME.tileval.u16_bwall = GAME.tileval.t28_wall;
+    GAME.tileval.u16_ibwall = GAME.tileval.t28_wall;
+    GAME.tileval.u16_floor1 = GAME.tileval.t28_floor1; 
+    GAME.tileval.u16_floor2 = GAME.tileval.t28_floor2; 
+    GAME.tileval.u16_orc = GAME.tileval.t28_orc; 
+    GAME.tileval.u16_troll = GAME.tileval.t28_troll; 
+    GAME.tileval.u16_corpse = GAME.tileval.t28_corpse;
 
     //standard 8mode: ASCII 
-    u8_door = TCOD_CHAR_CROSS;
-    u8_doorv = TCOD_CHAR_CROSS; // same door 
-    u8_player = '@'; // 445 
-    u8_wall = 668; 
-    u8_vwall = 667;
-    u8_trwall = 669;
-    u8_tlwall = ' ';
-    u8_bwall = ' ';
-    u8_ibwall = t28_wall;
-    u8_floor1 = '.'; 
-    u8_floor2 = '.'; 
-    u8_orc = 'o'; 
-    u8_troll = 'T'; 
-    u8_corpse = '%';
-    u8_hwall = 666;
+    GAME.tileval.u8_door = TCOD_CHAR_CROSS;
+    GAME.tileval.u8_doorv = TCOD_CHAR_CROSS; // same door 
+    GAME.tileval.u8_player = '@'; // 445 
+    GAME.tileval.u8_wall = 668; 
+    GAME.tileval.u8_vwall = 667;
+    GAME.tileval.u8_trwall = 669;
+    GAME.tileval.u8_tlwall = ' ';
+    GAME.tileval.u8_bwall = ' ';
+    GAME.tileval.u8_ibwall = GAME.tileval.t28_wall;
+    GAME.tileval.u8_floor1 = '.'; 
+    GAME.tileval.u8_floor2 = '.'; 
+    GAME.tileval.u8_orc = 'o'; 
+    GAME.tileval.u8_troll = 'T'; 
+    GAME.tileval.u8_corpse = '%';
+    GAME.tileval.u8_hwall = 666;
 
-    u8_wallCa = color_dark_wallF;
-    u8_wallCb = color_light_wall;
-    u8_wallCc = color_dark_wallF;
-    u8_wallCd = color_light_wall;
-    u8_floorCa = TCODColor::white;
-    u8_floorCb = TCODColor::grey;
+    GAME.tileval.u8_wallCa = color_dark_wallF;
+    GAME.tileval.u8_wallCb = color_light_wall;
+    GAME.tileval.u8_wallCc = color_dark_wallF;
+    GAME.tileval.u8_wallCd = color_light_wall;
+    GAME.tileval.u8_floorCa = TCODColor::white;
+    GAME.tileval.u8_floorCb = TCODColor::grey;
     color_light_ground = TCODColor::grey;
     
 
@@ -5076,6 +4395,30 @@ int main() {
     */
 
     //TCODConsole::disableKeyboardRepeat();
+    //
+    TCODColor tempcol1 = TCODColor::lightGrey;
+    
+    TCODConsole::root->clear();
+    print_8x16(TCODConsole::root, 10, 5, "In eternity, where there is no time,", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 11, 7, "nothing can grow.", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 12, 9, "Nothing can become.", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 13, 11, "Nothing changes.", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 14, 13, "So Death created time", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 15, 15, "to grow the things that it would kill...", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 16, 17, "and you are reborn", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 17, 19, "but into the same life", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 18, 21, "that you've always been born into.", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 19, 23, "I mean, how many times have we", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 20, 25, "had this conversation?", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 21, 27, "Well, who knows?", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 22, 29, "When you can't remember your lives,", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 23, 31, "you can't change your lives,", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 24, 33, "and that is the terrible and the secret fate of all life.", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 25, 35, "You're trapped...", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 26, 37, "by that nightmare you keep waking up into.", tempcol1, TCODColor::black);
+    print_8x16(TCODConsole::root, 10, 41, "-Rustin \"Rust\" Cohle, True Detective", TCODColor::white, TCODColor::black);
+    TCODConsole::flush();
+    TCODConsole::waitForKeypress(true);
 
     // MENU CYCLE
     int loopme = 1;
@@ -5226,23 +4569,23 @@ int main() {
         //TCODConsole::root->putChar( 10,10, 0x2500 );
 
         if (!alreadydead){
-        if(fov_recompute) con->clear();
+        if(GAME.gstate.fov_recompute) GAME.gstate.con->clear();
         TCODConsole::root->clear();
         }
         //fov_recompute = true; // if disabled the screen goes dark
 
         
-        render_all(); 
+        render_all(GAME); 
       
         
-        I_am_moused();
+        I_am_moused(GAME);
 
         //TCODConsole::root->putChar( 10,10, 0x2500 );
         
         TCODConsole::flush(); // this updates the screen
 
         
-        for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->clear(); // player array, clear previous
+        for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->clear(GAME); // player array, clear previous
 
         //int pla_x = player.x;
         //int pla_y = player.y;
@@ -5252,10 +4595,10 @@ int main() {
 
         combat_mode = false; 
 
-        if (!no_combat){ // debug flag
+        if (!GAME.gstate.no_combat){ // debug flag
 
         for (unsigned int i = 0; i<monvector.size(); ++i) {
-            in_sight = fov_map->isInFov(monvector[i].x,monvector[i].y);
+            in_sight = GAME.gstate.fov_map->isInFov(monvector[i].x,monvector[i].y);
             if(in_sight && monvector[i].alive == true){ 
                 combat_mode = true; // trigger combat mode, if monster is sighted
                 
@@ -5285,11 +4628,11 @@ int main() {
          
             std::vector<Monster> monsters; // vector used for initiative juggling
   
-            con->clear();
+            GAME.gstate.con->clear();
             TCODConsole::root->clear(); 
 
-            fov_recompute = true;
-            render_all();
+            GAME.gstate.fov_recompute = true;
+            render_all(GAME);
             TCODConsole::flush(); // this updates the screen
                 
             bool break_combat = true;
@@ -5307,7 +4650,7 @@ int main() {
             
 
             for (unsigned int i = 0; i<monvector.size(); ++i){
-                in_sight = fov_map->isInFov(monvector[i].x,monvector[i].y);
+                in_sight = GAME.gstate.fov_map->isInFov(monvector[i].x,monvector[i].y);
                 if(!in_sight) monvector[i].in_sight = false; else monvector[i].in_sight = true;
                 if( (in_sight && monvector[i].alive) || (monvector[i].chasing && monvector[i].alive) ){
                     monvector[i].c_mode = true;
@@ -5380,7 +4723,7 @@ int main() {
                 r_panel->clear(); 
                 break;} // break combat mode if monsters all dead or out of FoV
 
-            con->clear();
+            GAME.gstate.con->clear();
             r_panel->clear();
             TCODConsole::root->clear();
 
@@ -5452,8 +4795,8 @@ int main() {
                     ,TCOD_COLCTRL_2,TCOD_CHAR_VLINE,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_CHAR_VLINE,TCOD_COLCTRL_STOP);
             widget_popup->print(0, 2,"%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",TCOD_COLCTRL_2,TCOD_CHAR_SW,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_HLINE,TCOD_CHAR_SE,TCOD_COLCTRL_STOP);
             
-            fov_recompute = true;
-            render_all();
+            GAME.gstate.fov_recompute = true;
+            render_all(GAME);
             //TCODConsole::blit(r_panel,0,0,0,0,TCODConsole::root,MAP_WIDTH_AREA, 0);
             TCODConsole::blit(widget_popup,0,0,36,3,TCODConsole::root, 40, 65);
             //TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT_AREA+2);
@@ -5468,11 +4811,11 @@ int main() {
             for (unsigned int i = 0; i<monsters.size(); ++i) {
                 if (i == (player_own - 1)){ // -1 because vector starts at 0
                     //std::cout << "Player initiative position: " << player.initiative << std::endl;
-                    con->clear();
+                    GAME.gstate.con->clear();
                     TCODConsole::root->clear();
 
-                    fov_recompute = true;
-                    render_all();
+                    GAME.gstate.fov_recompute = true;
+                    render_all(GAME);
                     //render_messagelog();
                     //render_minimaps();
 
@@ -5482,7 +4825,7 @@ int main() {
 
                         bool didmove = false; // flag if player moved in this loop
 
-                        player_action = handle_keys(player);
+                        player_action = handle_keys(player, GAME);
 
                         if (player_action == quit2){ // quit combat
                             Sleep(100);
@@ -5499,7 +4842,7 @@ int main() {
                         if ((m_x != 0 || m_y != 0 || combat_null) && player.combat_move > 0){
                             player.move(m_x, m_y, monvector);
                             --player.combat_move;
-                            fov_recompute = true;
+                            GAME.gstate.fov_recompute = true;
                             didmove = true;
                             combat_null = false; // reset waiting action
                         } else didmove = false; // player action
@@ -5518,7 +4861,7 @@ int main() {
 
                         // monsters chasing and not in FoV do not ger updated    
                         for (unsigned int n = 0; n<monvector.size(); ++n) {
-                            in_sight = fov_map->isInFov(monvector[n].x,monvector[n].y);
+                            in_sight = GAME.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y);
                             if(in_sight && monvector[n].alive == true){
                                 monvector[n].c_mode = true;
                                 monvector[n].pl_x = player.x; // if player in sight, store player pos
@@ -5609,7 +4952,7 @@ int main() {
                         else mov_bar = TCODColor::white;
                         render_bar_s2(1, 2, BAR_WIDTH, "Mov", player.combat_move, 8,
                             TCODColor::lightPurple, TCODColor::darkerPurple, mov_bar);
-                        I_am_moused();
+                        I_am_moused(GAME);
                         if(msg_log_list.size() > 0){
                             Message_Log();
                         }
@@ -5618,7 +4961,7 @@ int main() {
                         //render_messagelog();
                         //render_minimaps();
                         //render_rpanel();
-                        render_all();
+                        render_all(GAME);
                         TCODConsole::flush(); // this updates the screen
                     }
                     // PLAYER BLOCK
@@ -5636,8 +4979,8 @@ int main() {
                     
               
             
-            fov_recompute = true;
-            render_all();
+            GAME.gstate.fov_recompute = true;
+            render_all(GAME);
             //TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT_AREA+2);
             TCODConsole::blit(widget_popup,0,0,34,1,TCODConsole::root, 40, 66);
             //render_messagelog();
@@ -5662,8 +5005,8 @@ int main() {
                             //TCODConsole::root->print(win_x/2,win_y-4,"%cMONSTER TURN%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
 
                             TCODConsole::root->clear();
-                            fov_recompute = true;
-                            render_all();
+                            GAME.gstate.fov_recompute = true;
+                            render_all(GAME);
                             r_panel->clear();
                             widget_popup->clear();
                             TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
@@ -5727,15 +5070,15 @@ int main() {
                             TCODConsole::flush(); // this block to update player rendering before monster TURN
 
                             bool seehere = false;
-                            seehere = fov_map->isInFov(monvector[b].x,monvector[b].y);
+                            seehere = GAME.gstate.fov_map->isInFov(monvector[b].x,monvector[b].y);
                             std::cout << "monster doing something" << std::endl;
                             int ctl = 0;
                             while (monvector[b].combat_move > 0){
-                                std::cout << "monster move: " << monvector[b].combat_move;
+                                std::cout << "cfgmonster move: " << monvector[b].combat_move;
 
                                 // take turn (monster)
                                 if (monvector[b].myai->take_turn(monvector[b], player, monvector[b].pl_x,
-                                        monvector[b].pl_y,seehere) );// render_all();
+                                        monvector[b].pl_y,seehere, GAME) );// render_all();
 
                                 if (player.stats.hp < 1 && !alreadydead ){
                                     player_death();
@@ -5747,15 +5090,15 @@ int main() {
                                 }
 
                                 if (ctl > 1){
-                                    con->clear();
-                                    fov_recompute = true;
+                                    GAME.gstate.con->clear();
+                                    GAME.gstate.fov_recompute = true;
                                     ctl = 0;
                                 }
                                 
                                 widget_popup->clear();
                                 TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
                                 widget_popup->print(0, 0, "%cMONSTER TURNS%c", TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
-                                render_all();
+                                render_all(GAME);
                                 TCODConsole::blit(widget_popup,0,0,13,1,TCODConsole::root, (MAP_WIDTH_AREA/2)-6, 66);
                                 TCODConsole::flush();
                                 Sleep(100);
@@ -5802,7 +5145,7 @@ int main() {
             }
         } // deactivates combat mode for all monsters, so they are properly re-flagged on next loop 
         
-        player_action = handle_keys(player);
+        player_action = handle_keys(player, GAME);
 
 
         if (player_action == quit) break; // break main while loop to exit program
@@ -5823,9 +5166,9 @@ int main() {
                     }
 
                     bool in_sight;
-                    fov_recompute = true;
+                    GAME.gstate.fov_recompute = true;
 
-                    in_sight = fov_map->isInFov(monvector[i].x,monvector[i].y);
+                    in_sight = GAME.gstate.fov_map->isInFov(monvector[i].x,monvector[i].y);
                     // take turn for monster in sight OR monster chasing and not bored
                     if (in_sight || (monvector[i].chasing && !monvector[i].boren)){
 
@@ -5877,7 +5220,7 @@ int main() {
                         }
                      
                         if (monvector[i].myai->take_turn(monvector[i], player, monvector[i].pl_x,
-                                monvector[i].pl_y,in_sight)); //render_all();
+                                monvector[i].pl_y,in_sight, GAME)); //render_all();
                    
                         // awake monsters seen
                         for (unsigned int l = 0; l<monvector.size(); ++l) {
@@ -5918,7 +5261,7 @@ int main() {
             alreadydead = 1;
         } else {
             player.move(m_x, m_y, monvector);
-            fov_recompute = true;
+            GAME.gstate.fov_recompute = true;
         } // this updates the player movement after the monster turn
 
         } // game state
