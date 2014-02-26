@@ -6,6 +6,8 @@
 #include "libtcod.hpp"
 #include <windows.h> // for Sleep() and not currently used
 #include <random>
+#include <string>
+#include <memory>
 
 #include "loader.h"
 //#include "tilevalues.h"
@@ -4201,7 +4203,7 @@ void draw_menu_2(int state, int pickone, int sel, int rolled, int pick, Statisti
     TCODConsole::root->printRect(4, 38, 60, 20, "Six numbers will be generated (%c2d6+6%c, for each attribute), when accepted, you can then bind each of the six Categories to one of the numbers. Note that each level corresponds to the sum of the one below. For example: MMC + MMP + MMS = MM, MM + MR = M. \"Capacity\" also defines the maximum \"Power\" and \"Speed\" can reach.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
 }
 
-int menu_1(){
+int menu_key(){
     TCOD_key_t key;
     TCOD_mouse_t mouse;
     TCOD_event_t eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
@@ -4224,6 +4226,66 @@ int menu_1(){
     }  
     return 0;
 }
+
+int UI_menu (int posx, int posy, std::vector<std::string> pack){
+    int what_menu = 0; // constant-based for keys
+    int menu_index = 1; // point at selected option
+    int options = pack.size(); // number of options
+
+    unsigned int sizx = 0;
+    for (auto count : pack){
+        if (sizx < count.length()) sizx = count.length();
+    }    
+    sizx += 2; // some space
+    int sizy = options+2; // +2 lines for some space
+    //auto menu = new TCODConsole(sizx, sizy);
+    std::shared_ptr<TCODConsole> menu  (new TCODConsole(sizx, sizy)); // should this stay preserved in GAME object?
+
+    while(1){
+        menu->clear();
+        menu->setAlignment(TCOD_LEFT);
+        menu->setBackgroundFlag(TCOD_BKGND_SET);
+
+        int index = 1;
+        for (auto count : pack){
+            if (index == menu_index){
+                menu->setDefaultForeground(TCODColor::black);
+                menu->setDefaultBackground(TCODColor::white);
+                menu->print(1, index, "%s", count.c_str());
+                menu->setDefaultForeground(TCODColor::white);
+                menu->setDefaultBackground(TCODColor::black);
+            } else {
+                menu->setDefaultForeground(TCODColor::white);
+                menu->setDefaultBackground(TCODColor::black);
+                menu->print(1, index, "%s", count.c_str());
+            }
+            ++index;
+        }   
+
+        what_menu = menu_key(); // polls keyboard
+
+        if (what_menu == move_up){
+            if(menu_index == 1){ 
+                menu_index = options;
+            } else --menu_index;
+        }    
+        
+        if (what_menu == move_down){
+            if(menu_index == options){ 
+                menu_index = 1;
+            } else ++menu_index; 
+        }
+
+        if (what_menu == action) return menu_index;
+
+        if (TCODConsole::isWindowClosed()) return 0;
+
+        TCODConsole::blit(menu.get(),0,0,0,0,TCODConsole::root, posx, posy);
+        TCODConsole::flush(); // this updates the screen
+    }
+
+    return 666; 
+}    
 
 
 
@@ -4420,37 +4482,34 @@ int main() {
     TCODConsole::flush();
     TCODConsole::waitForKeypress(true);
 
+    TCODConsole::root->clear();
+    std::vector<std::string> vecstr;
+    std::string st1 = "Generate new character";
+    std::string st2 = "Skip generation";
+    std::string st3 = "QUIT";
+                     //generate new  
+    vecstr.push_back(st1);
+    vecstr.push_back(st2);
+    vecstr.push_back(st3);
+       
+    int menu_index = 1;
+    switch ( UI_menu(19, 29, vecstr) ){
+        case 3:
+            return 0;
+            break;
+        case 1:
+            menu_index = 1;
+            break;
+        case 2:
+            menu_index = 2;
+            break;
+    }    
+
+    
     // MENU CYCLE
     int loopme = 1;
-    int menu_index = 1;
     int what_menu = 0;
-    while (loopme){
-        TCODConsole::root->clear();
-      
-        draw_menu_1(menu_index);
-        what_menu = menu_1();
-
-        if (what_menu == move_up){
-            if(menu_index == 1){ 
-                menu_index = 3;
-            } else --menu_index;
-        }    
-        
-        if (what_menu == move_down){
-            if(menu_index == 3){ 
-                menu_index = 1;
-            } else ++menu_index; 
-        }    
-
-        if (what_menu == action && menu_index == 1) loopme = 0;  
-        if (what_menu == action && menu_index == 2) loopme = 0;
-        if (what_menu == action && menu_index == 3) return 0;
-
-        if (TCODConsole::isWindowClosed()) return 0;
-
-        TCODConsole::flush(); // this updates the screen
-    }
-
+   
     if(menu_index == 1){
         loopme = 1;
         menu_index = 1;
@@ -4475,7 +4534,7 @@ int main() {
         if (doingso && (selection > 6)) {ch_roll = 2; menu_index = 1;} // char done
         doingso = false;
        
-        what_menu = menu_1();
+        what_menu = menu_key();
 
         if (ch_roll == 1){ // binding numbers
             if (what_menu == move_up){
