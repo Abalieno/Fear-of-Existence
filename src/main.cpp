@@ -4223,7 +4223,7 @@ int menu_key(){
     if ((eve == TCOD_EVENT_KEY_PRESS && key.vk == TCODK_ENTER) || 
             (eve == TCOD_EVENT_KEY_PRESS && key.vk == TCODK_SPACE) ){
         return action;
-    }  
+    }
     return 0;
 }
 
@@ -4232,15 +4232,18 @@ int UI_menu (int posx, int posy, std::vector<std::string> pack){
     int menu_index = 1; // point at selected option
     int options = pack.size(); // number of options
 
-    unsigned int sizx = 0;
+    int sizx = 0;
+    int annoy = 0;
     for (auto count : pack){
-        if (sizx < count.length()) sizx = count.length();
+        annoy = count.length();
+        if (sizx < annoy) sizx = count.length();
     }    
     sizx += 2; // some space
     int sizy = options+2; // +2 lines for some space
     //auto menu = new TCODConsole(sizx, sizy);
     std::shared_ptr<TCODConsole> menu  (new TCODConsole(sizx, sizy)); // should this stay preserved in GAME object?
 
+    bool button = false; // used to make sure the button is unpressed as first
     while(1){
         menu->clear();
         menu->setAlignment(TCOD_LEFT);
@@ -4279,6 +4282,22 @@ int UI_menu (int posx, int posy, std::vector<std::string> pack){
         if (what_menu == action) return menu_index;
 
         if (TCODConsole::isWindowClosed()) return 0;
+
+        
+
+        bool flagged = false;
+        mousez = TCODMouse::getStatus();
+        int mousex = mousez.cx;
+        int mousey = mousez.cy;
+        for(int op = 1; op <= options; ++op){
+            if( (mousex >= posx  && mousex <= (posx+sizx) ) && mousey == (op+posy)){
+                flagged = true;
+                menu_index = op;
+            }
+        }
+        if(!mousez.lbutton) button = true;
+        if(button) // only execute if the button was depressed once
+            if(mousez.lbutton && flagged) return menu_index;
 
         TCODConsole::blit(menu.get(),0,0,0,0,TCODConsole::root, posx, posy);
         TCODConsole::flush(); // this updates the screen
@@ -4505,7 +4524,6 @@ int main() {
             break;
     }    
 
-    
     // MENU CYCLE
     int loopme = 1;
     int what_menu = 0;
