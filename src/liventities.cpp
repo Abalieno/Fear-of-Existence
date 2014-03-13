@@ -67,6 +67,14 @@ void Object_monster::clear(Game &tgame) {
         }
     }
 
+void Object_monster::drop(std::vector<Generic_object> &wrd_inv){
+    for(auto i : inventory){
+        i.drop_to(x, y);
+        wrd_inv.push_back(i);
+    }    
+    inventory.clear();
+}    
+
 void Object_player::draw(bool uh, Game &tgame) {
         tgame.gstate.con->setDefaultForeground(color);
         // uh is for attack animation. if uh is 0 then the background is taken from cell
@@ -384,3 +392,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
     }
 
 }
+
+void move_obj(int x, int y, std::vector<Generic_object> &wrd_inv){
+    //drop_to(x, y);
+}    

@@ -109,6 +109,8 @@ struct global_state{
     bool debug; // shows all monsters on map, when set
 
     TCODMap * fov_map;
+
+    std::vector<Generic_object> wd_object;
 };    
 
 class Game

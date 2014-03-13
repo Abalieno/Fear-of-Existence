@@ -17,6 +17,7 @@
 #include "game.h"
 #include "liventities.h"
 #include "debug.h" // debugmsg()
+#include "inventory.h"
 
 // #include <process.h> //used for threading?
 
@@ -46,6 +47,7 @@ const int   LIMIT_FPS = 20;
 const int quit = 1;
 const int move_up = 5;
 const int move_down = 10;
+const int keysel = 100;
 const int action = 15;
 const int quit2 = 99; // combat mode exit game
 const int playing = 1;
@@ -540,6 +542,11 @@ void place_objects(Rect room, lvl1 myenc){
                     monster.stats.wpn1.wpn_aspect = myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_aspect;
 
                     monster.stats.ML = myenc.vmob_types[myenc.cave1[u].enc[i]].ML;
+
+                    Generic_object item;
+                    strcpy(item.name, "objectname");
+                    item.glyph_8 = 'K';
+                    monster.inventory.push_back(item);
 
                     monster.path0 = new TCODPath(fov_map_mons_path0, 0.0f);
                     monster.path1 = new TCODPath(fov_map_mons_path1, 0.0f);
@@ -2471,6 +2478,10 @@ void render_all (Game &tgame){
         monvector[i].draw(0, tgame); // first draws dead bodies
     }
 
+    for (auto i : tgame.gstate.wd_object) {
+        tgame.gstate.con->putChar(i.posx(), i.posy(), i.glyph_8, TCOD_BKGND_SET);
+    }    
+
     for (unsigned int i = 0; i<monvector.size(); ++i) {
         if (monvector[i].selfchar != '%')
         monvector[i].draw(0, tgame); // then draws monsters still alive
@@ -2910,6 +2921,7 @@ void player_move_attack(int dx, int dy, Game &tgame){
                
                     player.draw(0, tgame);
                     monvector[target].draw(0, tgame);
+                    monvector[target].drop(tgame.gstate.wd_object); // drop monster inventory
                     tgame.gstate.con->clear();
                     tgame.gstate.fov_recompute = true;
                     render_all(tgame);
@@ -4203,10 +4215,10 @@ void draw_menu_2(int state, int pickone, int sel, int rolled, int pick, Statisti
     TCODConsole::root->printRect(4, 38, 60, 20, "Six numbers will be generated (%c2d6+6%c, for each attribute), when accepted, you can then bind each of the six Categories to one of the numbers. Note that each level corresponds to the sum of the one below. For example: MMC + MMP + MMS = MM, MM + MR = M. \"Capacity\" also defines the maximum \"Power\" and \"Speed\" can reach.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
 }
 
-int menu_key(){
+int menu_key(TCOD_event_t &eve, char &sel){
     TCOD_key_t key;
     TCOD_mouse_t mouse;
-    TCOD_event_t eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+    eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
 
     if (eve == TCOD_EVENT_KEY_PRESS && key.vk == TCODK_UP ){
         return move_up;
@@ -4224,13 +4236,17 @@ int menu_key(){
             (eve == TCOD_EVENT_KEY_PRESS && key.vk == TCODK_SPACE) ){
         return action;
     }
+    if (key.vk != TCODK_NONE){ 
+        sel = key.c;
+        return keysel;
+    }    
     return 0;
 }
 
-int UI_menu (int posx, int posy, std::vector<std::string> pack){
+int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack, std::vector<int> select){
     int what_menu = 0; // constant-based for keys
-    int menu_index = 1; // point at selected option
-    int options = pack.size(); // number of options
+    unsigned int menu_index = 1; // point at selected option
+    unsigned int options = pack.size(); // number of options
 
     int sizx = 0;
     int annoy = 0;
@@ -4240,16 +4256,18 @@ int UI_menu (int posx, int posy, std::vector<std::string> pack){
     }    
     sizx += 2; // some space
     int sizy = options+2; // +2 lines for some space
-    //auto menu = new TCODConsole(sizx, sizy);
-    std::shared_ptr<TCODConsole> menu  (new TCODConsole(sizx, sizy)); // should this stay preserved in GAME object?
+    std::shared_ptr<TCODConsole> menu  (new TCODConsole(sizx, sizy)); // should be preserved in GAME object?
 
     bool button = false; // used to make sure the button is unpressed as first
+    bool keypress = false; // used to make sure no key is already pressed
+    char sel = '!';
+    TCOD_event_t eve;
     while(1){
         menu->clear();
         menu->setAlignment(TCOD_LEFT);
         menu->setBackgroundFlag(TCOD_BKGND_SET);
-
-        int index = 1;
+        
+        unsigned int index = 1;
         for (auto count : pack){
             if (index == menu_index){
                 menu->setDefaultForeground(TCODColor::black);
@@ -4263,9 +4281,15 @@ int UI_menu (int posx, int posy, std::vector<std::string> pack){
                 menu->print(1, index, "%s", count.c_str());
             }
             ++index;
-        }   
+        } // next block highlight the letter 
+        for (unsigned int z = 0; z < select.size(); ++z){
+            if (select[z]){ // only highlight if non-0 
+                if( (z+1) != menu_index) menu->setCharBackground(select[z], z+1, TCODColor::red);
+                else menu->setCharForeground(select[z], z+1, TCODColor::red);
+            }    
+        }
 
-        what_menu = menu_key(); // polls keyboard
+        what_menu = menu_key(eve, sel); // polls keyboard
 
         if (what_menu == move_up){
             if(menu_index == 1){ 
@@ -4283,13 +4307,21 @@ int UI_menu (int posx, int posy, std::vector<std::string> pack){
 
         if (TCODConsole::isWindowClosed()) return 0;
 
+        if (eve == TCOD_EVENT_KEY_RELEASE){ keypress = true;}
         
+        if (what_menu == keysel && keypress){
+            for (unsigned int z = 0; z < select.size(); ++z){
+                if(select[z]){ // only if non-0 so if index present 
+                    if (sel == tolower(pack[z][select[z]-1]) ) return z+1; 
+                } 
+            }    
+        }    
 
         bool flagged = false;
         mousez = TCODMouse::getStatus();
-        int mousex = mousez.cx;
-        int mousey = mousez.cy;
-        for(int op = 1; op <= options; ++op){
+        unsigned int mousex = mousez.cx;
+        unsigned int mousey = mousez.cy;
+        for(unsigned int op = 1; op <= options; ++op){
             if( (mousex >= posx  && mousex <= (posx+sizx) ) && mousey == (op+posy)){
                 flagged = true;
                 menu_index = op;
@@ -4301,6 +4333,7 @@ int UI_menu (int posx, int posy, std::vector<std::string> pack){
 
         TCODConsole::blit(menu.get(),0,0,0,0,TCODConsole::root, posx, posy);
         TCODConsole::flush(); // this updates the screen
+        keypress = false; // so that is true only when release event happens
     }
 
     return 666; 
@@ -4503,6 +4536,7 @@ int main() {
 
     TCODConsole::root->clear();
     std::vector<std::string> vecstr;
+    std::vector<int> vecchar {10, 1, 1};
     std::string st1 = "Generate new character";
     std::string st2 = "Skip generation";
     std::string st3 = "QUIT";
@@ -4510,9 +4544,9 @@ int main() {
     vecstr.push_back(st1);
     vecstr.push_back(st2);
     vecstr.push_back(st3);
-       
+
     int menu_index = 1;
-    switch ( UI_menu(19, 29, vecstr) ){
+    switch ( UI_menu(19, 29, vecstr, vecchar) ){
         case 3:
             return 0;
             break;
@@ -4552,7 +4586,9 @@ int main() {
         if (doingso && (selection > 6)) {ch_roll = 2; menu_index = 1;} // char done
         doingso = false;
        
-        what_menu = menu_key();
+        char sel = '!'; // these two not really uswed
+        TCOD_event_t eve; 
+        what_menu = menu_key(eve, sel);
 
         if (ch_roll == 1){ // binding numbers
             if (what_menu == move_up){

@@ -6,6 +6,7 @@
 
 #include "libtcod.hpp"
 #include "game.h"
+#include "inventory.h"
 
 class Game;
 
@@ -88,6 +89,8 @@ public: // public should be moved down, but I keep it here for debug messages
     TCODPath *path1;
     int path_mode; // 0 = standard 1 = path with monster positions
 
+
+
     bool stuck;
     int bored;
     bool boren; // 100 bored, if to 0, boren true, start recuperating
@@ -103,6 +106,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int initiative;
     int temp_init; // total initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag, attacks during turn received
+
+    std::vector<Generic_object> inventory;
 
     Object_monster(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
         x = a;
@@ -144,6 +149,8 @@ public: // public should be moved down, but I keep it here for debug messages
         int dy = other_y - y;
         return sqrt (pow(dx, 2) + pow(dy, 2));
     }
+
+    void drop(std::vector<Generic_object> &wrd_inv);
 
     void clear(Game &tgame); 
 
@@ -258,6 +265,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int temp_init; // total initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag - number of attacks received in current turn
 
+    std::vector<Generic_object> inventory;
+
     Object_player(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter, 
             Statistics loc_sts) : stats(loc_fighter), sts(loc_sts) {
             
@@ -285,6 +294,8 @@ public: // public should be moved down, but I keep it here for debug messages
     }
 
     void draw(bool uh, Game &tgame); 
+
+    void move_obj(int x, int y, std::vector<Generic_object> &wrd_inv);
 
     void clear(Game &tgame);
 
