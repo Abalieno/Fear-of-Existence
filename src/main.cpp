@@ -47,7 +47,7 @@ const int   LIMIT_FPS = 20;
 const int quit = 1;
 const int move_up = 5;
 const int move_down = 10;
-const int keysel = 100;
+const int keysel = 100; // used in UI_menu
 const int action = 15;
 const int quit2 = 99; // combat mode exit game
 const int playing = 1;
@@ -83,7 +83,7 @@ TCODColor blood3(120, 0, 0);
 TCODColor blood4(100, 0, 0);
 TCODColor door_c(222, 136, 0);
 
-
+TCODColor colorbase(185, 192, 168);
 
 TCODColor demake(0,146,170);
 
@@ -4243,10 +4243,24 @@ int menu_key(TCOD_event_t &eve, char &sel){
     return 0;
 }
 
-int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack, std::vector<int> select){
+int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack){
     int what_menu = 0; // constant-based for keys
     unsigned int menu_index = 1; // point at selected option
     unsigned int options = pack.size(); // number of options
+    std::vector<int> select; // vector with int of letter highlight
+
+    // block to parse strings and check for highlight letter '&'
+    for ( auto &z : pack){ // walk string vector
+        int cnt = 1;
+        for( auto iter = z.begin() ; iter != z.end() ; ++iter){ // walk string
+            if( *iter == '&' ){ 
+                select.push_back(cnt);
+                iter = z.erase(iter);
+                break;
+            } 
+            ++cnt;
+        }    
+    }   
 
     int sizx = 0;
     int annoy = 0;
@@ -4276,7 +4290,7 @@ int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack
                 menu->setDefaultForeground(TCODColor::white);
                 menu->setDefaultBackground(TCODColor::black);
             } else {
-                menu->setDefaultForeground(TCODColor::white);
+                menu->setDefaultForeground(colorbase);
                 menu->setDefaultBackground(TCODColor::black);
                 menu->print(1, index, "%s", count.c_str());
             }
@@ -4536,17 +4550,17 @@ int main() {
 
     TCODConsole::root->clear();
     std::vector<std::string> vecstr;
-    std::vector<int> vecchar {10, 1, 1};
-    std::string st1 = "Generate new character";
-    std::string st2 = "Skip generation";
-    std::string st3 = "QUIT";
+    //std::vector<int> vecchar {10, 1, 1};
+    std::string st1 = "Generate &new character";
+    std::string st2 = "&Skip generation";
+    std::string st3 = "&QUIT";
                      //generate new  
     vecstr.push_back(st1);
     vecstr.push_back(st2);
     vecstr.push_back(st3);
 
     int menu_index = 1;
-    switch ( UI_menu(19, 29, vecstr, vecchar) ){
+    switch ( UI_menu(19, 29, vecstr) ){
         case 3:
             return 0;
             break;
