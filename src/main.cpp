@@ -1460,14 +1460,37 @@ void I_am_moused(Game &tgame){
         panel->setDefaultBackground(TCODColor::black);
     }
 
-    if (!found){
-            TCODConsole::root->setDefaultForeground(TCODColor::white);
-            TCODConsole::root->setAlignment(TCOD_LEFT);
-            TCODConsole::root->print(40, 0, "Mouse on [Nothing] at [%d.%d]", x, y);
-            TCODConsole::root->print(40, 1, "Player at [%d.%d]", player.x, player.y);
-            TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the screen as black
-            found = false;
+    int mapx = x + tgame.gstate.off_xx;
+    int mapy = y + tgame.gstate.off_yy;
+    if(mapx >= MAP_WIDTH || mapy >= MAP_HEIGHT) mapx = -1, mapy = -1; // off map bounds
+    if (!tgame.gstate.bigg && mapx == player.x && mapy == player.y){ // look for player
+        found = true;
+        TCODConsole::root->setDefaultForeground(TCODColor::white);
+        TCODConsole::root->setAlignment(TCOD_LEFT);
+        TCODConsole::root->print(0, 71, "MAP x,y [Player] at [%d.%d]", mapx, mapy);
+    } else { // look for monsters
+        for (unsigned int n = 0; n<monvector.size(); ++n){
+            if( (!tgame.gstate.bigg && (mapx == monvector[n].x && mapy == monvector[n].y && monvector[n].alive) 
+                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y))  ){
+                whatis = &(monvector[n].name[0]);
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                TCODConsole::root->setAlignment(TCOD_LEFT);
+                col_obj = monvector[n].color;
+                TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
+                TCODConsole::root->print(0, 71, "Mouse on [%c%s%c] at [%d.%d]",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
+                TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+                found = true;
+            }
         }
+    }    
+    if (!found){
+        TCODConsole::root->setDefaultForeground(TCODColor::white);
+        TCODConsole::root->setAlignment(TCOD_LEFT);
+        TCODConsole::root->print(0, 70, "Mouse on [Nothing] at [%d.%d]", x, y);
+        TCODConsole::root->print(0, 71, "MAP x,y [Nothing] at [%d.%d]", mapx, mapy);
+        TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the screen as black
+        found = false;
+    }
 }
 
 
@@ -5090,7 +5113,7 @@ int main() {
                         else mov_bar = TCODColor::white;
                         render_bar_s2(1, 2, BAR_WIDTH, "Mov", player.combat_move, 8,
                             TCODColor::lightPurple, TCODColor::darkerPurple, mov_bar);
-                        I_am_moused(GAME);
+                        
                         if(msg_log_list.size() > 0){
                             Message_Log();
                         }
@@ -5100,6 +5123,7 @@ int main() {
                         //render_minimaps();
                         //render_rpanel();
                         render_all(GAME);
+                        I_am_moused(GAME);
                         TCODConsole::flush(); // this updates the screen
                     }
                     // PLAYER BLOCK
