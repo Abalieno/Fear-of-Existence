@@ -88,7 +88,7 @@ void Object_player::draw(bool uh, Game &tgame) {
             }  
         }    
         tgame.gstate.con->setDefaultBackground(colorb);
-        if (tgame.gstate.fov_map->isInFov(x,y)){
+        if (tgame.gstate.fov_map->isInFov(x,y)){ // isn't it always?
             if(tgame.gstate.bigg){
                 tgame.gstate.con->putChar((x*2), (y*2), tgame.tileval.u16_player, TCOD_BKGND_SET);
                 tgame.gstate.con->putChar((x*2)+1, (y*2), tgame.tileval.u16_player+100, TCOD_BKGND_SET);
@@ -108,18 +108,17 @@ void Object_player::draw(bool uh, Game &tgame) {
     }
 
 void Object_player::clear(Game &tgame) {
-        if (tgame.gstate.fov_map->isInFov(x,y)){
+    if (tgame.gstate.fov_map->isInFov(x,y)){
         if(tgame.gstate.bigg){
-        tgame.gstate.con->putChar((x*2), (y*2), 503, TCOD_BKGND_NONE);
-        tgame.gstate.con->putChar((x*2)+1, (y*2), 603, TCOD_BKGND_NONE);
-        tgame.gstate.con->putChar((x*2), (y*2)+1, 703, TCOD_BKGND_NONE);
-        tgame.gstate.con->putChar((x*2)+1, (y*2)+1, 803, TCOD_BKGND_NONE);
+            tgame.gstate.con->putChar((x*2), (y*2), 503, TCOD_BKGND_NONE);
+            tgame.gstate.con->putChar((x*2)+1, (y*2), 603, TCOD_BKGND_NONE);
+            tgame.gstate.con->putChar((x*2), (y*2)+1, 703, TCOD_BKGND_NONE);
+            tgame.gstate.con->putChar((x*2)+1, (y*2)+1, 803, TCOD_BKGND_NONE);
         } else {
-
-        tgame.gstate.con->putChar(x, y, ' ', TCOD_BKGND_NONE);
-        }
+            tgame.gstate.con->putChar(x, y, ' ', TCOD_BKGND_NONE);
         }
     }
+}
 
 bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y, bool myfov, Game &tgame){
             //float dist = 0;

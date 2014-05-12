@@ -110,6 +110,7 @@ TCODColor orc(0, 200, 0);
 TCODColor troll(0, 255, 0);
 TCODColor monsterdead(TCODColor::lightGrey);
 
+TCODConsole *border = new TCODConsole(win_x, win_y);
 
 TCODConsole *con_mini = new TCODConsole(MAP_WIDTH+2, MAP_HEIGHT+2);
 
@@ -1302,11 +1303,8 @@ void threadm( void* pParams )
       //  }
     }
 
-// (was only) in combat
 void I_am_moused(Game &tgame){
-    //TCOD_key_t key;
-    //TCOD_mouse_t mouse;
-    //TCOD_event_t ev = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+    
     mousez = TCODMouse::getStatus();
     int x = mousez.cx;
     int y = mousez.cy;
@@ -1321,7 +1319,7 @@ void I_am_moused(Game &tgame){
     } else {    
 
         // extended msg log
-        if(mousez.lbutton && mousez.cy == 73 && (mousez.cx == 33 || mousez.cx == 34)) {
+        if(mousez.lbutton && y == 73 && (x == 33 || x == 34)) {
             if(MSG_MODE_XTD){ 
                 MSG_MODE_XTD=0; 
             } else {
@@ -1330,7 +1328,7 @@ void I_am_moused(Game &tgame){
             release_button = 0;
         }    
 
-        if(mousez.lbutton && mousez.cy == 0 && (mousez.cx == 0 || mousez.cx == 1 || mousez.cx == 2)) {
+        if(mousez.lbutton && y == 0 && (x == 0 || x == 1 || x == 2)) {
             if(wid_top_open){ 
                 wid_top_open=0; 
             } else {
@@ -1339,7 +1337,7 @@ void I_am_moused(Game &tgame){
             release_button = 0;
         }
 
-        if(mousez.lbutton && mousez.cy > (win_y-2) && mousez.cx > (win_x-4) ) {
+        if(mousez.lbutton && y > (win_y-2) && x > (win_x-4) ) {
             if(wid_combat_open){ 
                 wid_combat_open=0; 
             } else {
@@ -1348,9 +1346,9 @@ void I_am_moused(Game &tgame){
         release_button = 0;
         }
 
-        if( (mousez.lbutton && mousez.cy == 3 && mousez.cx == 127) ||
-                (mousez.lbutton && mousez.cy == 3 && mousez.cx == 126) ||
-                (mousez.lbutton && mousez.cy == 3 && mousez.cx == 125) ) {
+        if( (mousez.lbutton && y == 3 && x == 127) ||
+                (mousez.lbutton && y == 3 && x == 126) ||
+                (mousez.lbutton && y == 3 && x == 125) ) {
             if(wid_rpanel_open){ 
                 wid_rpanel_open=0; 
             } else {
@@ -1361,32 +1359,32 @@ void I_am_moused(Game &tgame){
     
 
     if(wid_top_open){
-        if(mousez.lbutton && mousez.cy == 0 && (mousez.cx >= 92 && mousez.cx <= 94)) {
+        if(mousez.lbutton && y == 0 && (x >= 92 && x <= 94)) {
             wid_help = 1;
         }
-        if(mousez.lbutton && mousez.cx == 4 && mousez.cy == 0) {stance_pos = 1; tgame.gstate.bigg = 0; tgame.gstate.fov_recompute = true;}
-        if(mousez.lbutton && mousez.cx == 5 && mousez.cy == 0) {stance_pos = 2; tgame.gstate.bigg = 1; tgame.gstate.fov_recompute = true;}
+        if(mousez.lbutton && x == 4 && y == 0) {stance_pos = 1; tgame.gstate.bigg = 0; tgame.gstate.fov_recompute = true;}
+        if(mousez.lbutton && x == 5 && y == 0) {stance_pos = 2; tgame.gstate.bigg = 1; tgame.gstate.fov_recompute = true;}
         //if(mousez.lbutton && mousez.cx == 2 && mousez.cy == 0) stance_pos = 3;
-        if(mousez.cx == 6 && mousez.cy == 0) {
+        if(x == 6 && y == 0) {
             tgame.gstate.bigg2 = 1;
             tgame.gstate.fov_recompute = true;
         } else {
             tgame.gstate.bigg2 = 0;
         }
-        if(mousez.cx == 7 && mousez.cy == 0) {
+        if(x == 7 && y == 0) {
             tgame.gstate.bigg3 = 1;
             tgame.gstate.fov_recompute = true;
         } else {
             tgame.gstate.bigg3 = 0;
         }
-        if( (mousez.cx >= 10 && mousez.cx < 18) && mousez.cy == 0) {
+        if( (x >= 10 && x < 18) && y == 0) {
             stance_pos2 = 1;
         } else {
             stance_pos2 = 0;
         }
     }
     if(wid_help){
-        if(mousez.lbutton && mousez.cy == 10 && (mousez.cx >= 92 && mousez.cx <= 95)) {
+        if(mousez.lbutton && y == 10 && (x >= 92 && x <= 95)) {
             wid_help = 0;
         }    
     }    
@@ -1439,13 +1437,6 @@ void I_am_moused(Game &tgame){
         }
         }
           
-        if (!found){
-            panel->setDefaultForeground(TCODColor::white);
-            panel->setAlignment(TCOD_LEFT);
-            panel->print(1, 5, "Mouse on [Nothing] at [%d.%d]", x, y);
-            panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
-            found = false;
-        }
     }
 
     }
@@ -1468,6 +1459,15 @@ void I_am_moused(Game &tgame){
         }
         panel->setDefaultBackground(TCODColor::black);
     }
+
+    if (!found){
+            TCODConsole::root->setDefaultForeground(TCODColor::white);
+            TCODConsole::root->setAlignment(TCOD_LEFT);
+            TCODConsole::root->print(40, 0, "Mouse on [Nothing] at [%d.%d]", x, y);
+            TCODConsole::root->print(40, 1, "Player at [%d.%d]", player.x, player.y);
+            TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the screen as black
+            found = false;
+        }
 }
 
 
@@ -1908,21 +1908,16 @@ void render_top(Game &tgame){
 
 void render_all (Game &tgame){
 
-    //std::cout << fov_recompute << std::endl;
-
     int off_x = 0;
     int off_y = 0;
 
-    //if (bigg){
-    //    off_x = (player.x * 2) - 55; // centered 
-    //    off_y = (player.y * 2) - 35;
-    //} else {
-        off_x = player.x - 55; // centered 
-        off_y = player.y - 35;
-    //}    
-    if (off_x < 0) off_x = 0;
+    
+    off_x = player.x - 55; // centered (110 70 is map area space) 
+    off_y = player.y - 35;
+    if (off_x < 0) off_x = 0; // doesn't go negative, blit 0 0 con to 0 0 screen
     if (off_y < 0) off_y = 0;
 
+    // overridden by off_xx at the bottom of this function?
     tgame.gstate.off_xx = off_x; // used in monster attack cycle
     tgame.gstate.off_yy = off_y;
 
@@ -1943,12 +1938,6 @@ void render_all (Game &tgame){
     if (tgame.gstate.fov_recompute){
         tgame.gstate.fov_map->computeFov(player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO);
 
-        //if(bigg){
-        //    maxmap_x = maxmap_x/2;
-        //    maxmap_y = maxmap_y/2;
-            //drawmap_off_y = drawmap_off_y/2;
-            //drawmap_off_x = drawmap_off_x/2;
-        //}
 
         for (int i = drawmap_off_y; i < maxmap_y ;++i){ // i = column
             for (int l = drawmap_off_x; l < maxmap_x ;++l) { // l = row
@@ -2490,17 +2479,27 @@ void render_all (Game &tgame){
 
     for (unsigned int i = 0; i<myvector.size(); ++i) myvector[i]->draw(0, tgame); // player vector
 
+    TCODConsole::blit(border,0,0,0,0,TCODConsole::root,0,0); // offmap background
 
     // BLIT MAP TO ROOT (both default and bigg map)
     if(!tgame.gstate.bigg){
         int smalloff_x = off_x;
         int smalloff_y = off_y;
-        if((smalloff_y+MAP_HEIGHT_AREA) > MAP_HEIGHT) smalloff_y = MAP_HEIGHT-MAP_HEIGHT_AREA;
+        int fullx = win_x; // defaults map blit to full window
+        int fully = win_y;
+        // - used for origin blit
+        // starting point + screenmap area > entire map, 
         if((smalloff_x+MAP_WIDTH_AREA) > MAP_WIDTH) smalloff_x = MAP_WIDTH-MAP_WIDTH_AREA;
+        if((smalloff_y+MAP_HEIGHT_AREA) > MAP_HEIGHT) smalloff_y = MAP_HEIGHT-MAP_HEIGHT_AREA;
+        // - used for blit width height
+        // starting point + winx > entire map
+        // then reduce win_x by the mount it exceed the map size
+        if((smalloff_x+win_x) > MAP_WIDTH) fullx = win_x - ((smalloff_x+win_x) - MAP_WIDTH);
+        if((smalloff_y+win_y) > MAP_HEIGHT) fully = win_y - ((smalloff_y+win_y) - MAP_HEIGHT);
         // source, source_x, source_y, howmuch_x, howmuch_y, target,
         //std::cout << "SMALLOFF: " << smalloff_x << std::endl;
-        TCODConsole::blit(tgame.gstate.con,smalloff_x,smalloff_y, win_x, win_y,TCODConsole::root,0,0);
-        tgame.gstate.off_xx = smalloff_x;
+        TCODConsole::blit(tgame.gstate.con,smalloff_x,smalloff_y, fullx, fully,TCODConsole::root,0,0);
+        tgame.gstate.off_xx = smalloff_x; // stores offset for external use
         tgame.gstate.off_yy = smalloff_y;
         //std::cout << "SMALLOFF: " << off_xx << " " << off_yy << std::endl;
     } else {
@@ -2528,9 +2527,6 @@ void render_all (Game &tgame){
             render_help();
         } 
 
-        
-                
-    
 }
 
 
@@ -4546,7 +4542,22 @@ int main() {
     print_8x16(TCODConsole::root, 26, 37, "by that nightmare you keep waking up into.", tempcol1, TCODColor::black);
     print_8x16(TCODConsole::root, 10, 41, "-Rustin \"Rust\" Cohle, True Detective", TCODColor::white, TCODColor::black);
     TCODConsole::flush();
-    TCODConsole::waitForKeypress(true);
+    //TCODConsole::waitForKeypress(true);
+    //
+    
+    // block that checks for keyboard click, or mouse click
+    
+    TCOD_event_t eve;
+    TCOD_key_t key;
+    TCOD_mouse_t mouse;
+    do {
+        TCODConsole::flush(); // idles CPU to match FPS rate
+        eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+    }  while ( eve != TCOD_EVENT_KEY_PRESS && eve != TCOD_EVENT_MOUSE_RELEASE );
+
+    // prepares a background to blit when offmap (within render_all)
+    TCODImage *pix = new TCODImage("bg.bmp");
+    pix->blit2x(border, 0, 0, -1, -1);
 
     TCODConsole::root->clear();
     std::vector<std::string> vecstr;
