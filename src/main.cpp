@@ -453,7 +453,8 @@ void Object_player::move(int dx, int dy, std::vector<Object_monster> smonvector)
                     cflag_attacks++;
                     move_counter = 0;
                 }    
-            }        
+            }  
+            // if player bloodier than tile, tile get more blood
             if (bloody > 0){
                 if (bloody >= map_array[y * MAP_WIDTH + x].bloodyt)
                 map_array[y * MAP_WIDTH + x].bloodyt = bloody;
@@ -466,7 +467,9 @@ void Object_player::move(int dx, int dy, std::vector<Object_monster> smonvector)
         if (y <= 0) {y = 0;std::cout << "No, I'm not stepping into the void." << std::endl;}
 
         bloody = (map_array[y * MAP_WIDTH + x].bloodyt);
-        if (map_array[y * MAP_WIDTH + x].bloodyt > 1) --map_array[y * MAP_WIDTH + x].bloodyt;
+        if(!override){ // only decrease blood on tile if actually moved
+            if (map_array[y * MAP_WIDTH + x].bloodyt > 1) --map_array[y * MAP_WIDTH + x].bloodyt;
+        }
 }
 
 BasicMonster orc_ai;
