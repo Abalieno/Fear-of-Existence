@@ -1395,93 +1395,55 @@ void I_am_moused(Game &tgame){
     bool found = false;
     TCODColor col_obj; // color of object
 
-    if(!tgame.gstate.bigg){
+    // find map coordinates
+    int mapx = 0;
+    int mapy = 0;
+    if (!tgame.gstate.bigg){
+        mapx = x + tgame.gstate.off_xx;
+        mapy = y + tgame.gstate.off_yy;
+        if(mapx >= MAP_WIDTH || mapy >= MAP_HEIGHT) mapx = -1, mapy = -1; // off map bounds
+    } else if (tgame.gstate.bigg){    
+        mapx = (x + tgame.gstate.offbig_x)/2;
+        mapy = (y + tgame.gstate.offbig_y)/2;
+        if(mapx >= MAP_WIDTH || mapy >= MAP_HEIGHT) mapx = -1, mapy = -1; // off map bounds
+    }   
 
-    if ((!tgame.gstate.bigg && x == player.x && y == player.y) || (tgame.gstate.bigg && (x/2) == player.x && (y/2) == player.y)){
-        panel->setDefaultForeground(TCODColor::white);
-        panel->setAlignment(TCOD_LEFT);
-        panel->print(1, 5, "Mouse on [Player] at [%d.%d]", x, y);
-        panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
-    } else {
-        for (unsigned int n = 0; n<monvector.size(); ++n) {
-            if( (!tgame.gstate.bigg && (x == monvector[n].x && y == monvector[n].y && monvector[n].alive) 
-                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
-                (tgame.gstate.bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y && monvector[n].alive) 
-                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) ){
-                whatis = &(monvector[n].name[0]);
-                panel->setDefaultForeground(TCODColor::white);
-                panel->setAlignment(TCOD_LEFT);
-                col_obj = monvector[n].color;
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-                panel->print(1, 5, "Mouse on [%c%s%c] at [%d.%d]",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
-                panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
-                found = true;
-                  }
-        }
-
-        if (!found){ // only if no moster alive found        
-        for (unsigned int n = 0; n<monvector.size(); ++n) {
-            if( (!tgame.gstate.bigg && (x == monvector[n].x && y == monvector[n].y) && !(monvector[n].alive) 
-                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) ||
-                (tgame.gstate.bigg && ((x/2) == monvector[n].x && (y/2) == monvector[n].y) && !(monvector[n].alive) 
-                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y))    ){
-                whatis = &(monvector[n].name[0]);
-                panel->setDefaultForeground(TCODColor::white);
-                panel->setAlignment(TCOD_LEFT);
-                col_obj = monvector[n].color;
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-                panel->print(1, 5, "Mouse on [dead %c%s%c] at [%d.%d]",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y); 
-                panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
-                found = true;
-            }
-        }
-        }
-          
-    }
-
-    }
-
-    int asciiwhat = 0;
-    if(tgame.gstate.bigg){
-        panel->setDefaultForeground(TCODColor::white);
-        panel->setAlignment(TCOD_LEFT);
-        asciiwhat= TCODConsole::root->getChar(x, y);
-        if (asciiwhat == 502 || asciiwhat == 602 || asciiwhat == 702 || asciiwhat == 802){
-            panel->print(1, 5, "Mouse on [Player] at [%d.%d]", x, y);
-        } else if(asciiwhat == 501 || asciiwhat == 601 || asciiwhat == 701 || asciiwhat == 801){
-            panel->print(1, 5, "Mouse on [Floor] at [%d.%d]", x, y);
-        } else if(asciiwhat == 504 || asciiwhat == 604 || asciiwhat == 704 || asciiwhat == 804){
-            panel->print(1, 5, "Mouse on [Troll] at [%d.%d]", x, y);
-        } else if(asciiwhat == 505 || asciiwhat == 605 || asciiwhat == 705 || asciiwhat == 805){
-            panel->print(1, 5, "Mouse on [Orc] at [%d.%d]", x, y);
-        } else if(asciiwhat == 506 || asciiwhat == 606 || asciiwhat == 706 || asciiwhat == 806){
-            panel->print(1, 5, "Mouse on [Remains] at [%d.%d]", x, y);
-        }
-        panel->setDefaultBackground(TCODColor::black);
-    }
-
-    int mapx = x + tgame.gstate.off_xx;
-    int mapy = y + tgame.gstate.off_yy;
-    if(mapx >= MAP_WIDTH || mapy >= MAP_HEIGHT) mapx = -1, mapy = -1; // off map bounds
-    if (!tgame.gstate.bigg && mapx == player.x && mapy == player.y){ // look for player
+    if (mapx == player.x && mapy == player.y){ // look for player
         found = true;
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->print(0, 71, "MAP x,y [Player] at [%d.%d]", mapx, mapy);
     } else { // look for monsters
         for (unsigned int n = 0; n<monvector.size(); ++n){
-            if( (!tgame.gstate.bigg && (mapx == monvector[n].x && mapy == monvector[n].y && monvector[n].alive) 
-                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y))  ){
+            if( ((mapx == monvector[n].x && mapy == monvector[n].y && monvector[n].alive) 
+                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) && !found  ){
                 whatis = &(monvector[n].name[0]);
                 TCODConsole::root->setDefaultForeground(TCODColor::white);
                 TCODConsole::root->setAlignment(TCOD_LEFT);
                 col_obj = monvector[n].color;
                 TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-                TCODConsole::root->print(0, 71, "Mouse on [%c%s%c] at [%d.%d]",TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, x, y);
+                TCODConsole::root->print(0, 71, "Mouse on [%c%s%c] at [%d.%d]",
+                        TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, mapx, mapy);
                 TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
                 found = true;
             }
         }
+        if (!found){ // only if no moster alive found
+            for (unsigned int n = 0; n<monvector.size(); ++n) {
+                if( ((mapx == monvector[n].x && mapy == monvector[n].y && !(monvector[n].alive) ) 
+                        && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) && !found  ){
+                    whatis = &(monvector[n].name[0]);
+                    TCODConsole::root->setDefaultForeground(TCODColor::white);
+                    TCODConsole::root->setAlignment(TCOD_LEFT);
+                    col_obj = monvector[n].color;
+                    TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
+                    TCODConsole::root->print(0, 71, "Mouse on [dead %c%s%c] at [%d.%d]",
+                        TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, mapx, mapy);
+                    TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+                    found = true;
+                }
+            }    
+        }        
     }    
     if (!found){
         TCODConsole::root->setDefaultForeground(TCODColor::white);
@@ -1490,7 +1452,7 @@ void I_am_moused(Game &tgame){
         TCODConsole::root->print(0, 71, "MAP x,y [Nothing] at [%d.%d]", mapx, mapy);
         TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the screen as black
         found = false;
-    }
+    }        
 }
 
 
@@ -2484,12 +2446,13 @@ void render_all (Game &tgame){
             }    
         }
     }
-    
+   
     for (unsigned int i = 0; i<monvector.size(); ++i) {
         if (monvector[i].selfchar == '%')
         monvector[i].draw(0, tgame); // first draws dead bodies
     }
 
+    // DROPPED ITEMS
     for (auto i : tgame.gstate.wd_object) {
         tgame.gstate.con->putChar(i.posx(), i.posy(), i.glyph_8, TCOD_BKGND_SET);
     }    
@@ -3053,7 +3016,7 @@ int handle_keys(Object_player &duh, Game &tgame) {
                 tgame.tileval.u16_troll = tgame.tileval.t28_troll; 
                 tgame.tileval.u16_corpse = tgame.tileval.t28_corpse;
             }    
-        } else { // block to swap basic 8 mode
+        } else { // block to swap basic 8 mode NOT BIGG
             if(tgame.tileval.u8_door == TCOD_CHAR_CROSS){
                 tgame.tileval.U8 = true; // sprite
                 tgame.tileval.u8_door = 444;
@@ -4446,24 +4409,13 @@ int main() {
 
     bool quit_now = false;
 
-    //bool loped = false; // used for threading?
-
-    //TCODConsole::mapAsciiCodeToFont('s',4,0);
-    //TCODConsole::mapAsciiCodeToFont(TCOD_CHAR_HLINE,4,0);
-
-    // x = 1 y = 16 start of new font a = 1,16 + 1,17 / b = 1,18 + 1,19
-    //TCODConsole::mapAsciiCodeToFont(666,1,16);
-    //TCODConsole::mapAsciiCodeToFont(667,2,16);
-    //TCODConsole::mapAsciiCodeToFont(668,1,17);
-    //TCODConsole::mapAsciiCodeToFont(669,2,17);
-
     TCODConsole::mapAsciiCodeToFont(666,0,223);
     TCODConsole::mapAsciiCodeToFont(667,0,231);
     TCODConsole::mapAsciiCodeToFont(668,0,227);
     TCODConsole::mapAsciiCodeToFont(669,0,232);
 
-    map_8x16_font();
-    map_16x16_tile();
+    map_8x16_font(); // DOS font for readable text, not used
+    map_16x16_tile(); // mapping bigg tiles, in map16.cpp
 
     TCODConsole::mapAsciiCodeToFont(400,2,16);
     TCODConsole::mapAsciiCodeToFont(401,2,17);

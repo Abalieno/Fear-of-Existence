@@ -35,7 +35,7 @@ void Object_monster::draw(bool uh, Game &tgame) {
                     tgame.gstate.con->putChar((x*2), (y*2)+1, self_16+200, TCOD_BKGND_SET);
                     tgame.gstate.con->putChar((x*2)+1, (y*2)+1, self_16+300, TCOD_BKGND_SET);
              
-            } else {
+            } else { // if 8x8
                 tgame.gstate.con->setDefaultForeground(color);
                 if(hit) colorb = TCODColor::red;
                 else colorb = tgame.gstate.con->getCharBackground(x, y);
@@ -44,8 +44,7 @@ void Object_monster::draw(bool uh, Game &tgame) {
 
                 if (tgame.tileval.U8 == true){
                     tgame.gstate.con->putChar(x, y, self_8, TCOD_BKGND_SET);
-                    //con->setCharBackground(x, y, con->getCharBackground(x, y), TCOD_BKGND_SET);
-                    //con->putChar(x, y, u8_orc, TCOD_BKGND_SET);
+                    
                 } else {
                     tgame.gstate.con->putChar(x, y, selfchar, TCOD_BKGND_SET);
                 }    
