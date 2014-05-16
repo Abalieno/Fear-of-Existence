@@ -24,7 +24,7 @@ bool Game::setup()
     gstate.color_dark_ground.g = 15;
     gstate.color_dark_ground.b = 15;
 
-    gstate.con = new TCODConsole(440, 280);
+    gstate.con = new TCODConsole(128, 91);
     //gstate.con = new TCODConsole(256, 182); // TO DO only draw the blitted part, split bigg and small con
     gstate.mesg = new TCODConsole(33, 3);
     gstate.no_combat = false;

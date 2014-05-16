@@ -9,13 +9,23 @@
 
 void Object_monster::draw(bool uh, Game &tgame) {
     //con->setDefaultForeground(color);
+    
+    int newx = 0;
+    int newy = 0;
+    if (!tgame.gstate.bigg){
+        newx = x-tgame.gstate.off_xx;
+        newy = y-tgame.gstate.off_yy;
+    } else if (tgame.gstate.bigg){
+        newx = x-tgame.gstate.off_xx-28;
+        newy = y-tgame.gstate.off_yy-18;
+    }
         
         // executes only outside combat
         if (!uh){ // if 0
             if(tgame.gstate.bigg){
-                colorb = tgame.gstate.con->getCharBackground((x*2), (y*2));
+                colorb = tgame.gstate.con->getCharBackground((newx*2), (newy*2));
             } else {  
-                if (selfchar == '%') colorb = tgame.gstate.con->getCharBackground(x, y);
+                if (selfchar == '%') colorb = tgame.gstate.con->getCharBackground(newx, newy);
                 else colorb = TCODColor::black;
                 //colorb = con->getCharBackground(x, y);
                 
@@ -30,23 +40,23 @@ void Object_monster::draw(bool uh, Game &tgame) {
                 // sets color only if sprite isn't colored (lame check)
                 tgame.gstate.con->setDefaultForeground(color);
                 
-                    tgame.gstate.con->putChar((x*2), (y*2), self_16, TCOD_BKGND_SET);
-                    tgame.gstate.con->putChar((x*2)+1, (y*2), self_16+100, TCOD_BKGND_SET);
-                    tgame.gstate.con->putChar((x*2), (y*2)+1, self_16+200, TCOD_BKGND_SET);
-                    tgame.gstate.con->putChar((x*2)+1, (y*2)+1, self_16+300, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((newx*2), (newy*2), self_16, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((newx*2)+1, (newy*2), self_16+100, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((newx*2), (newy*2)+1, self_16+200, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar((newx*2)+1, (newy*2)+1, self_16+300, TCOD_BKGND_SET);
              
             } else { // if 8x8
                 tgame.gstate.con->setDefaultForeground(color);
                 if(hit) colorb = TCODColor::red;
-                else colorb = tgame.gstate.con->getCharBackground(x, y);
+                else colorb = tgame.gstate.con->getCharBackground(newx, newy);
 
-                tgame.gstate.con->setCharBackground(x, y, colorb, TCOD_BKGND_SET);
+                tgame.gstate.con->setCharBackground(newx, newy, colorb, TCOD_BKGND_SET);
 
                 if (tgame.tileval.U8 == true){
-                    tgame.gstate.con->putChar(x, y, self_8, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar(newx, newy, self_8, TCOD_BKGND_SET);
                     
                 } else {
-                    tgame.gstate.con->putChar(x, y, selfchar, TCOD_BKGND_SET);
+                    tgame.gstate.con->putChar(newx,newy, selfchar, TCOD_BKGND_SET);
                 }    
             }
         }    
@@ -75,12 +85,28 @@ void Object_monster::drop(std::vector<Generic_object> &wrd_inv){
 }    
 
 void Object_player::draw(bool uh, Game &tgame) {
+
+    // both newx and xx 110 70
+    int newx = 0;
+    int newy = 0;
+    if (!tgame.gstate.bigg){
+        newx = x-tgame.gstate.off_xx;
+        newy = y-tgame.gstate.off_yy;
+    } else if (tgame.gstate.bigg){
+        newx = x-tgame.gstate.off_xx-28;
+        newy = y-tgame.gstate.off_yy-18;
+    }    
+        
+    //tgame.gstate.con->print(0, 68, "Mouse on [x,y] at [%d.%d]", x, y);
+    //tgame.gstate.con->print(0, 67, "Mouse on [newx,newy] at [%d.%d]", newx, newy);
+    //tgame.gstate.con->print(0, 66, "Mouse on [offx,offy] at [%d.%d]", tgame.gstate.off_xx, tgame.gstate.off_yy);
+
         tgame.gstate.con->setDefaultForeground(color);
         // uh is for attack animation. if uh is 0 then the background is taken from cell
         // if uh is 1 then look at colorb 
         if (!uh){  
             if(tgame.gstate.bigg){
-                colorb = tgame.gstate.con->getCharBackground((x*2), (y*2));
+                colorb = tgame.gstate.con->getCharBackground((newx*2), (newy*2));
             } else {    
                 //colorb = con->getCharBackground(x, y);
                 colorb = TCODColor::black; // for sprite
@@ -89,17 +115,13 @@ void Object_player::draw(bool uh, Game &tgame) {
         tgame.gstate.con->setDefaultBackground(colorb);
         if (tgame.gstate.fov_map->isInFov(x,y)){ // isn't it always?
             if(tgame.gstate.bigg){
-                tgame.gstate.con->putChar((x*2), (y*2), tgame.tileval.u16_player, TCOD_BKGND_SET);
-                tgame.gstate.con->putChar((x*2)+1, (y*2), tgame.tileval.u16_player+100, TCOD_BKGND_SET);
-                tgame.gstate.con->putChar((x*2), (y*2)+1, tgame.tileval.u16_player+200, TCOD_BKGND_SET);
-                tgame.gstate.con->putChar((x*2)+1, (y*2)+1, tgame.tileval.u16_player+300, TCOD_BKGND_SET);
-                //con->putChar((x*2), (y*2), 502, TCOD_BKGND_SET);
-                //con->putChar((x*2)+1, (y*2), 602, TCOD_BKGND_SET);
-                //con->putChar((x*2), (y*2)+1, 702, TCOD_BKGND_SET);
-                //con->putChar((x*2)+1, (y*2)+1, 802, TCOD_BKGND_SET);
+                tgame.gstate.con->putChar((newx*2), (newy*2), tgame.tileval.u16_player, TCOD_BKGND_SET);
+                tgame.gstate.con->putChar((newx*2)+1, (newy*2), tgame.tileval.u16_player+100, TCOD_BKGND_SET);
+                tgame.gstate.con->putChar((newx*2), (newy*2)+1, tgame.tileval.u16_player+200, TCOD_BKGND_SET);
+                tgame.gstate.con->putChar((newx*2)+1, (newy*2)+1, tgame.tileval.u16_player+300, TCOD_BKGND_SET);
             } else {
                 //con->putChar(x, y, 445, TCOD_BKGND_SET);
-                tgame.gstate.con->putChar(x, y, tgame.tileval.u8_player, TCOD_BKGND_SET);
+                tgame.gstate.con->putChar(newx, newy, tgame.tileval.u8_player, TCOD_BKGND_SET);
             }
         }
         tgame.gstate.con->setDefaultBackground(TCODColor::black); // reset background for smaller map
@@ -155,9 +177,11 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
                 //else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
 
                 if(tgame.gstate.bigg){
-                    TCODConsole::blit(tgame.gstate.con,tgame.gstate.offbig_x,tgame.gstate.offbig_y+2,110,68,TCODConsole::root,0,2);
+                    TCODConsole::blit(tgame.gstate.con, 0, 0, 0, 0, TCODConsole::root,0,0);
+                    //TCODConsole::blit(tgame.gstate.con,tgame.gstate.offbig_x,tgame.gstate.offbig_y+2,110,68,TCODConsole::root,0,2);
                 } else {    
-                    TCODConsole::blit(tgame.gstate.con,tgame.gstate.off_xx,tgame.gstate.off_yy+1,110,69,TCODConsole::root,0,1);
+                    TCODConsole::blit(tgame.gstate.con, 0, 0, 0, 0, TCODConsole::root,0,0);
+                    //TCODConsole::blit(tgame.gstate.con,tgame.gstate.off_xx,tgame.gstate.off_yy+1,110,69,TCODConsole::root,0,1);
                 }
                 //std::cout << "SMALLOFF: " << off_xx << " " << off_yy << std::endl;
 

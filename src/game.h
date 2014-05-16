@@ -88,6 +88,14 @@ struct msg_log_c { bool is_context; int ltype;};
 static std::vector<msg_log> msg_log_list;
 static std::vector<msg_log_c> msg_log_context;
 
+struct UIhook{
+    int ID;
+    int x;
+    int y;
+    int w;
+    int h;
+};    
+
 struct global_state{
     int bigg;
     int bigg2;
@@ -111,6 +119,8 @@ struct global_state{
     TCODMap * fov_map;
 
     std::vector<Generic_object> wd_object;
+
+    std::vector<UIhook> UI_hook;
 };    
 
 class Game
