@@ -21,6 +21,9 @@
 
 // #include <process.h> //used for threading?
 
+std::vector<msg_log> msg_log_list;
+std::vector<msg_log_c> msg_log_context;
+
 bool combat_mode = false;
 bool is_handle_combat = false;
 
@@ -1983,13 +1986,11 @@ void render_all (Game &tgame){
         tgame.gstate.fov_map->computeFov(player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO);
 
         tgame.gstate.con->setDefaultBackground(nullcolor);
-              tgame.gstate.con->clear(); 
-              tgame.gstate.con->setDefaultBackground(TCODColor::black);
+        tgame.gstate.con->clear(); 
+        tgame.gstate.con->setDefaultBackground(TCODColor::black);
 
         for (int i = 0; i < topy; ++i){ // i = column
             for (int l = 0; l < topx; ++l) { // l = row
-        //for (int i = drawmap_off_y; i < maxmap_y ;++i){ // i = column
-            //for (int l = drawmap_off_x; l < maxmap_x ;++l) { // l = row
 
                 t_i = drawmap_off_y + i; // actual coordinates for map logic
                 t_l = drawmap_off_x + l;

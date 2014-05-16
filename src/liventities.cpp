@@ -6,6 +6,8 @@
 #include "game.h"
 #include "liventities.h"
 
+extern std::vector<msg_log> msg_log_list;
+extern std::vector<msg_log_c> msg_log_context;
 
 void Object_monster::draw(bool uh, Game &tgame) {
     //con->setDefaultForeground(color);
@@ -209,6 +211,8 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
     }
 
 void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
+
+
 
 
     int damage = 0;

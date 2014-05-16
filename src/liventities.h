@@ -8,6 +8,7 @@
 #include "game.h"
 #include "inventory.h"
 
+
 class Game;
 
 class AI;

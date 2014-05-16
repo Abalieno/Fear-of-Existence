@@ -85,8 +85,8 @@ struct msg_log { char message [94]; TCODColor color1; TCODColor color2; TCODColo
 
 struct msg_log_c { bool is_context; int ltype;}; 
 
-static std::vector<msg_log> msg_log_list;
-static std::vector<msg_log_c> msg_log_context;
+//static std::vector<msg_log> msg_log_list;
+//static std::vector<msg_log_c> msg_log_context;
 
 struct UIhook{
     int ID;
