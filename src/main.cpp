@@ -18,9 +18,10 @@
 #include "liventities.h"
 #include "debug.h" // debugmsg()
 #include "inventory.h"
-
+#include "gui.h"
 // #include <process.h> //used for threading?
 
+// used in liventities (extern) and here
 std::vector<msg_log> msg_log_list;
 std::vector<msg_log_c> msg_log_context;
 
@@ -143,7 +144,7 @@ unsigned int MSG_HEIGHT = 15;// PANEL_HEIGHT - 1 | was 12!
 bool MSG_MODE_XTD = false; // flag for extended msg log panel
 
 // UI panel toggles
-int wid_top_open = 1; // is top widget open?
+int wid_top_open = 0; // is top widget open?
 int wid_combat_open = 0;
 int wid_help = 0;
 int wid_rpanel_open = 0;
@@ -1330,34 +1331,21 @@ void I_am_moused(Game &tgame){
         if(mousez.lbutton && y == 73 && (x == 33 || x == 34)) {
             if(MSG_MODE_XTD){ 
                 MSG_MODE_XTD=0; 
+                UI_unhook(tgame, 3);
             } else {
                 MSG_MODE_XTD = 1; 
+                UI_hook(tgame, 3);
             }
             release_button = 0;
         }    
-
-        
-        UIhook thisui;
-        thisui.ID = 0;
-        thisui.x = 0;
-        thisui.y = 0;
-        thisui.w = 127;
-        thisui.h = 0;
         
         if(mousez.lbutton && y == 0 && (x == 0 || x == 1 || x == 2)) {
             if(wid_top_open){ 
                 wid_top_open=0;
-                for (unsigned int i = 0; i<tgame.gstate.UI_hook.size(); ++i) { 
-                    if(tgame.gstate.UI_hook[i].ID == 0) tgame.gstate.UI_hook.erase(tgame.gstate.UI_hook.begin()+i);
-                }    
-                
+                UI_unhook(tgame, 0); 
             } else {
                 wid_top_open = 1;
-                bool control = false;
-                for (auto i : tgame.gstate.UI_hook) {
-                    if(i.ID == 0) control = true;
-                }    
-                if (!control) tgame.gstate.UI_hook.push_back(thisui);
+                UI_hook(tgame, 0);
             }
             release_button = 0;
         }
@@ -1366,8 +1354,10 @@ void I_am_moused(Game &tgame){
         if(mousez.lbutton && y > (win_y-2) && x > (win_x-4) ) {
             if(wid_combat_open){ 
                 wid_combat_open=0; 
+                UI_unhook(tgame, 2);
             } else {
             wid_combat_open = 1; 
+            UI_hook(tgame, 2);
             }
         release_button = 0;
         }
@@ -1377,8 +1367,10 @@ void I_am_moused(Game &tgame){
                 (mousez.lbutton && y == 3 && x == 125) ) {
             if(wid_rpanel_open){ 
                 wid_rpanel_open=0; 
+                UI_unhook(tgame, 1);
             } else {
-            wid_rpanel_open = 1; 
+            wid_rpanel_open = 1;
+            UI_hook(tgame, 1);
             }
         release_button = 0;
         } 
@@ -4461,10 +4453,13 @@ int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack
 
 int main() {
 
-    
-
     Game GAME;
     GAME.setup();
+
+    UI_register(GAME , 0, 0, 0, 127, 0); // top panel
+    UI_register(GAME , 1, 110, 3, 17, 66); // right panel
+    UI_register(GAME , 2, 0, 72, 127, 18); // combat bottom
+    UI_register(GAME , 3, 34, 12, 93, 78); // extended message log
 
     //TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE);
     //TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
@@ -4802,11 +4797,11 @@ int main() {
     }
     }
 
+    wid_top_open = 1; // default on for top bar
+    UI_hook(GAME, 0); // hook in the panel
+
     //uint32 timin1 = 0;
     //uint32 timin2 = 0; 
-
-    //int fpscount = 0;
-    //TCODConsole::setKeyboardRepeat(1, 1);
 
     while (! TCODConsole::isWindowClosed()) {
 
@@ -4831,7 +4826,6 @@ int main() {
         }
         //fov_recompute = true; // if disabled the screen goes dark
 
-        
         render_all(GAME); 
       
         
