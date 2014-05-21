@@ -5,10 +5,10 @@
 
 static std::vector<UIhook> localhook;
 
-bool UI_register(Game &tgame, int ID, int x, int y, int w, int h);
+void UI_register(Game &tgame, int ID, int x, int y, int w, int h);
 
-bool UI_hook(Game &tgame, int ID);
+void UI_hook(Game &tgame, int ID);
 
-bool UI_unhook(Game &tgame, int ID);
+void UI_unhook(Game &tgame, int ID);
 
 #endif
