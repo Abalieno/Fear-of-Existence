@@ -89,8 +89,7 @@ public: // public should be moved down, but I keep it here for debug messages
     TCODPath *path0;
     TCODPath *path1;
     int path_mode; // 0 = standard 1 = path with monster positions
-
-
+    int facing; // 0 to 3, N E S W
 
     bool stuck;
     int bored;
@@ -140,7 +139,7 @@ public: // public should be moved down, but I keep it here for debug messages
         if (dx == 0 && target_x > x) pdir = true;
         if (dy == 0 && target_y > y) pdir = true;
 
-        if ( (dx < 2 && dx > -2) && (dy < 2 && dy > -2) )
+        if ( (dx < 2 && dx > -2) && (dy < 2 && dy > -2) ) // -1 +1 range
             move(dx, dy, pdir);
         //std::cout << "move: " << dx << dy << std::endl;
     }
@@ -265,6 +264,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int initiative;
     int temp_init; // total initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag - number of attacks received in current turn
+
+    int facing; // 0 to 3, N E S W
 
     std::vector<Generic_object> inventory;
 

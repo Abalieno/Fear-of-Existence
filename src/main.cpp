@@ -386,7 +386,16 @@ bool iis_blocked(int x, int y){ // was used by object_monster.move
 }
 
 void Object_monster::move(int dx, int dy, bool p_dir) {
-      
+     
+    // sets facing
+    if (dy != 0){
+        if (dy == -1) facing = 0;
+        else facing = 2;
+    }  
+    if (dx != 0){
+        if (dx == -1) facing = 3;
+        else facing = 1;
+    }
 
         //std::cout << "BEFORE" << std::endl;
         //
@@ -545,6 +554,8 @@ void place_objects(Rect room, lvl1 myenc){
                     monster.c_mode = false;
                     monster.speed = myenc.vmob_types[myenc.cave1[u].enc[i]].speed;
                     monster.hit = false;
+
+                    monster.facing = rng(0,3); // random facing
 
                     monster.stats.wpn1.wpn_AC =     myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_AC;
                     monster.stats.wpn1.wpn_DC =     myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_DC;
@@ -1312,13 +1323,64 @@ void threadm( void* pParams )
       //  }
     }
 
+void overlay(int who, int mapx, int mapy, int realx, int realy, bool bigg){
+    int facing = 0;
+    if (who == -1){ // player
+        facing = player.facing;
+        TCODConsole::root->setDefaultForeground(TCODColor::white);
+        TCODConsole::root->setAlignment(TCOD_LEFT);
+        TCODConsole::root->print(0, 71, "Mouse on [Player] at [%d.%d]", mapx, mapy);
+    } else { // all other monsters alive
+        facing = monvector[who].facing;
+        char *whatis;
+        TCODColor col_obj; // color of object
+        whatis = &(monvector[who].name[0]);
+        TCODConsole::root->setDefaultForeground(TCODColor::white);
+        TCODConsole::root->setAlignment(TCOD_LEFT);
+        col_obj = monvector[who].color;
+        TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
+        TCODConsole::root->print(0, 71, "Mouse on [%c%s%c] at [%d.%d]",
+                TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, mapx, mapy);
+    }
+    int casebig = 0;
+    if (!bigg) casebig = 1;
+    else casebig = 2;
+    switch (facing){
+        case 0:
+            realy -= casebig;
+            break;
+        case 1:
+            realx += casebig;
+            break;
+        case 2:
+            realy += casebig;
+            break;
+        case 3:
+            realx -= casebig;
+            break;
+    } 
+    if (!bigg){
+        TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+        TCODConsole::root->putChar(realx, realy, 178, TCOD_BKGND_SET);
+    } else {        
+        if (realx % 2 == 1) realx -= 1;
+        if (realy % 2 == 1) realy -= 1;
+        TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+        TCODConsole::root->putChar(realx, realy, 178, TCOD_BKGND_SET);
+        TCODConsole::root->putChar(realx+1, realy, 178, TCOD_BKGND_SET);
+        TCODConsole::root->putChar(realx, realy+1, 178, TCOD_BKGND_SET);
+        TCODConsole::root->putChar(realx+1, realy+1, 178, TCOD_BKGND_SET);
+    }
+    TCODConsole::root->setDefaultBackground(TCODColor::black);
+}    
+
 void I_am_moused(Game &tgame){
     
     mousez = TCODMouse::getStatus();
     int x = mousez.cx;
     int y = mousez.cy;
 
-    char *whatis;
+    char *whatis; // monster namestring
 
     if(!release_button){
         if(!mousez.lbutton){
@@ -1435,21 +1497,12 @@ void I_am_moused(Game &tgame){
 
     if (mapx == player.x && mapy == player.y){ // look for player
         found = true;
-        TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->setAlignment(TCOD_LEFT);
-        TCODConsole::root->print(0, 71, "Mouse on [Player] at [%d.%d]", mapx, mapy);
+        overlay(-1, mapx, mapy, x, y, tgame.gstate.bigg);
     } else { // look for monsters
         for (unsigned int n = 0; n<monvector.size(); ++n){
             if( ((mapx == monvector[n].x && mapy == monvector[n].y && monvector[n].alive) 
                     && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) && !found  ){
-                whatis = &(monvector[n].name[0]);
-                TCODConsole::root->setDefaultForeground(TCODColor::white);
-                TCODConsole::root->setAlignment(TCOD_LEFT);
-                col_obj = monvector[n].color;
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-                TCODConsole::root->print(0, 71, "Mouse on [%c%s%c] at [%d.%d]",
-                        TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, mapx, mapy);
-                TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+                overlay(n, mapx, mapy, x, y, tgame.gstate.bigg); 
                 found = true;
             }
         }
@@ -2744,6 +2797,15 @@ void player_move_attack(int dx, int dy, Game &tgame){
     
     int x = player.x + dx;
     int y = player.y + dy;
+
+    if (dy != 0){
+        if (dy == -1) player.facing = 0;
+        else player.facing = 2;
+    }  
+    if (dx != 0){
+        if (dx == -1) player.facing = 3;
+        else player.facing = 1;
+    }
 
     //Object *target;
      unsigned int target = 0;
@@ -4855,6 +4917,9 @@ int main() {
                 
                 wid_combat_open = 1; // default combat panels on
                 wid_rpanel_open = 1;
+                UI_hook(GAME, 1);
+                UI_hook(GAME, 2);
+                break;
             }    
         } // activates combat mode as soon a monster is in sight, deactivates on subsequent loops
 

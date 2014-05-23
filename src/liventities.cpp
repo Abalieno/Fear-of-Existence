@@ -146,7 +146,7 @@ void Object_player::clear(Game &tgame) {
 bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y, bool myfov, Game &tgame){
             //float dist = 0;
             //std::cout << monster.combat_move << std::endl; 
-        
+   
             std::cout << "The " << monster.name << " is active! " << std::endl;
             //dist = monster.distance_to(p_x, p_y);
 
