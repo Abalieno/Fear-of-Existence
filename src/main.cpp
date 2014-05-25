@@ -154,7 +154,7 @@ TCODMap * fov_map_mons = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 TCODMap * fov_map_mons_path0 = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 TCODMap * fov_map_mons_path1 = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
 
-
+std::vector<unsigned int> mon_list;
 
 
 void map_8x16_font(){
@@ -1323,6 +1323,17 @@ void threadm( void* pParams )
       //  }
     }
 
+void givemescreenxy(int &x, int &y, Game &tgame){
+    if (!tgame.gstate.bigg){
+        x = x - tgame.gstate.off_xx;
+        y = y - tgame.gstate.off_yy;
+    } else if (tgame.gstate.bigg){   
+        x = (x - tgame.gstate.off_xx - 28)*2;
+        y = (y - tgame.gstate.off_yy - 18)*2;
+    }
+}    
+
+// mapx, mapy used to print text
 void overlay(int who, int mapx, int mapy, int realx, int realy, bool bigg){
     int facing = 0;
     if (who == -1){ // player
@@ -1342,6 +1353,21 @@ void overlay(int who, int mapx, int mapy, int realx, int realy, bool bigg){
         TCODConsole::root->print(0, 71, "Mouse on [%c%s%c] at [%d.%d]",
                 TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, mapx, mapy);
     }
+    if(!bigg){
+        TCODConsole::root->setCharForeground(realx, realy, TCODColor::TCODColor::darkGrey);
+        TCODConsole::root->setCharBackground(realx, realy, TCODColor::white, TCOD_BKGND_SET);
+    } else if (bigg){
+        if (realx % 2 == 1) realx -= 1;
+        if (realy % 2 == 1) realy -= 1;
+        TCODConsole::root->setCharForeground(realx, realy, TCODColor::darkGrey);
+        TCODConsole::root->setCharBackground(realx, realy, TCODColor::white, TCOD_BKGND_SET);
+        TCODConsole::root->setCharForeground(realx+1, realy, TCODColor::darkGrey);
+        TCODConsole::root->setCharBackground(realx+1, realy, TCODColor::white, TCOD_BKGND_SET);
+        TCODConsole::root->setCharForeground(realx, realy+1, TCODColor::darkGrey);
+        TCODConsole::root->setCharBackground(realx, realy+1, TCODColor::white, TCOD_BKGND_SET);
+        TCODConsole::root->setCharForeground(realx+1, realy+1, TCODColor::darkGrey);
+        TCODConsole::root->setCharBackground(realx+1, realy+1, TCODColor::white, TCOD_BKGND_SET);
+    }    
     int casebig = 0;
     if (!bigg) casebig = 1;
     else casebig = 2;
@@ -1357,6 +1383,9 @@ void overlay(int who, int mapx, int mapy, int realx, int realy, bool bigg){
             break;
         case 3:
             realx -= casebig;
+            break;
+        default:
+            g_debugmsg("Broken facing: %d", facing);
             break;
     } 
     if (!bigg){
@@ -1492,10 +1521,38 @@ void I_am_moused(Game &tgame){
         if( (x >= i.x && x <= (i.x + i.w)) && (y >= i.y && y <= (i.y + i.h) ) ){
             mapx = -1;
             mapy = -1;
-        }    
+            if (i.ID == 1 && mon_list.size() > 0){
+                int list_h = mon_list.size();
+                if (y-6 >= 0 && y-6 < list_h){
+                    for(int p = 0; p < 17; ++p){
+                        TCODColor fore;
+                        TCODColor back;
+                        fore = TCODConsole::root->getCharBackground(110+p, y);
+                        back = TCODConsole::root->getCharForeground(110+p, y);
+                        TCODConsole::root->setCharForeground(110+p, y, fore);
+                        TCODConsole::root->setCharBackground(110+p, y, back, TCOD_BKGND_SET);
+                    }    
+                    if (mon_list[y-6] == 255){
+                        int rx = player.x;
+                        int ry = player.y;
+                        givemescreenxy(rx, ry, tgame);
+                        overlay(-1, player.x, player.y, rx, ry, tgame.gstate.bigg);
+                        
+                    } else if (mon_list[y-6] != 256){ 
+                        int xx = monvector[mon_list[y-6]].x;
+                        int yy = monvector[mon_list[y-6]].y;
+                        int rx = xx;
+                        int ry = yy;
+                        givemescreenxy(rx, ry, tgame);
+                        overlay(mon_list[y-6], xx, yy, rx, ry, tgame.gstate.bigg);
+                    }    
+                    found = true;
+                }    
+            }    
+        }
     }    
 
-    if (mapx == player.x && mapy == player.y){ // look for player
+    if (mapx == player.x && mapy == player.y && !found){ // look for player
         found = true;
         overlay(-1, mapx, mapy, x, y, tgame.gstate.bigg);
     } else { // look for monsters
@@ -1609,7 +1666,7 @@ void Message_Log(){
         panel_offset = 34;
     }    
 
-    panel->print(33, 1, ">");
+    panel->putChar(33, 1, 18, TCOD_BKGND_SET);
 
     if(msg_log_list.size() > 0){
         whatpanel->setDefaultForeground(TCODColor::white);
@@ -4915,10 +4972,15 @@ int main() {
             if(in_sight && monvector[i].alive == true){ 
                 combat_mode = true; // trigger combat mode, if monster is sighted
                 
-                wid_combat_open = 1; // default combat panels on
-                wid_rpanel_open = 1;
-                UI_hook(GAME, 1);
-                UI_hook(GAME, 2);
+                if(!wid_combat_open){ 
+                    wid_combat_open = 1; // default combat panels on
+                    UI_hook(GAME, 2);
+                }    
+                if(!wid_rpanel_open){
+                    wid_rpanel_open = 1;
+                    UI_hook(GAME, 1);
+                }    
+                
                 break;
             }    
         } // activates combat mode as soon a monster is in sight, deactivates on subsequent loops
@@ -5223,10 +5285,12 @@ int main() {
                         TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::yellow, TCODColor::black);
                         TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lightAmber,TCODColor::black);
                         TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::darkRed, TCODColor::black);
+                        mon_list.clear(); // mouse lookup
                         for (unsigned int n = 0; n<monsters.size(); ++n) {
                             if (n == (player_own - 1)){
                                 r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] Player <", TCOD_COLCTRL_1, 
                                     player.temp_init, TCOD_COLCTRL_STOP);
+                                mon_list.push_back(255); // for mouse lookup on list
                             } else {
                                 for (unsigned int b = 0; b<monvector.size(); ++b) {
                                     unsigned int monster_ini = monvector[b].initiative;
@@ -5234,14 +5298,14 @@ int main() {
                                         if(monvector[b].in_sight){
                                             if(monster_ini < player_own){
                                                 r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "%c[%d] %s%c", TCOD_COLCTRL_3,
-                                                monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
-                                            
+                                                    monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
                                             } else {  
                                                 r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
                                                     monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
                                                     monvector[b].name, TCOD_COLCTRL_STOP);
                                             }
-                                        } else {
+                                            mon_list.push_back(b); // for mouse lookup on list
+                                        } else { // monster hidden
                                             if(monster_ini < player_own){
                                                 r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "***%c[%d] %s%c", TCOD_COLCTRL_3,
                                                 monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
@@ -5251,6 +5315,7 @@ int main() {
                                                     monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
                                                     monvector[b].name, TCOD_COLCTRL_STOP);
                                             }
+                                            mon_list.push_back(256); // for mouse lookup on list
                                         }    
                                     }
                                 }
@@ -5272,11 +5337,6 @@ int main() {
                         if(msg_log_list.size() > 0){
                             Message_Log();
                         }
-                        //TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT_AREA+2);
-
-                        //render_messagelog();
-                        //render_minimaps();
-                        //render_rpanel();
                         render_all(GAME);
                         I_am_moused(GAME);
                         TCODConsole::flush(); // this updates the screen
@@ -5284,28 +5344,19 @@ int main() {
                     // PLAYER BLOCK
                     // PLAYER BLOCK
 
-                    //con->clear();
-                    //TCODConsole::root->clear(); 
-
              
             //panel->setAlignment(TCOD_CENTER);
             widget_popup->clear();
             TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
             widget_popup->print(0, 0, "%cpress any key to END Player's turn%c",
                     TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
-                    
-              
-            
             GAME.gstate.fov_recompute = true;
             render_all(GAME);
-            //TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT_AREA+2);
             TCODConsole::blit(widget_popup,0,0,34,1,TCODConsole::root, 40, 66);
-            //render_messagelog();
-            //render_minimaps();
-            //render_rpanel();
             TCODConsole::flush(); // this updates the screen
                 
             TCODConsole::waitForKeypress(true);
+            mon_list.clear(); // mouse lookup
 
                     player.combat_move = 8; // player turn ends, so resets the movement points
                 } else {
