@@ -246,6 +246,12 @@ class Object_player {
 public: // public should be moved down, but I keep it here for debug messages
 
     char name[20];
+    int species;
+    int sex;
+    int bmonth;
+    int bday;
+    int sunsign;
+
     int x;
     int y;
     char selfchar;
