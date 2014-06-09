@@ -251,6 +251,17 @@ public: // public should be moved down, but I keep it here for debug messages
     int bmonth;
     int bday;
     int sunsign;
+    int sibrank;
+    int famsize;
+    int strange;
+    int hand;
+    int height;
+    int frame;
+    int weight;
+    int size;
+    int complexion;
+    int hair;
+    int eye;
 
     int x;
     int y;

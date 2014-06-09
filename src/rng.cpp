@@ -15,7 +15,7 @@ long rng(long low, long high)
     static std::mt19937 rnumber; // uses Mersenne Twister
     if(low == 1 && (high == 4 || high == 6 || high == 8 || high == 10 || high == 20 || high == 100) ){
         switch (high){
-            case 5:
+            case 4:
                 return u1d4(rnumber);
                 break;
             case 6:
@@ -38,9 +38,7 @@ long rng(long low, long high)
         }    
     } else {    
         std::uniform_int_distribution<long> u {low, high};
-        //std::cout << "min: " << rnumber.min() << " max: " << rnumber.max() << std::endl;
         return u(rnumber);
-        //return low + long((high - low + 1) * double(rand() / double(RAND_MAX + 1.0)));
     }    
 }
 
