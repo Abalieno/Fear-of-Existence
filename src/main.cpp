@@ -342,11 +342,14 @@ std::vector<Object_player*> myvector; // player vector object
 
 
 Fighter fighter_component(30, 2, 5, 8); // hp, defense, power
-Statistics stati(0);
+//Statistics stati(0);
+
 //Object_player playera(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
 //Object_player playerb(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
 
-Object_player player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component, stati);
+Object_player player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
+// , stati
+//
 //strcpy(player.name, "Playername");
 //strcpy(monster.name, "orc");
 
@@ -3890,8 +3893,8 @@ int main() {
 
     TCODConsole::root->clear();
     std::vector<std::string> vecstr;
-    std::string st1 = "Generate &new character";
-    std::string st2 = "&Skip generation";
+    std::string st1 = "Generate &New Character";
+    std::string st2 = "&Random Character";
     std::string st3 = "&QUIT";
     vecstr.push_back(st1);
     vecstr.push_back(st2);

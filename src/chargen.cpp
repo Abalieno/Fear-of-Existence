@@ -1,4 +1,5 @@
 #include <iostream> // debug
+#include <algorithm>    // std::sort
 
 #include "chargen.h"
 #include "rng.h"
@@ -8,10 +9,6 @@
 extern int win_y;
 extern int win_x;
 
-void gen_name(Game &GAME){
-    strcpy(GAME.player->name, "Placeholderguy");
-    return;
-}
 void gen_species(Game &GAME){
     int roll = 0;
     roll = rng(1, 100);
@@ -39,6 +36,53 @@ void gen_sex(Game &GAME){
     }    
     return;
 }
+
+void gen_name(Game &GAME){
+    int curSet= 0 ;
+    static TCODList<char *> sets;
+    TCODList<char *> files=TCODSystem::getDirectoryContent("data/namegen","*.cfg");
+    for (char **it=files.begin(); it != files.end(); it++) {
+			char tmp[256];
+			sprintf(tmp, "data/namegen/%s",*it);
+			TCODNamegen::parse(tmp);
+    }
+    sets = TCODNamegen::getSets();
+    if(GAME.player->sex == Male){
+        do{ 
+            curSet = rng(0,15);
+        } while (curSet % 2 != 0);
+    } else {
+        do curSet = rng(0,15);
+        while (curSet % 2 == 0);
+    } 
+    if(GAME.player->species == Sindarin){
+        if(GAME.player->sex == Male){
+            do{ 
+            curSet = rng(0,15);
+        } while (curSet % 2 != 0 || curSet >= 5);
+        } else {
+            do{ 
+            curSet = rng(0,15);
+        } while (curSet % 2 == 0 || curSet >= 5);
+        }    
+    } else if(GAME.player->species == Khuzdul){
+        if(GAME.player->sex == Male){
+            curSet = rng(0,1);
+            if(curSet == 0) curSet = 8;
+            else curSet = 10;
+        } else {
+            curSet = rng(0,1);
+            if(curSet == 0) curSet = 9;
+            else curSet = 11;
+        }
+    }    
+    std::cout << "Name set n: " << curSet << std::endl;
+    GAME.player->name2 = TCODNamegen::generate(sets.get(curSet),true);
+    std::cout << "Name set: " << sets.get(curSet) << std::endl;
+    //strcpy(GAME.player->name, "Placeholderguy");
+    return;
+}
+
 void gen_birthdate(Game &GAME){
     int roll1 = 0;
     roll1 = rng(1, 12);
@@ -330,6 +374,252 @@ void gen_eye(Game &GAME){
     return;
 }
 
+void gen_comeliness(Game &GAME){
+    int roll = 0;
+    roll = dice(3,6);
+    if(GAME.player->species == Sindarin) roll += 2;
+    std::cout << "comeliness roll: " << roll << std::endl;
+    if(roll <= 5) GAME.player->comeliness = Ugly;
+    else if(roll >= 6 && roll <= 8) GAME.player->comeliness = Plain;
+    else if(roll >= 9 && roll <= 12) GAME.player->comeliness = BAverage;
+    else if(roll >= 13 && roll <= 15) GAME.player->comeliness = Attractive;
+    else if(roll >= 16) GAME.player->comeliness = Handsome;
+}   
+
+void gen_STR(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::cout << "str1 roll: " << dice1 << std::endl;
+    std::cout << "str2 roll: " << dice2 << std::endl;
+    std::cout << "str3 roll: " << dice3 << std::endl;
+    std::cout << "str4 roll: " << dice4 << std::endl;
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->STR = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Khuzdul) GAME.player->STR += 4;
+    else if(GAME.player->species == Sindarin) GAME.player->STR += 1;
+
+    if(GAME.player->weight <= 20) GAME.player->STR -= 6;
+    else if(GAME.player->weight >= 21 && GAME.player->weight <= 55) GAME.player->STR -= 5;
+    else if(GAME.player->weight >= 56 && GAME.player->weight <= 85) GAME.player->STR -= 4;
+    else if(GAME.player->weight >= 86 && GAME.player->weight <= 110) GAME.player->STR -= 3;
+    else if(GAME.player->weight >= 111 && GAME.player->weight <= 130) GAME.player->STR -= 2;
+    else if(GAME.player->weight >= 131 && GAME.player->weight <= 145) GAME.player->STR -= 1;
+    else if(GAME.player->weight >= 156 && GAME.player->weight <= 170) GAME.player->STR += 1;
+    else if(GAME.player->weight >= 171 && GAME.player->weight <= 190) GAME.player->STR += 2;
+    else if(GAME.player->weight >= 191 && GAME.player->weight <= 215) GAME.player->STR += 3;
+    else if(GAME.player->weight >= 216 && GAME.player->weight <= 245) GAME.player->STR += 4;
+    else if(GAME.player->weight >= 246 && GAME.player->weight <= 280) GAME.player->STR += 5;
+    else if(GAME.player->weight >= 281 && GAME.player->weight <= 320) GAME.player->STR += 6;
+    else if(GAME.player->weight >= 321 && GAME.player->weight <= 375) GAME.player->STR += 7;
+    else if(GAME.player->weight >= 366 && GAME.player->weight <= 415) GAME.player->STR += 8;
+}    
+
+void gen_END(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    int dice5 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    dice5 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    vdice.push_back(dice5);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->END = vdice[2] + vdice[3] + vdice [4];
+
+    if(GAME.player->species == Khuzdul) GAME.player->END += 2;
+}
+
+void gen_DEX(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->DEX = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Khuzdul) GAME.player->DEX += 1;
+    else if(GAME.player->species == Sindarin) GAME.player->DEX += 2;
+    if(GAME.player->hand == Ambidextrous) GAME.player->DEX += 2;
+    else if(GAME.player->hand == Lefthanded) GAME.player->DEX += 1;
+}
+
+void gen_AGI(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->AGI = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Sindarin) GAME.player->AGI += 2;
+    if(GAME.player->frame == Scant) GAME.player->AGI += 2;
+    else if(GAME.player->frame == Light) GAME.player->AGI += 1;
+    else if(GAME.player->frame == Heavy) GAME.player->AGI -= 1;
+    else if(GAME.player->frame == Massive) GAME.player->AGI -= 2;
+}
+
+void gen_SPD(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->SPD = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Human && GAME.player->sex == Female) GAME.player->SPD -= 2;
+    if(GAME.player->SPD < (GAME.player->AGI - 4) ) GAME.player->SPD = (GAME.player->AGI - 4);
+}
+
+void gen_EYE(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->EYE = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Sindarin) GAME.player->EYE += 3;
+}
+
+void gen_HEA(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->HEA = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Sindarin) GAME.player->HEA += 3;
+    else if(GAME.player->species == Khuzdul) GAME.player->HEA += 2;
+}
+
+void gen_SMT(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->SMT = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Sindarin) GAME.player->SMT += 3;
+    else if(GAME.player->species == Human && GAME.player->sex == Female) GAME.player->SMT += 1;
+}
+
+void gen_TCH(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->TCH = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Sindarin) GAME.player->TCH += 2;
+    else if(GAME.player->species == Khuzdul) GAME.player->TCH += 1;
+}
+
+void gen_VOI(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->VOI = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Sindarin) GAME.player->VOI += 3;
+}
+
 void draw_frame(const char *title1, const char *title2){
     for (int n = 0; n < win_y; ++n){
         TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
@@ -455,13 +745,32 @@ void txt_eye(char* here, Game &GAME){
     return;
 }
 
+void txt_comeliness(char* here, Game &GAME){
+    if(GAME.player->comeliness == 0) strcpy(here, "Ugly");
+    else if(GAME.player->comeliness == 1) strcpy(here, "Plain");
+    else if(GAME.player->comeliness == 2) strcpy(here, "Average");
+    else if(GAME.player->comeliness == 3) strcpy(here, "Attractive");
+    else if(GAME.player->comeliness == 4) strcpy(here, "Handsome");
+    return;
+}
+
+const char *txt_voice(Game &GAME){
+    if(GAME.player->VOI <= 4) return "Unbearable";
+    else if(GAME.player->VOI >= 5 && GAME.player->VOI <= 8) return "Unpleasant";
+    else if(GAME.player->VOI >= 9 && GAME.player->VOI <= 12) return "Average";
+    else if(GAME.player->VOI >= 13 && GAME.player->VOI <= 15) return "Pleasant";
+    else if(GAME.player->VOI >= 16 && GAME.player->VOI <= 17) return "Excellent";
+    else if(GAME.player->VOI >= 1) return "Unearthly";
+    else return "Null";
+}    
+
 int chargen(Game &GAME){
     bool redofromstart = true;
     while(redofromstart){
         TCODConsole::root->clear();
-        gen_name(GAME);
         gen_species(GAME);
         gen_sex(GAME);
+        gen_name(GAME);
         gen_birthdate(GAME);
         gen_sunsign(GAME);
         gen_sibrank(GAME);
@@ -473,49 +782,87 @@ int chargen(Game &GAME){
         gen_complexion(GAME);
         gen_hair(GAME);
         gen_eye(GAME);
+        gen_comeliness(GAME);
+        gen_STR(GAME);
+        gen_END(GAME);
+        gen_DEX(GAME);
+        gen_AGI(GAME);
+        gen_SPD(GAME);
+        gen_EYE(GAME);
+        gen_HEA(GAME);
+        gen_SMT(GAME);
+        gen_TCH(GAME);
+        gen_VOI(GAME);
         draw_frame("CHARACTOR GENERATOR", "Pick your fool");
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
         TCODConsole::root->print(5, 5, "Player name:");
-        TCODConsole::root->print(20, 5, "%c%s%c", TCOD_COLCTRL_1, GAME.player->name, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(20, 5, "%c%s%c", TCOD_COLCTRL_1, GAME.player->name2, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(3, 7, "%cBIRTH%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         char dump[20];
         txt_species(dump, GAME);
-        TCODConsole::root->print(5, 6, "Species:");
-        TCODConsole::root->print(20, 6, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        txt_sex(dump, GAME);
-        TCODConsole::root->print(5, 7, "Sex:");
-        TCODConsole::root->print(20, 7, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        txt_birthdate(dump, GAME);
-        TCODConsole::root->print(5, 8, "Birthdate:");
-        TCODConsole::root->print(20, 8, "%c%s, %d%c", TCOD_COLCTRL_2, dump, GAME.player->bday, TCOD_COLCTRL_STOP);
-        txt_sunsign(dump, GAME);
-        TCODConsole::root->print(5, 9, "Sunsign:");
+        TCODConsole::root->print(5, 9, "Species:");
         TCODConsole::root->print(20, 9, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(5, 10, "Sibling Rank:");
-        TCODConsole::root->print(20, 10, "%c%d (of %d)%c", TCOD_COLCTRL_2, GAME.player->sibrank, GAME.player->famsize, TCOD_COLCTRL_STOP);
-        txt_enstrangement(dump, GAME);
-        TCODConsole::root->print(5, 11, "Enstrangement:");
-        TCODConsole::root->print(20, 11, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        txt_handedness(dump, GAME);
-        TCODConsole::root->print(5, 12, "Handedness:");
+        txt_sex(dump, GAME);
+        TCODConsole::root->print(5, 10, "Sex:");
+        TCODConsole::root->print(20, 10, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        txt_birthdate(dump, GAME);
+        TCODConsole::root->print(5, 11, "Birthdate:");
+        TCODConsole::root->print(20, 11, "%c%s, %d%c", TCOD_COLCTRL_2, dump, GAME.player->bday, TCOD_COLCTRL_STOP);
+        txt_sunsign(dump, GAME);
+        TCODConsole::root->print(5, 12, "Sunsign:");
         TCODConsole::root->print(20, 12, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(5, 13, "Height:");
-        TCODConsole::root->print(20, 13, "%c%d'%c", TCOD_COLCTRL_2, GAME.player->height, TCOD_COLCTRL_STOP);
-        txt_frame(dump, GAME);
-        TCODConsole::root->print(5, 14, "Frame:");
+        TCODConsole::root->print(5, 13, "Sibling Rank:");
+        TCODConsole::root->print(20, 13, "%c%d (of %d)%c", TCOD_COLCTRL_2, GAME.player->sibrank, GAME.player->famsize, TCOD_COLCTRL_STOP);
+        txt_enstrangement(dump, GAME);
+        TCODConsole::root->print(5, 14, "Enstrangement:");
         TCODConsole::root->print(20, 14, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(5, 15, "Weight (Size):");
-        TCODConsole::root->print(20, 15, "%c%dp/%d%c", TCOD_COLCTRL_2, GAME.player->weight, GAME.player->size, TCOD_COLCTRL_STOP);
+        txt_handedness(dump, GAME);
+        TCODConsole::root->print(5, 15, "Handedness:");
+        TCODConsole::root->print(20, 15, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(3, 17, "%cAPPEARANCE%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(5, 19, "Height:");
+        TCODConsole::root->print(20, 19, "%c%d'%c", TCOD_COLCTRL_2, GAME.player->height, TCOD_COLCTRL_STOP);
+        txt_frame(dump, GAME);
+        TCODConsole::root->print(5, 20, "Frame:");
+        TCODConsole::root->print(20, 20, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(5, 21, "Weight (Size):");
+        TCODConsole::root->print(20, 21, "%c%dp/%d%c", TCOD_COLCTRL_2, GAME.player->weight, GAME.player->size, TCOD_COLCTRL_STOP);
         txt_complexion(dump, GAME);
-        TCODConsole::root->print(5, 16, "Complexion:");
-        TCODConsole::root->print(20, 16, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(5, 22, "Complexion:");
+        TCODConsole::root->print(20, 22, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
         txt_hair(dump, GAME);
-        TCODConsole::root->print(5, 17, "Hair:");
-        TCODConsole::root->print(20, 17, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(5, 23, "Hair:");
+        TCODConsole::root->print(20, 23, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
         txt_eye(dump, GAME);
-        TCODConsole::root->print(5, 18, "Eyes:");
-        TCODConsole::root->print(20, 18, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(5, 24, "Eyes:");
+        TCODConsole::root->print(20, 24, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        txt_comeliness(dump, GAME);
+        TCODConsole::root->print(5, 25, "Comeliness:");
+        TCODConsole::root->print(20, 25, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(40, 7, "%cPHYSICAL%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(42, 9, "Strength:");
+        TCODConsole::root->print(57, 9, "%c%d%c", TCOD_COLCTRL_2, GAME.player->STR, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(42, 10, "Endurance:");
+        TCODConsole::root->print(57, 10, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(42, 11, "Dexterity:");
+        TCODConsole::root->print(57, 11, "%c%d%c", TCOD_COLCTRL_2, GAME.player->DEX, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(42, 12, "Agility:");
+        TCODConsole::root->print(57, 12, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AGI, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(42, 13, "Speed:");
+        TCODConsole::root->print(57, 13, "%c%d%c", TCOD_COLCTRL_2, GAME.player->SPD, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(42, 14, "Eyesight:");
+        TCODConsole::root->print(57, 14, "%c%d%c", TCOD_COLCTRL_2, GAME.player->EYE, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(42, 15, "Hearing:");
+        TCODConsole::root->print(57, 15, "%c%d%c", TCOD_COLCTRL_2, GAME.player->HEA, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(42, 16, "Smell/Taste:");
+        TCODConsole::root->print(57, 16, "%c%d%c", TCOD_COLCTRL_2, GAME.player->SMT, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(42, 17, "Touch:");
+        TCODConsole::root->print(57, 17, "%c%d%c", TCOD_COLCTRL_2, GAME.player->TCH, TCOD_COLCTRL_STOP);
+        //txt_voice(dump, GAME);
+        TCODConsole::root->print(42, 18, "Voice:");
+        TCODConsole::root->print(57, 18, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->VOI, txt_voice(GAME), TCOD_COLCTRL_STOP);
         std::vector<std::string> vecstr;
         std::string st1 = "&Accept";
         std::string st2 = "&Reroll";

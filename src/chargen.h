@@ -75,6 +75,12 @@ const int EGrey = 3;
 const int EGreen = 4;
 const int EViolet = 5;
 
+const int Ugly = 0;
+const int Plain = 1;
+const int BAverage = 2;
+const int Attractive = 3;
+const int Handsome = 4;
+
 void gen_name(Game &GAME);
 void gen_species(Game &GAME);
 void gen_sex(Game &GAME);

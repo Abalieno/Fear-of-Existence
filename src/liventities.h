@@ -163,89 +163,13 @@ public:
 
 };
 
-class Statistics {
-
-public:
-
-    int M;
-    int P;
-    int S;
-
-    int MM;
-    int MR;
-    int PM;
-    int PN;
-    int SM;
-    int SP;
-
-    int MMC;
-    int MMP;
-    int MMS;
-
-    int MRC;
-    int MRP;
-    int MRS;
-
-    int PMC;
-    int PMP;
-    int PMS;
-
-    int PNC;
-    int PNP;
-    int PNS;
-
-    int SMC;
-    int SMP;
-    int SMS;
-
-    int SPC;
-    int SPP;
-    int SPS;
-
-    Statistics(int a){ // player characteristics
-        M = 0;
-        P = 0;
-        S = 0;
-
-        MM = 0;
-        MR = 0;
-        PM = 0;
-        PN = 0;
-        SM = 0;
-        SP = 0;
-
-        MMC = 0;
-        MMP = 0;
-        MMS = 0;
-
-        MRC = 0;
-        MRP = 0;
-        MRS = 0;
-
-        PMC = 0;
-        PMP = 0;
-        PMS = 0;
-
-        PNC = 0;
-        PNP = 0;
-        PNS = 0;
-
-        SMC = 0;
-        SMP = 0;
-        SMS = 0;
-
-        SPC = 0;
-        SPP = 0;
-        SPS = 0;
-    }
-
-};
-
 class Object_player {
 
 public: // public should be moved down, but I keep it here for debug messages
 
+    // new chargen block
     char name[20];
+    char *name2;
     int species;
     int sex;
     int bmonth;
@@ -262,6 +186,17 @@ public: // public should be moved down, but I keep it here for debug messages
     int complexion;
     int hair;
     int eye;
+    int comeliness;
+    int STR;
+    int END;
+    int DEX;
+    int AGI;
+    int SPD;
+    int EYE;
+    int HEA;
+    int SMT;
+    int TCH;
+    int VOI;
 
     int x;
     int y;
@@ -272,7 +207,6 @@ public: // public should be moved down, but I keep it here for debug messages
     int bloody;
     bool blocks;
     Fighter stats;
-    Statistics sts;
 
     int combat_move;
     int combat_move_max;
@@ -286,9 +220,7 @@ public: // public should be moved down, but I keep it here for debug messages
 
     std::vector<Generic_object> inventory;
 
-    Object_player(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter, 
-            Statistics loc_sts) : stats(loc_fighter), sts(loc_sts) {
-            
+    Object_player(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
         x = a;
         y = b;
         selfchar = pchar;
