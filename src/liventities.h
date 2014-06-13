@@ -197,6 +197,10 @@ public: // public should be moved down, but I keep it here for debug messages
     int SMT;
     int TCH;
     int VOI;
+    int INT;
+    int AUR;
+    int WIL;
+    int MOR;
 
     int x;
     int y;

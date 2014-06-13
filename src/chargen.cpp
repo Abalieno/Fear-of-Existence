@@ -620,6 +620,78 @@ void gen_VOI(Game &GAME){
     if(GAME.player->species == Sindarin) GAME.player->VOI += 3;
 }
 
+void gen_INT(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->INT = vdice[1] + vdice[2] + vdice [3];
+}
+
+void gen_AUR(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->AUR = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Sindarin) GAME.player->AUR += 4;
+    else if(GAME.player->species == Khuzdul) GAME.player->AUR -= 2;
+    else if(GAME.player->species == Human && GAME.player->sex == Female) GAME.player->AUR -= 2;
+}
+
+void gen_WIL(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    int dice4 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    dice4 = dice(1,6);
+    std::vector<int> vdice;
+    vdice.push_back(dice1);
+    vdice.push_back(dice2);
+    vdice.push_back(dice3);
+    vdice.push_back(dice4);
+    std::sort(vdice.begin(), vdice.end());
+    GAME.player->WIL = vdice[1] + vdice[2] + vdice [3];
+
+    if(GAME.player->species == Khuzdul) GAME.player->WIL += 3;
+}
+
+void gen_MOR(Game &GAME){
+    int dice1 = 0;
+    int dice2 = 0;
+    int dice3 = 0;
+    dice1 = dice(1,6);
+    dice2 = dice(1,6);
+    dice3 = dice(1,6);
+    GAME.player->MOR = dice1 + dice2 + dice3;
+
+    if(GAME.player->species == Sindarin) GAME.player->MOR += 4;
+}
+
 void draw_frame(const char *title1, const char *title2){
     for (int n = 0; n < win_y; ++n){
         TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
@@ -760,9 +832,28 @@ const char *txt_voice(Game &GAME){
     else if(GAME.player->VOI >= 9 && GAME.player->VOI <= 12) return "Average";
     else if(GAME.player->VOI >= 13 && GAME.player->VOI <= 15) return "Pleasant";
     else if(GAME.player->VOI >= 16 && GAME.player->VOI <= 17) return "Excellent";
-    else if(GAME.player->VOI >= 1) return "Unearthly";
+    else if(GAME.player->VOI >= 18) return "Unearthly";
     else return "Null";
-}    
+}   
+
+const char *txt_intelligence(Game &GAME){
+    if(GAME.player->INT <= 5) return "Absent Minded";
+    else if(GAME.player->INT >= 6 && GAME.player->INT <= 8) return "Forgetful";
+    else if(GAME.player->INT >= 9 && GAME.player->INT <= 12) return "Average";
+    else if(GAME.player->INT >= 13 && GAME.player->INT <= 15) return "Good";
+    else if(GAME.player->INT >= 16) return "Excellent";
+    else return "Null";
+}
+
+const char *txt_morality(Game &GAME){
+    if(GAME.player->MOR <= 4) return "Diabolical";
+    else if(GAME.player->MOR >= 5 && GAME.player->MOR <= 7) return "Unscrupulous";
+    else if(GAME.player->MOR >= 8 && GAME.player->MOR <= 10) return "Corruptible";
+    else if(GAME.player->MOR >= 11 && GAME.player->MOR <= 13) return "Law-Abiding";
+    else if(GAME.player->MOR >= 14 && GAME.player->MOR <= 16) return "Principled";
+    else if(GAME.player->MOR >= 17) return "Exemplary";
+    else return "Null";
+}
 
 int chargen(Game &GAME){
     bool redofromstart = true;
@@ -793,76 +884,90 @@ int chargen(Game &GAME){
         gen_SMT(GAME);
         gen_TCH(GAME);
         gen_VOI(GAME);
+        gen_INT(GAME);
+        gen_AUR(GAME);
+        gen_WIL(GAME);
+        gen_MOR(GAME);
         draw_frame("CHARACTOR GENERATOR", "Pick your fool");
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
-        TCODConsole::root->print(5, 5, "Player name:");
-        TCODConsole::root->print(20, 5, "%c%s%c", TCOD_COLCTRL_1, GAME.player->name2, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(3, 7, "%cBIRTH%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        int main_osetx = 5;
+        TCODConsole::root->print(5, 5, "Character name:");
+        TCODConsole::root->print(22, 5, "%c%s%c", TCOD_COLCTRL_1, GAME.player->name2, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx, 7, "%cBIRTH%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         char dump[20];
         txt_species(dump, GAME);
-        TCODConsole::root->print(5, 9, "Species:");
-        TCODConsole::root->print(20, 9, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 9, "Species:");
+        TCODConsole::root->print(main_osetx+17, 9, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
         txt_sex(dump, GAME);
-        TCODConsole::root->print(5, 10, "Sex:");
-        TCODConsole::root->print(20, 10, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 10, "Sex:");
+        TCODConsole::root->print(main_osetx+17, 10, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
         txt_birthdate(dump, GAME);
-        TCODConsole::root->print(5, 11, "Birthdate:");
-        TCODConsole::root->print(20, 11, "%c%s, %d%c", TCOD_COLCTRL_2, dump, GAME.player->bday, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 11, "Birthdate:");
+        TCODConsole::root->print(main_osetx+17, 11, "%c%s, %d%c", TCOD_COLCTRL_2, dump, GAME.player->bday, TCOD_COLCTRL_STOP);
         txt_sunsign(dump, GAME);
-        TCODConsole::root->print(5, 12, "Sunsign:");
-        TCODConsole::root->print(20, 12, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(5, 13, "Sibling Rank:");
-        TCODConsole::root->print(20, 13, "%c%d (of %d)%c", TCOD_COLCTRL_2, GAME.player->sibrank, GAME.player->famsize, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 12, "Sunsign:");
+        TCODConsole::root->print(main_osetx+17, 12, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 13, "Sibling Rank:");
+        TCODConsole::root->print(main_osetx+17, 13, "%c%d (of %d)%c", TCOD_COLCTRL_2, GAME.player->sibrank, GAME.player->famsize, TCOD_COLCTRL_STOP);
         txt_enstrangement(dump, GAME);
-        TCODConsole::root->print(5, 14, "Enstrangement:");
-        TCODConsole::root->print(20, 14, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 14, "Enstrangement:");
+        TCODConsole::root->print(main_osetx+17, 14, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
         txt_handedness(dump, GAME);
-        TCODConsole::root->print(5, 15, "Handedness:");
-        TCODConsole::root->print(20, 15, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(3, 17, "%cAPPEARANCE%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(5, 19, "Height:");
-        TCODConsole::root->print(20, 19, "%c%d'%c", TCOD_COLCTRL_2, GAME.player->height, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 15, "Handedness:");
+        TCODConsole::root->print(main_osetx+17, 15, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx, 17, "%cAPPEARANCE%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 19, "Height:");
+        TCODConsole::root->print(main_osetx+17, 19, "%c%d'%c", TCOD_COLCTRL_2, GAME.player->height, TCOD_COLCTRL_STOP);
         txt_frame(dump, GAME);
-        TCODConsole::root->print(5, 20, "Frame:");
-        TCODConsole::root->print(20, 20, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(5, 21, "Weight (Size):");
-        TCODConsole::root->print(20, 21, "%c%dp/%d%c", TCOD_COLCTRL_2, GAME.player->weight, GAME.player->size, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 20, "Frame:");
+        TCODConsole::root->print(main_osetx+17, 20, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 21, "Weight (Size):");
+        TCODConsole::root->print(main_osetx+17, 21, "%c%dp/%d%c", TCOD_COLCTRL_2, GAME.player->weight, GAME.player->size, TCOD_COLCTRL_STOP);
         txt_complexion(dump, GAME);
-        TCODConsole::root->print(5, 22, "Complexion:");
-        TCODConsole::root->print(20, 22, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 22, "Complexion:");
+        TCODConsole::root->print(main_osetx+17, 22, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
         txt_hair(dump, GAME);
-        TCODConsole::root->print(5, 23, "Hair:");
-        TCODConsole::root->print(20, 23, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 23, "Hair:");
+        TCODConsole::root->print(main_osetx+17, 23, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
         txt_eye(dump, GAME);
-        TCODConsole::root->print(5, 24, "Eyes:");
-        TCODConsole::root->print(20, 24, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+2, 24, "Eyes:");
+        TCODConsole::root->print(main_osetx+17, 24, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
         txt_comeliness(dump, GAME);
-        TCODConsole::root->print(5, 25, "Comeliness:");
-        TCODConsole::root->print(20, 25, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(40, 7, "%cPHYSICAL%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(42, 9, "Strength:");
+        TCODConsole::root->print(main_osetx+2, 25, "Comeliness:");
+        TCODConsole::root->print(main_osetx+17, 25, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+35, 7, "%cPHYSICAL%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+37, 9, "Strength:");
         TCODConsole::root->print(57, 9, "%c%d%c", TCOD_COLCTRL_2, GAME.player->STR, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(42, 10, "Endurance:");
+        TCODConsole::root->print(main_osetx+37, 10, "Endurance:");
         TCODConsole::root->print(57, 10, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(42, 11, "Dexterity:");
+        TCODConsole::root->print(main_osetx+37, 11, "Dexterity:");
         TCODConsole::root->print(57, 11, "%c%d%c", TCOD_COLCTRL_2, GAME.player->DEX, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(42, 12, "Agility:");
+        TCODConsole::root->print(main_osetx+37, 12, "Agility:");
         TCODConsole::root->print(57, 12, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AGI, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(42, 13, "Speed:");
+        TCODConsole::root->print(main_osetx+37, 13, "Speed:");
         TCODConsole::root->print(57, 13, "%c%d%c", TCOD_COLCTRL_2, GAME.player->SPD, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(42, 14, "Eyesight:");
+        TCODConsole::root->print(main_osetx+37, 14, "Eyesight:");
         TCODConsole::root->print(57, 14, "%c%d%c", TCOD_COLCTRL_2, GAME.player->EYE, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(42, 15, "Hearing:");
+        TCODConsole::root->print(main_osetx+37, 15, "Hearing:");
         TCODConsole::root->print(57, 15, "%c%d%c", TCOD_COLCTRL_2, GAME.player->HEA, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(42, 16, "Smell/Taste:");
+        TCODConsole::root->print(main_osetx+37, 16, "Smell/Taste:");
         TCODConsole::root->print(57, 16, "%c%d%c", TCOD_COLCTRL_2, GAME.player->SMT, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(42, 17, "Touch:");
+        TCODConsole::root->print(main_osetx+37, 17, "Touch:");
         TCODConsole::root->print(57, 17, "%c%d%c", TCOD_COLCTRL_2, GAME.player->TCH, TCOD_COLCTRL_STOP);
         //txt_voice(dump, GAME);
-        TCODConsole::root->print(42, 18, "Voice:");
+        TCODConsole::root->print(main_osetx+37, 18, "Voice:");
         TCODConsole::root->print(57, 18, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->VOI, txt_voice(GAME), TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+35, 20, "%cPERSONALITY%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+37, 22, "Intelligence:");
+        TCODConsole::root->print(57, 22, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->INT, txt_intelligence(GAME), TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+37, 23, "Aura:");
+        TCODConsole::root->print(57, 23, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AUR, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+37, 24, "Will:");
+        TCODConsole::root->print(57, 24, "%c%d%c", TCOD_COLCTRL_2, GAME.player->WIL, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+37, 25, "Morality:");
+        TCODConsole::root->print(57, 25, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->MOR, txt_morality(GAME), TCOD_COLCTRL_STOP);
         std::vector<std::string> vecstr;
         std::string st1 = "&Accept";
         std::string st2 = "&Reroll";
