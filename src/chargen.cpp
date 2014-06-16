@@ -1,5 +1,6 @@
 #include <iostream> // debug
 #include <algorithm>    // std::sort
+#include <math.h> // for rounding
 
 #include "chargen.h"
 #include "rng.h"
@@ -692,6 +693,40 @@ void gen_MOR(Game &GAME){
     if(GAME.player->species == Sindarin) GAME.player->MOR += 4;
 }
 
+int skillSB(int a, int b, int c){
+    int x = a + b + c;
+    return round(x/3.0);
+}    
+
+void gen_rollskill(Game &GAME){
+    GAME.player->skill.condSB = skillSB(GAME.player->END, GAME.player->END, GAME.player->WIL); 
+    GAME.player->skill.slthSB = skillSB(GAME.player->AGI, GAME.player->TCH, GAME.player->TCH);
+    GAME.player->skill.thrwSB = skillSB(GAME.player->STR, GAME.player->DEX, GAME.player->EYE);
+    GAME.player->skill.condML = GAME.player->skill.condSB * 5;
+    GAME.player->skill.slthML = GAME.player->skill.slthSB * 3;
+    GAME.player->skill.thrwML = GAME.player->skill.thrwSB * 4;
+
+    GAME.player->skill.dodgSB = skillSB(GAME.player->AGI, GAME.player->AGI, GAME.player->SPD);
+    GAME.player->skill.initSB = skillSB(GAME.player->AGI, GAME.player->SPD, GAME.player->WIL);
+    GAME.player->skill.lswdSB = skillSB(GAME.player->STR, GAME.player->STR, GAME.player->DEX);
+    GAME.player->skill.mobiSB = skillSB(GAME.player->AGI, GAME.player->SPD, GAME.player->SPD);
+    GAME.player->skill.uarmSB = skillSB(GAME.player->STR, GAME.player->DEX, GAME.player->AGI);
+    GAME.player->skill.dodgML = GAME.player->skill.dodgSB * 5;
+    GAME.player->skill.initML = GAME.player->skill.initSB * 5;
+    GAME.player->skill.lswdML = GAME.player->skill.lswdSB * 3;
+    GAME.player->skill.mobiML = GAME.player->skill.mobiSB * 5;
+    GAME.player->skill.uarmML = GAME.player->skill.uarmSB * 3;
+
+    GAME.player->skill.awarSB = skillSB(GAME.player->EYE, GAME.player->HEA, GAME.player->SMT);
+    GAME.player->skill.intrSB = skillSB(GAME.player->INT, GAME.player->AUR, GAME.player->WIL);
+    GAME.player->skill.oratSB = skillSB(GAME.player->comeliness, GAME.player->VOI, GAME.player->INT);
+    GAME.player->skill.rhetSB = skillSB(GAME.player->VOI, GAME.player->INT, GAME.player->WIL);
+    GAME.player->skill.awarML = GAME.player->skill.awarSB * 4;
+    GAME.player->skill.intrML = GAME.player->skill.intrSB * 3;
+    GAME.player->skill.oratML = GAME.player->skill.oratSB * 2;
+    GAME.player->skill.rhetML = GAME.player->skill.rhetSB * 3;
+}
+
 void draw_frame(const char *title1, const char *title2){
     for (int n = 0; n < win_y; ++n){
         TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
@@ -888,6 +923,7 @@ int chargen(Game &GAME){
         gen_AUR(GAME);
         gen_WIL(GAME);
         gen_MOR(GAME);
+        gen_rollskill(GAME);
         draw_frame("CHARACTOR GENERATOR", "Pick your fool");
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
@@ -968,6 +1004,51 @@ int chargen(Game &GAME){
         TCODConsole::root->print(57, 24, "%c%d%c", TCOD_COLCTRL_2, GAME.player->WIL, TCOD_COLCTRL_STOP);
         TCODConsole::root->print(main_osetx+37, 25, "Morality:");
         TCODConsole::root->print(57, 25, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->MOR, txt_morality(GAME), TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+70, 7, "%cPHYSICAL SKILLS%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+90, 7, "%cSB%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 7, "%cML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 9, "CONDITION");
+        TCODConsole::root->print(main_osetx+90, 9, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.condSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 9, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.condML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 10, "STEALTH");
+        TCODConsole::root->print(main_osetx+90, 10, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.slthSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 10, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.slthML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 11, "THROWING");
+        TCODConsole::root->print(main_osetx+90, 11, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.thrwSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 11, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.thrwML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+70, 13, "%cCOMBAT SKILLS%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+90, 13, "%cSB%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 13, "%cML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 15, "DODGE");
+        TCODConsole::root->print(main_osetx+90, 15, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.dodgSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 15, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.dodgML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 16, "INITIATIVE");
+        TCODConsole::root->print(main_osetx+90, 16, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.initSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 16, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.initML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 17, "Longswords");
+        TCODConsole::root->print(main_osetx+90, 17, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.lswdSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 17, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.lswdML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 18, "MOBILITY");
+        TCODConsole::root->print(main_osetx+90, 18, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.mobiSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 18, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.mobiML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 18, "UNARMED");
+        TCODConsole::root->print(main_osetx+90, 18, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.uarmSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 18, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.uarmML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+70, 20, "%cCOMMUNICATION%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+90, 20, "%cSB%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 20, "%cML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 22, "AWARENESS");
+        TCODConsole::root->print(main_osetx+90, 22, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.awarSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 22, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.awarML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 23, "INTRIGUE");
+        TCODConsole::root->print(main_osetx+90, 23, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.intrSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 23, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.intrML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 24, "ORATORY");
+        TCODConsole::root->print(main_osetx+90, 24, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.oratSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 24, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.oratML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 25, "RHETORIC");
+        TCODConsole::root->print(main_osetx+90, 25, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.rhetSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 25, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.rhetML, TCOD_COLCTRL_STOP);
         std::vector<std::string> vecstr;
         std::string st1 = "&Accept";
         std::string st2 = "&Reroll";

@@ -63,6 +63,36 @@ public:
     }
 };
 
+class Skill {
+    public: 
+        int condSB;
+        int slthSB;
+        int thrwSB;
+        int condML;
+        int slthML;
+        int thrwML;
+
+        int dodgSB;
+        int dodgML;
+        int initSB;
+        int initML;
+        int lswdSB;
+        int lswdML;
+        int mobiSB;
+        int mobiML;
+        int uarmSB;
+        int uarmML;
+
+        int awarSB;
+        int awarML;
+        int intrSB;
+        int intrML;
+        int oratSB;
+        int oratML;
+        int rhetSB;
+        int rhetML;
+};    
+
 class Object_monster {
 
 public: // public should be moved down, but I keep it here for debug messages
@@ -211,6 +241,7 @@ public: // public should be moved down, but I keep it here for debug messages
     int bloody;
     bool blocks;
     Fighter stats;
+    Skill skill;
 
     int combat_move;
     int combat_move_max;
