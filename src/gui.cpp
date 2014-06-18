@@ -170,7 +170,7 @@ int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack
                     a = 3 * (z);
                     int origin = 0;
                     origin = (tempsiz-pack[z].length()) /2;
-                    if( (tempsiz-pack[z].length()) % 2 == 1) origin += 1;
+                    //if( (tempsiz-pack[z].length()) % 2 == 1) origin += 1; // why was this needed?
                     if( (z+1) != menu_index) menu->setCharBackground(select[z]-1+(tempsiz*z)+origin+a, 1, TCODColor::red);
                     else menu->setCharForeground(select[z]-1+(tempsiz*z)+origin+a, 1, TCODColor::red);
                 }    

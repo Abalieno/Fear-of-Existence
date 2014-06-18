@@ -890,7 +890,31 @@ const char *txt_morality(Game &GAME){
     else return "Null";
 }
 
+void print_choice(){
+    TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
+    TCODConsole::root->print(43, 15, "Generation method:");
+    TCODConsole::root->setColorControl(TCOD_COLCTRL_5, TCODColor::black, TCODColor::white);
+    TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lightGrey, TCODColor::black);
+    TCODConsole::root->printRect(43, 17, 44,4, "%cFour dices%c %c- Characteristics are obtained by rolling 3d6. In this mode four dices are rolled, the lower value is then discarded.%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    TCODConsole::root->printRect(43, 21, 44,4, "%cDistribute points%c %c- The standard 3d6 are rolled, but you get to allocate manually a small pool of points between all characteristics.%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);        
+}
+
 int chargen(Game &GAME){
+    bool method = false; // using 4 dices or point allocation
+    std::vector<std::string> vecstr;
+    std::string st1 = "Use four &dices";
+    std::string st2 = "Distribute &points";
+    vecstr.push_back(st1);
+    vecstr.push_back(st2);
+    print_choice();
+    switch ( UI_menu(45, 29, vecstr, 1) ){
+        case 1:
+            method = false;
+            break;
+        case 2:
+            method = true;
+            break;
+    }
     bool redofromstart = true;
     while(redofromstart){
         TCODConsole::root->clear();
@@ -973,6 +997,12 @@ int chargen(Game &GAME){
         txt_comeliness(dump, GAME);
         TCODConsole::root->print(main_osetx+2, 25, "Comeliness:");
         TCODConsole::root->print(main_osetx+17, 25, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        if(method){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_3, TCODColor::lighterBlue, TCODColor::black);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_4, TCODColor::black, TCODColor::lighterBlue);
+            int alpoint = rng(8,12);
+            TCODConsole::root->print(main_osetx, 28, "%cTo distribute:%c %c%d%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, alpoint, TCOD_COLCTRL_STOP);
+        }    
         TCODConsole::root->print(main_osetx+35, 7, "%cPHYSICAL%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         TCODConsole::root->print(main_osetx+37, 9, "Strength:");
         TCODConsole::root->print(57, 9, "%c%d%c", TCOD_COLCTRL_2, GAME.player->STR, TCOD_COLCTRL_STOP);
@@ -1031,35 +1061,35 @@ int chargen(Game &GAME){
         TCODConsole::root->print(main_osetx+72, 18, "MOBILITY");
         TCODConsole::root->print(main_osetx+90, 18, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.mobiSB, TCOD_COLCTRL_STOP);
         TCODConsole::root->print(main_osetx+95, 18, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.mobiML, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+72, 18, "UNARMED");
-        TCODConsole::root->print(main_osetx+90, 18, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.uarmSB, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+95, 18, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.uarmML, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+70, 20, "%cCOMMUNICATION%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+90, 20, "%cSB%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+95, 20, "%cML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+72, 22, "AWARENESS");
-        TCODConsole::root->print(main_osetx+90, 22, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.awarSB, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+95, 22, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.awarML, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+72, 23, "INTRIGUE");
-        TCODConsole::root->print(main_osetx+90, 23, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.intrSB, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+95, 23, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.intrML, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+72, 24, "ORATORY");
-        TCODConsole::root->print(main_osetx+90, 24, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.oratSB, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+95, 24, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.oratML, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+72, 25, "RHETORIC");
-        TCODConsole::root->print(main_osetx+90, 25, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.rhetSB, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+95, 25, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.rhetML, TCOD_COLCTRL_STOP);
-        std::vector<std::string> vecstr;
-        std::string st1 = "&Accept";
-        std::string st2 = "&Reroll";
-        std::string st3 = "&Edit";
-        std::string st4 = "&Skip";
-        std::string st5 = "&QUIT";
-        vecstr.push_back(st1);
-        vecstr.push_back(st2);
-        vecstr.push_back(st3);
-        vecstr.push_back(st4);
-        vecstr.push_back(st5);
+        TCODConsole::root->print(main_osetx+72, 19, "UNARMED");
+        TCODConsole::root->print(main_osetx+90, 19, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.uarmSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 19, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.uarmML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+70, 21, "%cCOMMUNICATION%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+90, 21, "%cSB%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 21, "%cML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 23, "AWARENESS");
+        TCODConsole::root->print(main_osetx+90, 23, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.awarSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 23, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.awarML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 24, "INTRIGUE");
+        TCODConsole::root->print(main_osetx+90, 24, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.intrSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 24, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.intrML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 25, "ORATORY");
+        TCODConsole::root->print(main_osetx+90, 25, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.oratSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 25, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.oratML, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+72, 26, "RHETORIC");
+        TCODConsole::root->print(main_osetx+90, 26, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.rhetSB, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+95, 26, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.rhetML, TCOD_COLCTRL_STOP);
+        vecstr.clear();
+        std::string str1 = "&Accept";
+        std::string str2 = "&Reroll"; // fix this shit
+        std::string str3 = "&Edit";
+        std::string str4 = "&Skip";
+        std::string str5 = "&QUIT";
+        vecstr.push_back(str1);
+        vecstr.push_back(str2);
+        vecstr.push_back(str3);
+        vecstr.push_back(str4);
+        vecstr.push_back(str5);
         //int menu_index = 1;
     override:
         switch ( UI_menu(5, 32, vecstr, 1) ){
