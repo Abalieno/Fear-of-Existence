@@ -3901,25 +3901,18 @@ int main() {
     vecstr.push_back(st3);
 
     int menu_index = 1;
-    switch ( UI_menu(19, 29, vecstr, 0) ){
-        case 3:
-            return 0;
-            break;
-        case 1:
-            menu_index = 1;
-            break;
-        case 2:
-            menu_index = 2;
-            break;
-        case -1:
-            return 0;
-            break;
-    }    
 
-    if(menu_index == 1){
+    while(menu_index == 1){
+        menu_index = UI_menu(19, 29, vecstr, 0);
+        if(menu_index == -1 || menu_index == 3) return 0;
+        if(menu_index == 2) break;
         TCODConsole::root->clear();
-        if(chargen(GAME) == -1) return 0;
-    }   
+        if(menu_index == 1) menu_index = chargen(GAME);
+        if(menu_index == -1) return 0;
+        else if(menu_index == 0) break;
+        TCODConsole::root->clear();
+    }  
+    /*
     std::cout << "Name: " << GAME.player->name << std::endl;
     std::cout << "Species: " << player.species << std::endl;
     std::cout << "Sex: " << player.sex << std::endl;
@@ -3935,7 +3928,7 @@ int main() {
     std::cout << "Birthdate: " << dump << ", " << player.bday << std::endl;
     txt_sunsign(dump, GAME);
     std::cout << "Sunsign: " << dump << std::endl;
-    
+    */
 
     wid_top_open = 1; // default on for top bar
     UI_hook(GAME, 0); // hook in the panel
@@ -3944,7 +3937,6 @@ int main() {
     //uint32 timin2 = 0; 
 
     while (! TCODConsole::isWindowClosed()) {
-
         
         // FPS debug
         /* 
@@ -3952,7 +3944,6 @@ int main() {
         if(fpscount > LIMIT_FPS) fpscount = 0;
         std::cout << fpscount << " " << "pl.x " << player.x;
         */
-
 
         jump:
         //std::cout << "MAIN LOOP" << std::endl;

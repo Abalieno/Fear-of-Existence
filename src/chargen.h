@@ -81,28 +81,11 @@ const int BAverage = 2;
 const int Attractive = 3;
 const int Handsome = 4;
 
-void gen_name(Game &GAME);
-void gen_species(Game &GAME);
-void gen_sex(Game &GAME);
-void gen_birthdate(Game &GAME);
-void gen_sunsign(Game &GAME);
-void gen_sibrank(Game &GAME);
-void gen_strange(Game &GAME);
-void gen_hand(Game &GAME);
-void gen_height(Game &GAME);
-void gen_frame(Game &GAME);
-void gen_weight(Game &GAME);
-void gen_complexion(Game &GAME);
-void gen_hair(Game &GAME);
-void gen_eye(Game &GAME);
+
 
 void draw_frame(const char *title1, const char *title2);
 
-void txt_sex(char* here, Game &GAME);
-void txt_species(char* here, Game &GAME);
-void txt_birthdate(char* here, Game &GAME);
-void txt_sunsign(char* here, Game &GAME);
-void txt_complexion(char* here, Game &GAME);
+
 
 int chargen(Game &GAME);
 

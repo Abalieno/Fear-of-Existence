@@ -152,7 +152,7 @@ void gen_sibrank(Game &GAME){
     int famsize = 0;
     switch(GAME.player->species){
         case Human:
-            famsize = rng(6,12) - 5;
+            famsize = dice(6,2) - 5;
             if(famsize == 7){
                 int roll = 0;
                 while(rng(1,2) == 2){
@@ -162,7 +162,7 @@ void gen_sibrank(Game &GAME){
             }    
             break;
         case Sindarin:
-            famsize = rng(3,6) - 2;
+            famsize = dice(3,2) - 2;
             if(famsize == 4){
                 int roll = 0;
                 while(rng(1,2) == 2){
@@ -172,7 +172,7 @@ void gen_sibrank(Game &GAME){
             }
             break;
         case Khuzdul:
-            famsize = rng(3,6) - 2;
+            famsize = dice(3,2) - 2;
             if(famsize == 4){
                 int roll = 0;
                 while(rng(1,2) == 2){
@@ -225,7 +225,7 @@ void gen_height(Game &GAME){
 }
 void gen_frame(Game &GAME){
     int roll = 0;
-    roll = rng(3,18);
+    roll = dice(3,6);
     if(GAME.player->sex == Female && GAME.player->species == Human) roll -= 3;
     if(GAME.player->species == Sindarin) roll -= 2;
     if(GAME.player->species == Khuzdul) roll += 4;
@@ -387,7 +387,7 @@ void gen_comeliness(Game &GAME){
     else if(roll >= 16) GAME.player->comeliness = Handsome;
 }   
 
-void gen_STR(Game &GAME){
+void gen_STR(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -404,7 +404,8 @@ void gen_STR(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4); // use 4th dice only if we not use points
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->STR = vdice[1] + vdice[2] + vdice [3];
 
@@ -427,7 +428,7 @@ void gen_STR(Game &GAME){
     else if(GAME.player->weight >= 366 && GAME.player->weight <= 415) GAME.player->STR += 8;
 }    
 
-void gen_END(Game &GAME){
+void gen_END(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -443,14 +444,15 @@ void gen_END(Game &GAME){
     vdice.push_back(dice2);
     vdice.push_back(dice3);
     vdice.push_back(dice4);
-    vdice.push_back(dice5);
+    if(!method) vdice.push_back(dice5);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->END = vdice[2] + vdice[3] + vdice [4];
 
     if(GAME.player->species == Khuzdul) GAME.player->END += 2;
 }
 
-void gen_DEX(Game &GAME){
+void gen_DEX(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -463,7 +465,8 @@ void gen_DEX(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->DEX = vdice[1] + vdice[2] + vdice [3];
 
@@ -473,7 +476,7 @@ void gen_DEX(Game &GAME){
     else if(GAME.player->hand == Lefthanded) GAME.player->DEX += 1;
 }
 
-void gen_AGI(Game &GAME){
+void gen_AGI(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -486,7 +489,8 @@ void gen_AGI(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->AGI = vdice[1] + vdice[2] + vdice [3];
 
@@ -497,7 +501,7 @@ void gen_AGI(Game &GAME){
     else if(GAME.player->frame == Massive) GAME.player->AGI -= 2;
 }
 
-void gen_SPD(Game &GAME){
+void gen_SPD(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -510,7 +514,8 @@ void gen_SPD(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->SPD = vdice[1] + vdice[2] + vdice [3];
 
@@ -518,7 +523,7 @@ void gen_SPD(Game &GAME){
     if(GAME.player->SPD < (GAME.player->AGI - 4) ) GAME.player->SPD = (GAME.player->AGI - 4);
 }
 
-void gen_EYE(Game &GAME){
+void gen_EYE(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -531,14 +536,15 @@ void gen_EYE(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->EYE = vdice[1] + vdice[2] + vdice [3];
 
     if(GAME.player->species == Sindarin) GAME.player->EYE += 3;
 }
 
-void gen_HEA(Game &GAME){
+void gen_HEA(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -551,7 +557,8 @@ void gen_HEA(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->HEA = vdice[1] + vdice[2] + vdice [3];
 
@@ -559,7 +566,7 @@ void gen_HEA(Game &GAME){
     else if(GAME.player->species == Khuzdul) GAME.player->HEA += 2;
 }
 
-void gen_SMT(Game &GAME){
+void gen_SMT(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -572,7 +579,8 @@ void gen_SMT(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->SMT = vdice[1] + vdice[2] + vdice [3];
 
@@ -580,7 +588,7 @@ void gen_SMT(Game &GAME){
     else if(GAME.player->species == Human && GAME.player->sex == Female) GAME.player->SMT += 1;
 }
 
-void gen_TCH(Game &GAME){
+void gen_TCH(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -593,7 +601,8 @@ void gen_TCH(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->TCH = vdice[1] + vdice[2] + vdice [3];
 
@@ -601,7 +610,7 @@ void gen_TCH(Game &GAME){
     else if(GAME.player->species == Khuzdul) GAME.player->TCH += 1;
 }
 
-void gen_VOI(Game &GAME){
+void gen_VOI(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -614,14 +623,15 @@ void gen_VOI(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->VOI = vdice[1] + vdice[2] + vdice [3];
 
     if(GAME.player->species == Sindarin) GAME.player->VOI += 3;
 }
 
-void gen_INT(Game &GAME){
+void gen_INT(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -634,12 +644,13 @@ void gen_INT(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->INT = vdice[1] + vdice[2] + vdice [3];
 }
 
-void gen_AUR(Game &GAME){
+void gen_AUR(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -652,7 +663,8 @@ void gen_AUR(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->AUR = vdice[1] + vdice[2] + vdice [3];
 
@@ -661,7 +673,7 @@ void gen_AUR(Game &GAME){
     else if(GAME.player->species == Human && GAME.player->sex == Female) GAME.player->AUR -= 2;
 }
 
-void gen_WIL(Game &GAME){
+void gen_WIL(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -674,14 +686,15 @@ void gen_WIL(Game &GAME){
     vdice.push_back(dice1);
     vdice.push_back(dice2);
     vdice.push_back(dice3);
-    vdice.push_back(dice4);
+    if(!method) vdice.push_back(dice4);
+    else vdice.push_back(0);
     std::sort(vdice.begin(), vdice.end());
     GAME.player->WIL = vdice[1] + vdice[2] + vdice [3];
 
     if(GAME.player->species == Khuzdul) GAME.player->WIL += 3;
 }
 
-void gen_MOR(Game &GAME){
+void gen_MOR(Game &GAME, bool method){
     int dice1 = 0;
     int dice2 = 0;
     int dice3 = 0;
@@ -899,6 +912,165 @@ void print_choice(){
     TCODConsole::root->printRect(43, 21, 44,4, "%cDistribute points%c %c- The standard 3d6 are rolled, but you get to allocate manually a small pool of points between all characteristics.%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);        
 }
 
+void edit_char(Game &GAME, int points){
+    unsigned int main_osetx = 4;
+    TCODConsole::root->setColorControl(TCOD_COLCTRL_1, TCODColor::black, TCODColor::white);
+    TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+    TCODConsole::root->print(main_osetx+35, 9, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 10, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 11, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 12, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 13, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 14, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 15, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 16, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 17, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 18, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+
+    TCODConsole::root->print(main_osetx+35, 22, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 23, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    TCODConsole::root->print(main_osetx+35, 24, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+
+    TCOD_event_t eve;
+    TCOD_key_t key;
+    TCOD_mouse_t mouse;
+    bool button = false; // used to make sure the button is unpressed as first
+    unsigned int str = 0, end = 0, dex = 0, agi = 0, spd = 0, eye = 0, hea = 0, smt = 0, tch = 0, voi = 0;
+    while(1){
+        eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+        if (TCODConsole::isWindowClosed()) return;
+        mouse = TCODMouse::getStatus();
+        unsigned int mousex = mouse.cx;
+        unsigned int mousey = mouse.cy;
+        if(!mouse.lbutton) button = true;
+        if(button && mouse.lbutton){
+            if(mousex == main_osetx+35 && mousey == 9){
+                if(str > 0) {--str; ++points;}
+                if(str == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 9, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->STR+str, TCOD_COLCTRL_STOP);
+            }    
+            else if(mousex == main_osetx+36 && mousey == 9){
+                if(points > 0) {++str; --points;}
+                if(str == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 9, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->STR+str, TCOD_COLCTRL_STOP);
+            }    
+            else if(mousex == main_osetx+35 && mousey == 10){
+                if(end > 0) {--end; ++points;}
+                if(end == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 10, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->END+end, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+36 && mousey == 10){
+                if(points > 0) {++end; --points;}
+                if(end == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 10, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->END+end, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+35 && mousey == 11){
+                if(dex > 0) {--dex; ++points;}
+                if(dex == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 11, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->DEX+dex, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+36 && mousey == 11){
+                if(points > 0) {++dex; --points;}
+                if(dex == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 11, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->DEX+dex, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+35 && mousey == 12){
+                if(agi > 0) {--agi; ++points;}
+                if(agi == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 12, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->AGI+agi, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+36 && mousey == 12){
+                if(points > 0) {++agi; --points;}
+                if(agi == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 12, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->AGI+agi, TCOD_COLCTRL_STOP);
+            }  
+            else if(mousex == main_osetx+35 && mousey == 13){
+                if(spd > 0) {--spd; ++points;}
+                if(spd == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 13, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->SPD+spd, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+36 && mousey == 13){
+                if(points > 0) {++spd; --points;}
+                if(spd == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 13, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->SPD+spd, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+35 && mousey == 14){
+                if(eye > 0) {--eye; ++points;}
+                if(eye == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 14, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->EYE+eye, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+36 && mousey == 14){
+                if(points > 0) {++eye; --points;}
+                if(eye == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 14, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->EYE+eye, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+35 && mousey == 15){
+                if(hea > 0) {--hea; ++points;}
+                if(hea == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 15, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->HEA+hea, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+36 && mousey == 15){
+                if(points > 0) {++hea; --points;}
+                if(hea == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 15, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->HEA+hea, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+35 && mousey == 16){
+                if(smt > 0) {--smt; ++points;}
+                if(smt == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 16, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->SMT+smt, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+36 && mousey == 16){
+                if(points > 0) {++smt; --points;}
+                if(smt == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 16, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->SMT+smt, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+35 && mousey == 17){
+                if(tch > 0) {--tch; ++points;}
+                if(tch == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 17, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->TCH+tch, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+36 && mousey == 17){
+                if(points > 0) {++tch; --points;}
+                if(tch == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 17, "%c%d  %c", TCOD_COLCTRL_2, GAME.player->TCH+tch, TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+35 && mousey == 18){
+                if(voi > 0) {--voi; ++points;}
+                if(voi == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 18, "%c%d (%s)     %c", TCOD_COLCTRL_2, GAME.player->VOI+voi, txt_voice(GAME), TCOD_COLCTRL_STOP);
+            }
+            else if(mousex == main_osetx+36 && mousey == 18){
+                if(points > 0) {++voi; --points;}
+                if(voi == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+                else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+                TCODConsole::root->print(57, 18, "%c%d (%s)     %c", TCOD_COLCTRL_2, GAME.player->VOI+voi, txt_voice(GAME), TCOD_COLCTRL_STOP);
+            }  
+            button = false; // reset mouse button
+        }
+        TCODConsole::root->print(main_osetx+1, 28, "%cTo distribute:%c %c%d%c  ", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, points, TCOD_COLCTRL_STOP);
+        TCODConsole::flush(); // this updates the screen
+    }   
+}    
+
 int chargen(Game &GAME){
     bool method = false; // using 4 dices or point allocation
     std::vector<std::string> vecstr;
@@ -933,20 +1105,20 @@ int chargen(Game &GAME){
         gen_hair(GAME);
         gen_eye(GAME);
         gen_comeliness(GAME);
-        gen_STR(GAME);
-        gen_END(GAME);
-        gen_DEX(GAME);
-        gen_AGI(GAME);
-        gen_SPD(GAME);
-        gen_EYE(GAME);
-        gen_HEA(GAME);
-        gen_SMT(GAME);
-        gen_TCH(GAME);
-        gen_VOI(GAME);
-        gen_INT(GAME);
-        gen_AUR(GAME);
-        gen_WIL(GAME);
-        gen_MOR(GAME);
+        gen_STR(GAME, method);
+        gen_END(GAME, method);
+        gen_DEX(GAME, method);
+        gen_AGI(GAME, method);
+        gen_SPD(GAME, method);
+        gen_EYE(GAME, method);
+        gen_HEA(GAME, method);
+        gen_SMT(GAME, method);
+        gen_TCH(GAME, method);
+        gen_VOI(GAME, method);
+        gen_INT(GAME, method);
+        gen_AUR(GAME, method);
+        gen_WIL(GAME, method);
+        gen_MOR(GAME, method);
         gen_rollskill(GAME);
         draw_frame("CHARACTOR GENERATOR", "Pick your fool");
         TCODConsole::root->setAlignment(TCOD_LEFT);
@@ -997,10 +1169,11 @@ int chargen(Game &GAME){
         txt_comeliness(dump, GAME);
         TCODConsole::root->print(main_osetx+2, 25, "Comeliness:");
         TCODConsole::root->print(main_osetx+17, 25, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
+        int alpoint = 0;
         if(method){
             TCODConsole::root->setColorControl(TCOD_COLCTRL_3, TCODColor::lighterBlue, TCODColor::black);
             TCODConsole::root->setColorControl(TCOD_COLCTRL_4, TCODColor::black, TCODColor::lighterBlue);
-            int alpoint = rng(8,12);
+            alpoint = rng(8,12);
             TCODConsole::root->print(main_osetx, 28, "%cTo distribute:%c %c%d%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, alpoint, TCOD_COLCTRL_STOP);
         }    
         TCODConsole::root->print(main_osetx+35, 7, "%cPHYSICAL%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -1083,7 +1256,7 @@ int chargen(Game &GAME){
         std::string str1 = "&Accept";
         std::string str2 = "&Reroll"; // fix this shit
         std::string str3 = "&Edit";
-        std::string str4 = "&Skip";
+        std::string str4 = "&Back";
         std::string str5 = "&QUIT";
         vecstr.push_back(str1);
         vecstr.push_back(str2);
@@ -1103,12 +1276,16 @@ int chargen(Game &GAME){
 
                 break;
             case 4:
-                return 0;
+                return 1;
                 break;
             case -1:
                 return -1;
                 break;
-            case 3: goto override;       
+            case 3:
+                if(method){
+                    edit_char(GAME, alpoint);
+                }
+                goto override;       
         }
     }
     return 0;
