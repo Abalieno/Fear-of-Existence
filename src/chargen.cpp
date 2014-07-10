@@ -912,6 +912,16 @@ void print_choice(){
     TCODConsole::root->printRect(43, 21, 44,4, "%cDistribute points%c %c- The standard 3d6 are rolled, but you get to allocate manually a small pool of points between all characteristics.%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);        
 }
 
+void print_choice_s(){
+    TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
+    TCODConsole::root->print(43, 15, "Select race:");
+}
+
+void print_choice_se(){
+    TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
+    TCODConsole::root->print(43, 15, "Select gender:");
+}
+
 void addpoint(unsigned int &stat, int ostat, int &points, bool subadd, int who){
     if(subadd){
         if(ostat+stat > 14 && ostat+stat < 18 && points > 2) { ++stat; points = points - 3; }
@@ -930,9 +940,9 @@ void addpoint(unsigned int &stat, int ostat, int &points, bool subadd, int who){
     else if(who == 10) TCODConsole::root->print(57, 22, "%c%d (%s)      %c", TCOD_COLCTRL_2, ostat+stat, txt_intelligence(ostat+stat), TCOD_COLCTRL_STOP);
     else if(who > 10) TCODConsole::root->print(57, 12+who, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP);
     else TCODConsole::root->print(57, 9+who, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP);
-}    
+}   
 
-void edit_char(Game &GAME, int points){
+int edit_char(Game &GAME, int points){
     unsigned int main_osetx = 4;
     TCODConsole::root->setColorControl(TCOD_COLCTRL_1, TCODColor::black, TCODColor::white);
     TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
@@ -956,10 +966,11 @@ void edit_char(Game &GAME, int points){
     TCOD_key_t key;
     TCOD_mouse_t mouse;
     bool button = false; // used to make sure the button is unpressed as first
+    bool accepted = false;
     unsigned int str = 0, end = 0, dex = 0, agi = 0, spd = 0, eye = 0, hea = 0, smt = 0, tch = 0, voi = 0, intel = 0, aur = 0, wil = 0;
-    while(1){
+    while(accepted == false){
         eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
-        if (TCODConsole::isWindowClosed()) return;
+        if (TCODConsole::isWindowClosed()) return 0;
         mouse = TCODMouse::getStatus();
         unsigned int mousex = mouse.cx;
         unsigned int mousey = mouse.cy;
@@ -969,6 +980,7 @@ void edit_char(Game &GAME, int points){
             menu->print(0, 1, "Accept");
             menu->setDefaultForeground(TCODColor::white);
             menu->setDefaultBackground(TCODColor::black);
+            if(mouse.lbutton) accepted = true;
         } else {
             menu->setDefaultForeground(colorbase);
             menu->setDefaultBackground(TCODColor::black);
@@ -1055,6 +1067,7 @@ void edit_char(Game &GAME, int points){
             else if(mousex == main_osetx+36 && mousey == 24){
                 addpoint(wil, GAME.player->WIL, points, 1, 12);
             }
+
             button = false; // reset mouse button
         }
         TCODConsole::root->print(main_osetx+1, 28, "%cTo distribute:%c %c%d%c  ", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, points, TCOD_COLCTRL_STOP);
@@ -1065,7 +1078,21 @@ void edit_char(Game &GAME, int points){
         for(int x = 0; x < 6; ++x) menu->putChar(x, 3-1, '-', TCOD_BKGND_SET);
         TCODConsole::blit(menu.get(),0,0,0,0,TCODConsole::root, 5, 32);
         TCODConsole::flush(); // this updates the screen
-    }   
+    } 
+    GAME.player->STR += str;
+    GAME.player->END += end;
+    GAME.player->DEX += dex;
+    GAME.player->AGI += agi;
+    GAME.player->SPD += spd;
+    GAME.player->EYE += eye;
+    GAME.player->HEA += hea;
+    GAME.player->SMT += smt;
+    GAME.player->TCH += tch;
+    GAME.player->VOI += voi;
+    GAME.player->INT += intel;
+    GAME.player->AUR += aur;
+    GAME.player->WIL += wil;
+    return points;
 }    
 
 int chargen(Game &GAME){
@@ -1084,11 +1111,60 @@ int chargen(Game &GAME){
             method = true;
             break;
     }
+    TCODConsole::root->clear();
+    vecstr.clear();
+    std::string ss1 = "Random";
+    std::string ss2 = "Human";
+    std::string ss3 = "Sindarin";
+    std::string ss4 = "Khuzdul";
+    bool lockspecies = false;
+    vecstr.push_back(ss1);
+    vecstr.push_back(ss2);
+    vecstr.push_back(ss3);
+    vecstr.push_back(ss4);
+    print_choice_s();
+    switch ( UI_menu(44, 17, vecstr, 0) ){
+        case 1:
+            break;
+        case 2:
+            GAME.player->species = Human;
+            lockspecies = true;
+            break;
+            case 3:
+            GAME.player->species = Sindarin;
+            lockspecies = true;
+            break;
+            case 4:
+            GAME.player->species = Khuzdul;
+            lockspecies = true;
+            break;
+    }
+    vecstr.clear();
+    TCODConsole::root->clear();
+    std::string se1 = "Random";
+    std::string se2 = "Male";
+    std::string se3 = "Female";
+    bool locksex = false;
+    vecstr.push_back(se1);
+    vecstr.push_back(se2);
+    vecstr.push_back(se3);
+    print_choice_se();
+    switch ( UI_menu(44, 17, vecstr, 0) ){
+        case 1:
+            break;
+        case 2:
+            GAME.player->sex = Male;
+            locksex = true;
+            break;
+            case 3:
+            GAME.player->sex = Female;
+            locksex = true;
+            break;
+    }
     bool redofromstart = true;
     while(redofromstart){
-        TCODConsole::root->clear();
-        gen_species(GAME);
-        gen_sex(GAME);
+        if(!lockspecies) gen_species(GAME);
+        if(!locksex) gen_sex(GAME);
         gen_name(GAME);
         gen_birthdate(GAME);
         gen_sunsign(GAME);
@@ -1116,12 +1192,21 @@ int chargen(Game &GAME){
         gen_AUR(GAME, method);
         gen_WIL(GAME, method);
         gen_MOR(GAME, method);
+        int main_osetx = 5;
+        int alpoint = 0;
+        if(method){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_3, TCODColor::lighterBlue, TCODColor::black);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_4, TCODColor::black, TCODColor::lighterBlue);
+            alpoint = rng(8,12);
+        }
+        override:
         gen_rollskill(GAME);
+        TCODConsole::root->clear();
+        if(method) TCODConsole::root->print(main_osetx, 28, "%cTo distribute:%c %c%d%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, alpoint, TCOD_COLCTRL_STOP);
         draw_frame("CHARACTOR GENERATOR", "Pick your fool");
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
-        int main_osetx = 5;
         TCODConsole::root->print(5, 5, "Character name:");
         TCODConsole::root->print(22, 5, "%c%s%c", TCOD_COLCTRL_1, GAME.player->name2, TCOD_COLCTRL_STOP);
         TCODConsole::root->print(main_osetx, 7, "%cBIRTH%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -1166,13 +1251,6 @@ int chargen(Game &GAME){
         txt_comeliness(dump, GAME);
         TCODConsole::root->print(main_osetx+2, 25, "Comeliness:");
         TCODConsole::root->print(main_osetx+17, 25, "%c%s%c", TCOD_COLCTRL_2, dump, TCOD_COLCTRL_STOP);
-        int alpoint = 0;
-        if(method){
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_3, TCODColor::lighterBlue, TCODColor::black);
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_4, TCODColor::black, TCODColor::lighterBlue);
-            alpoint = rng(8,12);
-            TCODConsole::root->print(main_osetx, 28, "%cTo distribute:%c %c%d%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, alpoint, TCOD_COLCTRL_STOP);
-        }    
         TCODConsole::root->print(main_osetx+35, 7, "%cPHYSICAL%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         TCODConsole::root->print(main_osetx+37, 9, "Strength:");
         TCODConsole::root->print(57, 9, "%c%d%c", TCOD_COLCTRL_2, GAME.player->STR, TCOD_COLCTRL_STOP);
@@ -1257,10 +1335,10 @@ int chargen(Game &GAME){
         std::string str5 = "&QUIT";
         vecstr.push_back(str1);
         vecstr.push_back(str2);
-        vecstr.push_back(str3);
+        if(method) vecstr.push_back(str3);
         vecstr.push_back(str4);
         vecstr.push_back(str5);
-    override:
+    
         switch ( UI_menu(5, 32, vecstr, 1) ){
             case 5:
                 return -1;
@@ -1272,15 +1350,17 @@ int chargen(Game &GAME){
 
                 break;
             case 4:
-                return 1;
+                if(method) return 1;
+                else return -1;
                 break;
             case -1:
                 return -1;
                 break;
             case 3:
                 if(method){
-                    edit_char(GAME, alpoint);
+                    alpoint = edit_char(GAME, alpoint);
                 }
+                else return 1;
                 goto override;       
         }
     }
