@@ -908,7 +908,7 @@ void print_choice(){
     TCODConsole::root->print(43, 15, "Generation method:");
     TCODConsole::root->setColorControl(TCOD_COLCTRL_5, TCODColor::black, TCODColor::white);
     TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lightGrey, TCODColor::black);
-    TCODConsole::root->printRect(43, 17, 44,4, "%cFour dices%c %c- Characteristics are obtained by rolling 3d6. In this mode four dices are rolled, the lower value is then discarded.%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    TCODConsole::root->printRect(43, 17, 44,4, "%cFour dice%c %c- Characteristics are obtained by rolling 3d6. In this mode four dice are rolled, the lower value is then discarded.%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
     TCODConsole::root->printRect(43, 21, 44,4, "%cDistribute points%c %c- The standard 3d6 are rolled, but you get to allocate manually a small pool of points between all characteristics.%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);        
 }
 
@@ -962,14 +962,13 @@ int edit_char(Game &GAME, int points){
     TCODConsole::root->print(main_osetx+35, 24, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
 
     std::shared_ptr<TCODConsole> menu (new TCODConsole(60, 3));
-    TCOD_event_t eve;
     TCOD_key_t key;
     TCOD_mouse_t mouse;
     bool button = false; // used to make sure the button is unpressed as first
     bool accepted = false;
     unsigned int str = 0, end = 0, dex = 0, agi = 0, spd = 0, eye = 0, hea = 0, smt = 0, tch = 0, voi = 0, intel = 0, aur = 0, wil = 0;
     while(accepted == false){
-        eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+        TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
         if (TCODConsole::isWindowClosed()) return 0;
         mouse = TCODMouse::getStatus();
         unsigned int mousex = mouse.cx;
@@ -1096,9 +1095,9 @@ int edit_char(Game &GAME, int points){
 }    
 
 int chargen(Game &GAME){
-    bool method = false; // using 4 dices or point allocation
+    bool method = false; // using 4 dice or point allocation
     std::vector<std::string> vecstr;
-    std::string st1 = "Use four &dices";
+    std::string st1 = "Use four &dice";
     std::string st2 = "Distribute &points";
     vecstr.push_back(st1);
     vecstr.push_back(st2);

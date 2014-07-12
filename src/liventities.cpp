@@ -223,7 +223,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
         int a_AML = monster.stats.ML; // basic skill
         a_AML += monster.stats.wpn1.wpn_AC; // adding weapon Attack Class
         // should check for walls here
-        int d_DML = player.stats.ML; // basic monster skill
+        int d_DML = player.skill.lswdML; // basic monster skill
         d_DML += player.stats.wpn1.wpn_AC; // adding weapon Attack Class
 
         // for every attack the player defends from or does, a -10 penality is applied

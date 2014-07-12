@@ -196,8 +196,9 @@ public:
 
     bool blocked;
     bool block_sight;
+    int feature;
     int bloodyt; // amount of blood on Tile
-    int explored;
+    bool explored;
 
     Tile() { blocked = false; block_sight = false; bloodyt = 0; }
 
@@ -207,6 +208,7 @@ public:
         block_sight = isblock_sight;
         if (blocked) block_sight = true;
         explored = false;
+        feature = 0;
     }
 };
 
@@ -1080,6 +1082,14 @@ void make_map_BSP(Object_player &duh){
     }
     
     delete myBSP;
+
+    // trying floor variation
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            if(!map_array[i * MAP_WIDTH + l].blocked)
+                map_array[i * MAP_WIDTH + l].feature = rng(1,4);
+        }
+    }
 
     killall = monvector.size(); // how many monsters on map
     while(map_array[player.y * MAP_WIDTH + player.x].blocked){
@@ -2523,7 +2533,7 @@ void render_all (Game &tgame){
                         if(tgame.gstate.bigg && l > 27 && i > 17 ){
                             l -= 28;
                             i -= 18;
-                            if(t_l%2==1){
+                            if(map_array[t_i * MAP_WIDTH + t_l].feature > 2){
                                 tgame.gstate.con->putChar(l*2,i*2, tgame.tileval.u16_floor2, TCOD_BKGND_SET);
                                 tgame.gstate.con->putChar((l*2)+1,i*2, tgame.tileval.u16_floor2+100, TCOD_BKGND_SET);
                                 tgame.gstate.con->putChar(l*2,(i*2)+1, tgame.tileval.u16_floor2+200, TCOD_BKGND_SET);
@@ -2548,14 +2558,24 @@ void render_all (Game &tgame){
                             i += 18;
 
                         } else if (!tgame.gstate.bigg){
-                            //con->putChar(l, i, '.', TCOD_BKGND_SET);
+                            /*
                             if(t_l%2==1){
-                            if(t_l%3==1 || t_i%3==1){
-                                if(t_l%3==1)tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor1, TCOD_BKGND_SET);
-                                if(t_i%3==1)tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor2, TCOD_BKGND_SET);
-                            }else tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor1, TCOD_BKGND_SET);} 
+                                if(t_l%3==1 || t_i%3==1){
+                                    if(t_l%3==1)tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor1, TCOD_BKGND_SET);
+                                    if(t_i%3==1)tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor2, TCOD_BKGND_SET);
+                                } else tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor1, TCOD_BKGND_SET);
+                            } 
                             else if(t_l%2==1)tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor2, TCOD_BKGND_SET); 
                             else tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor2, TCOD_BKGND_SET);
+                            */
+                            if(map_array[t_i * MAP_WIDTH + t_l].feature == 4) 
+                                tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor4, TCOD_BKGND_SET);
+                            else if(map_array[t_i * MAP_WIDTH + t_l].feature == 3) 
+                                tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor3, TCOD_BKGND_SET);
+                            else if(map_array[t_i * MAP_WIDTH + t_l].feature == 2) 
+                                tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor2, TCOD_BKGND_SET);
+                            else tgame.gstate.con->putChar(l, i, tgame.tileval.u8_floor1, TCOD_BKGND_SET);
+                            //con->putChar(l, i, '.', TCOD_BKGND_SET);
                             //con->setCharForeground(l, i, TCODColor::white);
                             //con->setCharForeground(l, i, demake_main_floor);
                             //con->setCharBackground(l, i, color_light_ground, TCOD_BKGND_SET);
@@ -2882,7 +2902,9 @@ void player_move_attack(int dx, int dy, Game &tgame){
 
 
         // calculate AML
-        int p_AML = player.stats.ML; // basic skill
+        //int p_AML = player.stats.ML; // basic skill
+        // first attempt using actual stats from chargen
+        int p_AML = player.skill.lswdML; // basic skill
         p_AML += player.stats.wpn1.wpn_AC; // adding weapon Attack class
         // should check for walls here
         int m_DML = monvector[target].stats.ML; // basic monster skill
@@ -2950,7 +2972,7 @@ void player_move_attack(int dx, int dy, Game &tgame){
             { 2, 2, 2, 1, }
         };
 
-        std::cout << "pML: " << player.stats.ML << " p_AML: " << p_AML << " p_d100: " << p_d100 << std::endl;
+        std::cout << "pML: " << player.skill.lswdML << " p_AML: " << p_AML << " p_d100: " << p_d100 << std::endl;
         std::cout << "mML: " << monvector[target].stats.ML << " m_DML: " << m_DML << " m_d100: " << m_d100 << std::endl;
         std::cout << "P Success Level: " << p_success_level << std::endl;
         std::cout << "M Success Level: " << m_success_level << std::endl;
@@ -3255,7 +3277,9 @@ int handle_keys(Object_player &duh, Game &tgame) {
                 tgame.tileval.u8_door = 444;
                 tgame.tileval.u8_player = 445;
                 tgame.tileval.u8_floor1 = 447;
-                tgame.tileval.u8_floor2 = 448;   
+                tgame.tileval.u8_floor2 = 447;  
+                tgame.tileval.u8_floor3 = 448;
+                tgame.tileval.u8_floor4 = 448;
                 tgame.tileval.u8_wall = 446;
                 tgame.tileval.u8_hwall = 446;
                 tgame.tileval.u8_trwall = ' ';
@@ -3276,7 +3300,9 @@ int handle_keys(Object_player &duh, Game &tgame) {
                 tgame.tileval.U8 = false; // ASCII
                 tgame.tileval.u8_player = '@';
                 tgame.tileval.u8_floor1 = '.';
-                tgame.tileval.u8_floor2 = '.';
+                tgame.tileval.u8_floor2 = ',';
+                tgame.tileval.u8_floor3 = '\'';
+                tgame.tileval.u8_floor4 = '`';
                 tgame.tileval.u8_wall = 668;
                 tgame.tileval.u8_hwall = 666;
                 tgame.tileval.u8_trwall = 669;
@@ -3842,7 +3868,9 @@ int main() {
     GAME.tileval.u8_bwall = ' ';
     GAME.tileval.u8_ibwall = GAME.tileval.t28_wall;
     GAME.tileval.u8_floor1 = '.'; 
-    GAME.tileval.u8_floor2 = '.'; 
+    GAME.tileval.u8_floor2 = ',';
+    GAME.tileval.u8_floor3 = '\'';
+    GAME.tileval.u8_floor4 = '`';
     GAME.tileval.u8_orc = 'o'; 
     GAME.tileval.u8_troll = 'T'; 
     GAME.tileval.u8_corpse = '%';

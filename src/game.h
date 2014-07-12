@@ -15,6 +15,8 @@ const int t28_wall = 521; // wall
 const int t28_nwall = 503; // null.wall
 const int t28_floor1 = 522; // floor1
 const int t28_floor2 = 523; // floor2
+const int t28_floor3 = 523; // floor2
+const int t28_floor4 = 523; // floor2
 const int t28_orc = 524; // orc
 const int t28_troll = 525; // troll
 const int t28_corpse = 526; // corpse
@@ -63,6 +65,8 @@ const int t16_corpse = 506; // corpse
  int u8_ibwall ; // B.wall
  int u8_floor1 ; // floor1
  int u8_floor2 ; // floor2
+ int u8_floor3 ;
+ int u8_floor4 ;
  int u8_orc ; // orc
  int u8_troll; // troll
  int u8_corpse ; // corpse
