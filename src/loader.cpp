@@ -12,7 +12,7 @@ void load_stuff(lvl1 &enc){
 }  
 
 void load_level(lvl1_map &map){
-    if(load_from_map("first.csv", map)) std::cout << "yay!" << std::endl;
-    else std::cout << "nay!" << std::endl;
+    if(load_from_map("first.csv", map)) std::cout << "Loading map from csv successful!" << std::endl;
+    else std::cout << "Problem loading map from csv!" << std::endl;
     return;
 }

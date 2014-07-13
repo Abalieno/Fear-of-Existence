@@ -56,25 +56,49 @@ bool load_from(std::string filename, lvl1 &enc)
     return true;
 }
 
-bool load_from_map(std::string filename, lvl1_map &map)
-{
+bool load_from_map(std::string filename, lvl1_map &map){
     std::ifstream fin;
     fin.open(filename.c_str());
     if (!fin.is_open()) {
-      debugmsg("Failed to open '%s'", filename.c_str());
-      return false;
-    }
-     
-    while (!fin.eof()) {
-        /*
-      if (!load_element(fin, map)) {
+        debugmsg("Failed to open '%s'", filename.c_str());
         return false;
-      }
-      */
     }
-    
+
+    map.max_x = 0;
+    map.max_y = 0;
+
+    while (!fin.eof()) {
+        if (!load_thismap(fin, map)) {
+            return false;
+        }
+    }
+
+    for(unsigned int i = 0; i<map.map_int.size(); ++i)
+        std::cout << map.map_int[i] << " " ;
+    std::cout << map.max_x << " " ;
+    std::cout << map.max_y << " " ;
     return true;
 }
+
+bool load_thismap(std::istream &data, lvl1_map &map){
+    std::string line;
+    getline(data,line); // skip first line
+    std::string ident;
+    int parseint = 0;
+    char parsechar;
+    data >> parseint; // x
+    if((parseint + 1) > map.max_x) map.max_x = parseint + 1; // set x size
+    data >> parsechar;
+    data >> parseint; // y
+    if((parseint + 1) > map.max_y) map.max_y = parseint + 1; // set y size
+    data >> parsechar;
+    data >> parseint; // tile
+    if(parseint == 219) map.map_int.push_back(0);
+    else map.map_int.push_back(1);    
+    data >> ident;
+    //debugmsg("%s", ident.c_str());
+    return true;
+}    
 
 bool load_element(std::istream &data, lvl1 &enc)
 {

@@ -1096,7 +1096,35 @@ void make_map_BSP(Object_player &duh){
         player.x++;
         player.y++;
     }    
-}    
+}  
+
+void load_map(Object_player &duh){
+   
+
+    lvl1_map map1;
+    load_level(map1);
+
+    map_array.resize(MAP_HEIGHT * MAP_WIDTH);
+     
+    // fill map with walls [1,1]
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+           map_array[i * MAP_WIDTH + l] = Tile(1,1);
+        }
+    }
+    
+    for (int i = 0; i < map1.max_y ;++i){
+        for (int l = 0; l < map1.max_x ;++l) {
+            if(map1.map_int[i * map1.max_x + l] == 1)
+                map_array[i * MAP_WIDTH + l] = Tile(1,1);
+            else map_array[i * MAP_WIDTH + l] = Tile(0,0);
+        }
+    }
+
+    player.x = 7;
+    player.y = 7;
+    
+}
 
 void make_map(Object_player &duh){
 
@@ -3733,38 +3761,7 @@ int main() {
     TCODSystem::setFps(LIMIT_FPS);
         
     myvector.push_back(&player);
-    
    
-    make_map_BSP(player);
-
-    for (int i = 0; i < MAP_HEIGHT ;++i){
-        for (int l = 0; l < MAP_WIDTH ;++l) {
-            GAME.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
-                        l].blocked));
-        }
-    }
-
-    for (int i = 0; i < MAP_HEIGHT ;++i){
-        for (int l = 0; l < MAP_WIDTH ;++l) {
-            fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
-                        l].blocked));
-        }
-    }
-
-    for (int i = 0; i < MAP_HEIGHT ;++i){
-        for (int l = 0; l < MAP_WIDTH ;++l) {
-            fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
-                        l].blocked));
-        }
-    }
-
-    for (int i = 0; i < MAP_HEIGHT ;++i){
-        for (int l = 0; l < MAP_WIDTH ;++l) {
-            fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
-                        l].blocked));
-        }
-    }
-
     player.colorb = GAME.gstate.con->getCharBackground(player.x, player.y);
     player.colorb = GAME.gstate.color_dark_ground;
 
@@ -3957,6 +3954,51 @@ int main() {
     txt_sunsign(dump, GAME);
     std::cout << "Sunsign: " << dump << std::endl;
     */
+
+    TCODConsole::root->clear();
+    vecstr.clear();
+    st1 = "Ramdom BSP map";
+    st2 = "Load new map";
+    vecstr.push_back(st1);
+    vecstr.push_back(st2);
+    menu_index = 1;
+    while(menu_index == 1){
+        menu_index = UI_menu(19, 29, vecstr, 0);
+        if(menu_index == 2) {load_map(player); break;}
+        if(menu_index == 1) {make_map_BSP(player); break;}
+        if(menu_index == -1) return 0;
+        else if(menu_index == 0) break;
+        TCODConsole::root->clear();
+    }
+    TCODConsole::root->clear();
+    
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            GAME.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+        }
+    }
+
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+        }
+    }
+
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+        }
+    }
+
+    for (int i = 0; i < MAP_HEIGHT ;++i){
+        for (int l = 0; l < MAP_WIDTH ;++l) {
+            fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
+                        l].blocked));
+        }
+    }
 
     wid_top_open = 1; // default on for top bar
     UI_hook(GAME, 0); // hook in the panel

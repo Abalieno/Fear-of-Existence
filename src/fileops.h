@@ -39,10 +39,14 @@ struct lvl1 {
 }; 
 
 struct lvl1_map {
+    int max_x;
+    int max_y;
+    std::vector<int> map_int;
 };    
 
 bool load_from(std::string filename, lvl1 &enc);
 bool load_from_map(std::string filename, lvl1_map &map);
+bool load_thismap(std::istream &data, lvl1_map &map);
 bool load_element(std::istream &data, lvl1 &enc);
 bool load_data(std::istream &data, lvl1 &enc);
 
