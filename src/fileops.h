@@ -36,9 +36,13 @@ struct mob_types {
 struct lvl1 {
     std::vector<room_enc> cave1; // types of encounters
     std::vector<mob_types> vmob_types; // all monsters on level (0,1)
+}; 
+
+struct lvl1_map {
 };    
 
 bool load_from(std::string filename, lvl1 &enc);
+bool load_from_map(std::string filename, lvl1_map &map);
 bool load_element(std::istream &data, lvl1 &enc);
 bool load_data(std::istream &data, lvl1 &enc);
 

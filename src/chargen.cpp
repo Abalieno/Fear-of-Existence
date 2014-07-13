@@ -961,6 +961,8 @@ int edit_char(Game &GAME, int points){
     TCODConsole::root->print(main_osetx+35, 23, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     TCODConsole::root->print(main_osetx+35, 24, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
 
+    TCODConsole::root->print(21, 5, "%c*%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+
     std::shared_ptr<TCODConsole> menu (new TCODConsole(60, 3));
     TCOD_key_t key;
     TCOD_mouse_t mouse;
@@ -1067,6 +1069,10 @@ int edit_char(Game &GAME, int points){
                 addpoint(wil, GAME.player->WIL, points, 1, 12);
             }
 
+            else if(mousex == 21 && mousey == 5){
+                gen_name(GAME);
+            }
+
             button = false; // reset mouse button
         }
         TCODConsole::root->print(main_osetx+1, 28, "%cTo distribute:%c %c%d%c  ", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, points, TCOD_COLCTRL_STOP);
@@ -1075,6 +1081,8 @@ int edit_char(Game &GAME, int points){
         menu->setDefaultBackground(TCODColor::black);
         for(int x = 0; x < 6; ++x) menu->putChar(x, 0, '=', TCOD_BKGND_SET);
         for(int x = 0; x < 6; ++x) menu->putChar(x, 3-1, '-', TCOD_BKGND_SET);
+        TCODConsole::root->print(22, 5, "%c%s%c                    ", TCOD_COLCTRL_1, GAME.player->name2, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(5, 90, "[%d.%d]%c%c", mousex, mousey, TCOD_CHAR_HLINE, TCOD_CHAR_HLINE);
         TCODConsole::blit(menu.get(),0,0,0,0,TCODConsole::root, 5, 32);
         TCODConsole::flush(); // this updates the screen
     } 

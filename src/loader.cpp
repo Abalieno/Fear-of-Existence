@@ -9,4 +9,10 @@ void load_stuff(lvl1 &enc){
     if(load_from("dummy.txt", enc)) std::cout << "yay!" << std::endl;
     else std::cout << "nay!" << std::endl;
     return;
-}    
+}  
+
+void load_level(lvl1_map &map){
+    if(load_from_map("first.csv", map)) std::cout << "yay!" << std::endl;
+    else std::cout << "nay!" << std::endl;
+    return;
+}

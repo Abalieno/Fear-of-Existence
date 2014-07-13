@@ -56,6 +56,26 @@ bool load_from(std::string filename, lvl1 &enc)
     return true;
 }
 
+bool load_from_map(std::string filename, lvl1_map &map)
+{
+    std::ifstream fin;
+    fin.open(filename.c_str());
+    if (!fin.is_open()) {
+      debugmsg("Failed to open '%s'", filename.c_str());
+      return false;
+    }
+     
+    while (!fin.eof()) {
+        /*
+      if (!load_element(fin, map)) {
+        return false;
+      }
+      */
+    }
+    
+    return true;
+}
+
 bool load_element(std::istream &data, lvl1 &enc)
 {
     if (!load_data(data, enc)) {
