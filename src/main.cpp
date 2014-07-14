@@ -3745,6 +3745,12 @@ bool compare(Monster a, Monster b) {if (*(a.initiative) != *(b.initiative)) retu
 
 int main() {
 
+    int r = 0;
+    std::string color = "#FFFFFF";
+    //r = std::strtol(color.substr(1,2),10);
+    r = std::stoi(color.substr(1,2),nullptr,16);
+    std::cout << r << std::endl;    
+
     Game GAME;
     GAME.setup();
 
@@ -3958,7 +3964,7 @@ int main() {
     TCODConsole::root->clear();
     vecstr.clear();
     st1 = "Ramdom BSP map";
-    st2 = "Load new map";
+    st2 = "Load csv map";
     vecstr.push_back(st1);
     vecstr.push_back(st2);
     menu_index = 1;

@@ -6,8 +6,8 @@ TEMP=./temp
 
 # I. loads .h in the directory
 CFLAGS=-I$(INCDIR) -I$(SRCDIR) -Wall -std=c++11 
-CC=mingw32-gcc
-CPP=mingw32-g++
+CC=gcc
+CPP=g++
 .SUFFIXES: .o .h .c .hpp .cpp
 
 $(TEMP)/%.o : $(SRCDIR)/%.cpp
@@ -20,8 +20,7 @@ CPP_OBJS=$(TEMP)/main.o $(TEMP)/fileops.o $(TEMP)/map16.o $(TEMP)/rng.o $(TEMP)/
 all : main  
 
 main : $(CPP_OBJS) 
-	$(CPP) $(CPP_OBJS) -o $@ -L${LIBDIR} -ltcod-mingw -static  
-
+	$(CPP) $(CPP_OBJS) -o $@ -L${LIBDIR} -ltcod-mingw -static
 clean :
-	del .\temp\*.o *.exe
+	rm -f temp/*.o *.exe
 
