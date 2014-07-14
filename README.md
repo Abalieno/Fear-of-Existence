@@ -3,6 +3,8 @@ Fear-of-Existence
 
 Programming "diary" currently here: http://brokenforum.com/index.php?threads/know-nothing-make-an-ambitious-roguelike-in-c.6227/
 
+With commit 95 I moved from standard MinGW to MinGW-w64. This means the compiled .exe will likely require a 64bit Windows, for the time being. The process was detailed here: http://www.cesspit.net/drupal/node/2103 explaining how to install properly(?) MinGW-w64 along with MSYS on Windows, and to compile libtcod and SDL to work with 64bits
+
 SUMMARY: I’m not a programmer who now attempts to write a roguelike, I’m a total noob who’s learning how to program through a roguelike. The "ideal" at this stage is that I move through the basics of game programming as if ideally following the history of RPGs from the very beginning. In the process, I hope to capture both what was the unique flavor of those old games as well the complexity of modern games.
 
 --
