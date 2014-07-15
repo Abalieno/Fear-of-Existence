@@ -39,15 +39,20 @@ void gen_sex(Game &GAME){
 }
 
 void gen_name(Game &GAME){
-    int curSet= 0 ;
+    static int nbSets = 0; 
+    static int curSet = 0;
     static TCODList<char *> sets;
-    TCODList<char *> files=TCODSystem::getDirectoryContent("data/namegen","*.cfg");
-    for (char **it=files.begin(); it != files.end(); it++) {
-			char tmp[256];
-			sprintf(tmp, "data/namegen/%s",*it);
-			TCODNamegen::parse(tmp);
+    if ( nbSets == 0 ) {
+        TCODList<char *> files=TCODSystem::getDirectoryContent("data/namegen","*.cfg");
+        for (char **it=files.begin(); it != files.end(); it++) {
+            char tmp[256];
+            sprintf(tmp, "data/namegen/%s",*it);
+            TCODNamegen::parse(tmp);
+        }
+        // get the sets list
+		sets = TCODNamegen::getSets();
+		nbSets = sets.size();
     }
-    sets = TCODNamegen::getSets();
     if(GAME.player->sex == Male){
         do{ 
             curSet = rng(0,15);
@@ -76,8 +81,9 @@ void gen_name(Game &GAME){
             if(curSet == 0) curSet = 9;
             else curSet = 11;
         }
-    }    
+    }  
     std::cout << "Name set n: " << curSet << std::endl;
+    delete GAME.player->name2;
     GAME.player->name2 = TCODNamegen::generate(sets.get(curSet),true);
     std::cout << "Name set: " << sets.get(curSet) << std::endl;
     //strcpy(GAME.player->name, "Placeholderguy");
