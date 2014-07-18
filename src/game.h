@@ -122,6 +122,13 @@ struct global_state{
 
     TCODMap * fov_map;
 
+    // hardcoded sizes 
+    TCODMap * fov_map_mons = new TCODMap(220,140);
+
+    TCODMap * fov_map_mons_path0; 
+    TCODMap * fov_map_mons_path1 = new TCODMap(220,140);
+    
+
     std::vector<Generic_object> wd_object;
 
     std::vector<UIhook> UI_hook;

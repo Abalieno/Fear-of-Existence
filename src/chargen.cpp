@@ -83,7 +83,7 @@ void gen_name(Game &GAME){
         }
     }  
     std::cout << "Name set n: " << curSet << std::endl;
-    delete GAME.player->name2;
+    free(GAME.player->name2); // avoid leak
     GAME.player->name2 = TCODNamegen::generate(sets.get(curSet),true);
     std::cout << "Name set: " << sets.get(curSet) << std::endl;
     //strcpy(GAME.player->name, "Placeholderguy");

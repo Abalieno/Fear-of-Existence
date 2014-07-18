@@ -166,6 +166,14 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
                 if (tgame.gstate.no_combat || (monster.combat_move >= 4)) {
                 //TCODConsole::root->clear();
                 
+                monster.path_mode = 0;
+
+                    // sets facing
+                    if(monster.x < player.x) monster.facing = 1;
+                    if(monster.x > player.x) monster.facing = 3;
+                    if(monster.y > player.y) monster.facing = 0;
+                    if(monster.y < player.y) monster.facing = 2;
+
                 tgame.gstate.mesg->setAlignment(TCOD_LEFT);
                 tgame.gstate.mesg->setDefaultForeground(TCODColor::yellow);
                 tgame.gstate.mesg->setDefaultBackground(TCODColor::black);

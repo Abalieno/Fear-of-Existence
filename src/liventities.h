@@ -121,6 +121,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int path_mode; // 0 = standard 1 = path with monster positions
     int facing; // 0 to 3, N E S W
 
+    int wasstuck; // used for switching path
+
     bool stuck;
     int bored;
     bool boren; // 100 bored, if to 0, boren true, start recuperating

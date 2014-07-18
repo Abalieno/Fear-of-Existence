@@ -2,12 +2,13 @@ LIBTCODDIR=D:/foe/libtcod-svn
 SRCDIR=./src
 INCDIR=$(LIBTCODDIR)/include
 LIBDIR=$(LIBTCODDIR)/lib 
-TEMP=./temp
+TEMP=./obj
 
 # I. loads .h in the directory
 CFLAGS=-I$(INCDIR) -I$(SRCDIR) -Wall -std=c++11 
 CC=gcc
 CPP=g++
+UPX=$(LIBTCODDIR)/dependencies/upx/win/upx.exe
 .SUFFIXES: .o .h .c .hpp .cpp
 
 $(TEMP)/%.o : $(SRCDIR)/%.cpp
@@ -21,6 +22,7 @@ all : main
 
 main : $(CPP_OBJS) 
 	$(CPP) $(CPP_OBJS) -o $@ -L${LIBDIR} -ltcod-mingw -static
+	$(UPX) main.exe
 clean :
-	rm -f temp/*.o *.exe
+	rm -f obj/*.o *.exe
 
