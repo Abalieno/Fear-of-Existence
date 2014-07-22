@@ -19,6 +19,7 @@
 #include "debug.h" // debugmsg()
 #include "inventory.h"
 #include "gui.h"
+#include "screens.h"
 
 #include "chargen.h"
 // #include <process.h> //used for threading?
@@ -556,6 +557,7 @@ void place_objects(Rect room, lvl1 myenc, Game &GAME){
                     monster.hit = false;
 
                     monster.facing = rng(0,3); // random facing
+                    monster.initML = rng(35, 65);
 
                     monster.stats.wpn1.wpn_AC =     myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_AC;
                     monster.stats.wpn1.wpn_DC =     myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_DC;
@@ -1585,7 +1587,10 @@ void I_am_moused(Game &tgame){
                     }    
                     found = true;
                 }    
+            } else if(i.ID == 0 && (x == 24 && y == 0) && mousez.lbutton){
+                char_sheet(tgame);
             }    
+
         }
     }    
 
@@ -2050,6 +2055,12 @@ void render_top(Game &tgame){
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
         TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::red,TCODColor::black);
         widget_top->print(10, 0, "%cIn Sight%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+
+        // player widget
+        widget_top->print(22, 0, "%c@-%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::lighterYellow);
+        widget_top->print(24, 0, "%cCi%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
         
         // fps count
         int fpscount = TCODSystem::getFps();
@@ -2927,7 +2938,6 @@ void player_move_attack(int dx, int dy, Game &tgame){
 
     if (is_it && monvector[target].alive && player.combat_move >= 4){
 
-
         // calculate AML
         //int p_AML = player.stats.ML; // basic skill
         // first attempt using actual stats from chargen
@@ -2953,49 +2963,52 @@ void player_move_attack(int dx, int dy, Game &tgame){
         }  
         monvector[target].cflag_attacks++; // increment counter (reset at beginning of combat turn)
 
-        TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
-        short int p_d100 = wtf->getInt(1, 100, 0);
-        short int m_d100 = wtf->getInt(1, 100, 0);
-
+        int p_d100 = rng(1, 100);
+        int m_d100 = rng(1, 100);
 
         // player (attack)
-        short int p_success_level = 0;
-        short int crit_val = p_d100 % 10;
+        int p_success_level = 0;
+        int crit_val = p_d100 % 10;
         if (p_d100 <= p_AML){
-            if ( crit_val == 0 || crit_val == 5 ){
+            if ( crit_val == 0){
                 p_success_level = 0; // CS Critical Success
             } else {    
                 p_success_level = 1; // MS Marginal Success
             }    
         } else if (p_d100 > p_AML){
-            if ( crit_val == 0 || crit_val == 5){
-                p_success_level = 3; // CF Critical Failure
+            if ( player.skill.lswdML <= 50 ){
+                if( p_d100 == 100 || p_d100 == 99 ) p_success_level = 3; // CF Critical Failure
+                else p_success_level = 2; // MF Marginal Failure
             } else {
-                p_success_level = 2; // MF Marginal Failure
+                if( p_d100 == 100) p_success_level = 3; // CF Critical Failure
+                else p_success_level = 2; // MF Marginal Failure
             }
-        }
+        }    
 
         short int m_success_level = 0;
         crit_val = m_d100 % 10;
         if (m_d100 <= m_DML){
-            if ( crit_val == 0 || crit_val == 5 ){
+            if ( crit_val == 0){
                 m_success_level = 0; // CS Critical Success
             } else {    
                 m_success_level = 1; // MS Marginal Success
             }    
         } else if (m_d100 > m_DML){
-            if ( crit_val == 0 || crit_val == 5){
-                m_success_level = 3; // CF Critical Failure
+            if ( monvector[target].stats.ML <= 50 ){
+                if( m_d100 == 100 || m_d100 == 99 ) m_success_level = 3; // CF Critical Failure
+                else m_success_level = 2; // MF Marginal Failure
             } else {
-                m_success_level = 2; // MF Marginal Failure
+                if( m_d100 == 100) m_success_level = 3; // CF Critical Failure
+                else m_success_level = 2; // MF Marginal Failure
             }
         }
 
+        // hor def - vert attack - succ to fail
         const int melee_res[4][4] = 
         {
             { 4, 5, 6, 7, },
             { 4, 4, 5, 6, },
-            { 2, 4, 4, 3, },
+            { 2, 8, 4, 3, },
             { 2, 2, 2, 1, }
         };
 
@@ -3095,6 +3108,11 @@ void player_move_attack(int dx, int dy, Game &tgame){
                 sprintf(msg1.message, "Triple damage! %c-15%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                 msg1.color1 = TCODColor::red;
                 break;
+            case 8:
+                std::cout << "You miss the attack!" << std::endl;
+                sprintf(msg1.message, "You miss the attack.");
+                msg1.color1 = TCODColor::red;
+                break;    
         }
         msg_log_list.push_back(msg1);
 
@@ -3129,8 +3147,6 @@ void player_move_attack(int dx, int dy, Game &tgame){
                 monvector[target].self_16 = 526;
                 monvector[target].self_8 = 451; // was 506, why?
  
-                //monvector[target].x=-365;
-                //monvector[target].y=-365; // teleport out of map   
                 player.move(0, 0, monvector); // updates player position so feet get bloody
                 tgame.gstate.fov_recompute = true;
                 render_all(tgame);
@@ -3149,7 +3165,6 @@ void player_move_attack(int dx, int dy, Game &tgame){
                     player.draw(1, tgame);
                     monvector[target].draw(1, tgame);
 
-                     
                     if (tgame.gstate.bigg){  
                         TCODConsole::blit(tgame.gstate.con, 0, 0, 0, 0, TCODConsole::root,0,0);
                         //TCODConsole::blit(tgame.gstate.con,tgame.gstate.offbig_x,tgame.gstate.offbig_y+2,110,68,TCODConsole::root,0,2);
@@ -3588,21 +3603,6 @@ int handle_keys(Object_player &duh, Game &tgame) {
                 tgame.gstate.fov_map_mons_path0->setProperties(duh.x, duh.y-1, 1, 1);
                 tgame.gstate.fov_map_mons_path1->setProperties(duh.x, duh.y-1, 1, 1);
                
-                /*
-                for (int i = 0; i < MAP_HEIGHT ;++i){
-                    for (int l = 0; l < MAP_WIDTH ;++l) {
-                            tgame.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                            tgame.gstate.fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                            tgame.gstate.fov_map_mons_path->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                           
-                            //map_array[row * MAP_WIDTH + l] = Tile(1,1);
-                    }
-                }
-                */
-                
                 tgame.gstate.fov_recompute = true;
                 return false;
             }
@@ -3616,21 +3616,7 @@ int handle_keys(Object_player &duh, Game &tgame) {
                 tgame.gstate.fov_map_mons->setProperties(duh.x, duh.y+1, 1, 1);
                 tgame.gstate.fov_map_mons_path0->setProperties(duh.x, duh.y+1, 1, 1);
                 tgame.gstate.fov_map_mons_path1->setProperties(duh.x, duh.y+1, 1, 1);
-                /*
-                for (int i = 0; i < MAP_HEIGHT ;++i){
-                    for (int l = 0; l < MAP_WIDTH ;++l) {
-                        tgame.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        tgame.gstate.fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        tgame.gstate.fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        tgame.gstate.fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        //map_array[row * MAP_WIDTH + l] = Tile(1,1);
-                    }
-                }
-                */
+
                 tgame.gstate.fov_recompute = true;
                 return false; 
             }
@@ -3644,21 +3630,7 @@ int handle_keys(Object_player &duh, Game &tgame) {
                 tgame.gstate.fov_map_mons->setProperties(duh.x-1, duh.y, 1, 1);
                 tgame.gstate.fov_map_mons_path0->setProperties(duh.x-1, duh.y, 1, 1);
                 tgame.gstate.fov_map_mons_path1->setProperties(duh.x-1, duh.y, 1, 1);
-                /*
-                for (int i = 0; i < MAP_HEIGHT ;++i){
-                    for (int l = 0; l < MAP_WIDTH ;++l) {
-                        tgame.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        tgame.gstate.fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        tgame.gstate.fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        tgame.gstate.fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        //map_array[row * MAP_WIDTH + l] = Tile(1,1);
-                    }
-                }
-                */
+
                 tgame.gstate.fov_recompute = true;
                 return false;
             }
@@ -3672,21 +3644,7 @@ int handle_keys(Object_player &duh, Game &tgame) {
                 tgame.gstate.fov_map_mons->setProperties(duh.x+1, duh.y, 1, 1);
                 tgame.gstate.fov_map_mons_path0->setProperties(duh.x+1, duh.y, 1, 1);
                 tgame.gstate.fov_map_mons_path1->setProperties(duh.x+1, duh.y, 1, 1);
-                /*
-                for (int i = 0; i < MAP_HEIGHT ;++i){
-                    for (int l = 0; l < MAP_WIDTH ;++l) {
-                        tgame.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        tgame.gstate.fov_map_mons->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        tgame.gstate.fov_map_mons_path0->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        tgame.gstate.fov_map_mons_path1->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), 
-                                !(map_array[i * MAP_WIDTH + l].blocked));
-                        //map_array[row * MAP_WIDTH + l] = Tile(1,1);
-                    }
-                }
-                */
+ 
                 tgame.gstate.fov_recompute = true;
                 return false;
             }
@@ -3766,8 +3724,8 @@ void player_death(Game &GAME){
 
 struct Monster { int *initiative; int *speed; };
 
-bool compare(Monster a, Monster b) {if (*(a.initiative) != *(b.initiative)) return (*(a.initiative) > *(b.initiative)); else return
-    (*(a.speed) > *(b.speed));}
+bool compare(Monster a, Monster b) {if (*(a.initiative) != *(b.initiative)) return (*(a.initiative) < *(b.initiative)); else return
+    (*(a.speed) < *(b.speed));}
 
 
 int main() {
@@ -3797,10 +3755,11 @@ int main() {
 
     GAME.gstate.fov_map_mons_path0 = new TCODMap(220,140);
 
-    UI_register(GAME , 0, 0, 0, 127, 0); // top panel
-    UI_register(GAME , 1, 110, 3, 17, 66); // right panel
-    UI_register(GAME , 2, 0, 72, 127, 18); // combat bottom
-    UI_register(GAME , 3, 34, 12, 93, 78); // extended message log
+    // ID, x, y, w, h
+    UI_register(GAME, 0, 0, 0, 127, 0); // top panel
+    UI_register(GAME, 1, 110, 3, 17, 66); // right panel
+    UI_register(GAME, 2, 0, 72, 127, 18); // combat bottom
+    UI_register(GAME, 3, 34, 12, 93, 78); // extended message log
 
     //TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE);
     //TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
@@ -4116,9 +4075,6 @@ int main() {
                 }    
             } // activates combat mode as soon a monster is in sight, deactivates on subsequent loops
 
-        
-
-        //player.combat_move = 8; // 1 cost for movement, 4 for attack
         while (combat_mode){
 
             is_handle_combat = true;
@@ -4145,8 +4101,6 @@ int main() {
             TCODConsole::flush(); // this updates the screen
                 
             bool break_combat = true;
-            
-            TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
             
             // updates monster map so that pathing includes monsters position
             for (unsigned int i = 0; i<monvector.size(); ++i){
@@ -4198,26 +4152,26 @@ int main() {
                     }    
 
                     int roll = 0;
-                    roll = wtf->getInt(1, 10, 0);
-                    monvector[i].initiative = monvector[i].speed + roll;
+                    roll = rng(1, 100);
+                    monvector[i].initiative = (200 - monvector[i].initML) - (monvector[i].initML - roll);
                     monvector[i].temp_init = monvector[i].initiative;
 
                     Monster tempm;
                     tempm.initiative = &monvector[i].initiative;
-                    tempm.speed = &monvector[i].speed;
+                    tempm.speed = &monvector[i].initML;
                     monsters.push_back(tempm);
 
                     msg_log msg1;
                     if(monvector[i].in_sight)
-                        sprintf(msg1.message, "%c>%c%s initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
-                            TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
-                            monvector[i].name, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
-                            *tempm.speed, monvector[i].initiative); 
+                        sprintf(msg1.message, "%c>%c%s initiative: Initiative(%d%%) %c1d100%c(%d) Total: %d.",
+                            TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
+                            monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
+                            monvector[i].initiative); 
                     else 
-                        sprintf(msg1.message, "%c>***%c%s initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
+                        sprintf(msg1.message, "%c>***%c%s initiative: Initiative(%d%%) %c1d100%c(%d) Total: %d.",
                             TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
-                            monvector[i].name, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
-                            *tempm.speed, monvector[i].initiative);
+                            monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
+                            monvector[i].initiative);
                     msg1.color1 = TCODColor::yellow;
                     msg_log_list.push_back(msg1);
                 }
@@ -4237,20 +4191,20 @@ int main() {
             TCODConsole::root->clear();
 
             int myroll = 0;
-            myroll = wtf->getInt(1, 10, 0);
-            player.initiative = player.speed + myroll;
+            myroll = rng(1, 100);
+            player.initiative = (200 - GAME.player->skill.initML) - (GAME.player->skill.initML - myroll);
             player.temp_init = player.initiative;
 
             Monster tempm; // player counts as monster for initiative
             tempm.initiative = &player.initiative;
-            tempm.speed = &player.speed;
+            tempm.speed = &GAME.player->skill.initML;
             monsters.push_back(tempm);
 
             msg_log msg1;
-            sprintf(msg1.message, "%c>%cPlayer initiative: %c1d10%c(%d) + SPD(%d) Total: %d.",
-                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
+            sprintf(msg1.message, "%c>%cPlayer initiative: Inititative(%d%%) %c1d100%c(%d) Total: %d.",
+                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, *tempm.speed,
                 TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, 
-                player.speed, player.initiative);
+                player.initiative);
             msg1.color1 = TCODColor::yellow;
             msg_log_list.push_back(msg1);
            

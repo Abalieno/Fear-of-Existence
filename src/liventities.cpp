@@ -4,6 +4,7 @@
 
 //#include "tilevalues.h"
 #include "game.h"
+#include "rng.h"
 #include "liventities.h"
 
 extern std::vector<msg_log> msg_log_list;
@@ -251,23 +252,24 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
         monster.cflag_attacks++; // increment counter (reset at beginning of combat turn)
 
         // roll two 1d100, one for player, one for monster
-        TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
-        short int a_d100 = wtf->getInt(1, 100, 0);
-        short int d_d100 = wtf->getInt(1, 100, 0);
+        int a_d100 = rng(1, 100);
+        int d_d100 = rng(1, 100);
 
-        short int a_success_level = 0;
-        short int crit_val = a_d100 % 10;
+        int a_success_level = 0;
+        int crit_val = a_d100 % 10;
         if (a_d100 <= a_AML){
-            if ( crit_val == 0 || crit_val == 5 ){
+            if ( crit_val == 0 ){
                 a_success_level = 0; // CS Critical Success
             } else {    
                 a_success_level = 1; // MS Marginal Success
             }    
         } else if (a_d100 > a_AML){
-            if ( crit_val == 0 || crit_val == 5){
-                a_success_level = 3; // CF Critical Failure
+            if ( monster.stats.ML <= 50 ){
+                if( a_d100 == 100 || a_d100 == 99 ) a_success_level = 3; // CF Critical Failure
+                else a_success_level = 2; // MF Marginal Failure
             } else {
-                a_success_level = 2; // MF Marginal Failure
+                if( a_d100 == 100) a_success_level = 3; // CF Critical Failure
+                else a_success_level = 2; // MF Marginal Failure
             }
         }
 
@@ -275,16 +277,18 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
         short int d_success_level = 0;
         crit_val = d_d100 % 10;
         if (d_d100 <= d_DML){
-            if ( crit_val == 0 || crit_val == 5 ){
+            if ( crit_val == 0 ){
                 d_success_level = 0; // CS Critical Success
             } else {    
                 d_success_level = 1; // MS Marginal Success
             }    
         } else if (d_d100 > d_DML){
-            if ( crit_val == 0 || crit_val == 5){
-                d_success_level = 3; // CF Critical Failure
+            if ( player.skill.lswdML <= 50 ){
+                if( d_d100 == 100 || d_d100 == 99 ) d_success_level = 3; // CF Critical Failure
+                else d_success_level = 2; // MF Marginal Failure
             } else {
-                d_success_level = 2; // MF Marginal Failure
+                if( d_d100 == 100) d_success_level = 3; // CF Critical Failure
+                else d_success_level = 2; // MF Marginal Failure
             }
         }
 
@@ -292,7 +296,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
         {
             { 4, 5, 6, 7, },
             { 4, 4, 5, 6, },
-            { 2, 4, 4, 3, },
+            { 2, 8, 4, 3, },
             { 2, 2, 2, 1, }
         };
 
@@ -395,27 +399,14 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
                 sprintf(msg1.message, "%c!%cTriple damage! %c%d%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (monster.stats.power * 3), TCOD_COLCTRL_STOP);
                 msg1.color1 = TCODColor::red;
                 break;
+            case 8:
+                std::cout << "You try to attack, but the monster defends itself!" << std::endl;
+                sprintf(msg1.message, "%c*%cThe monster misses.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msg1.color1 = TCODColor::red;
+                break;    
         }
         msg_log_list.push_back(msg1);
 
-        /* old combat 
-        damage = monster.stats.power - player.stats.defense;
-
-        if (damage > 0){
-            std::cout << monster.name << " attacks " << player.name << " for " << damage << " hit points." << std::endl;
-            player.stats.take_damage(damage);
-
-            msg_log msg1;
-                sprintf(msg1.message, "The %c%s%c hits you for %c%d%c damage.",
-                        TCOD_COLCTRL_1, monster.name, TCOD_COLCTRL_STOP,
-                        TCOD_COLCTRL_2, damage, TCOD_COLCTRL_STOP); 
-                msg1.color1 = monster.color;
-                msg1.color2 = TCODColor::red;
-                msg_log_list.push_back(msg1);
-
-        } else std::cout << monster.name << " attacks " << player.name << " but it has no effect!" << std::endl;
-        */
-        
     } else {
         damage = player.stats.power - monster.stats.defense;
 

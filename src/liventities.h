@@ -120,6 +120,7 @@ public: // public should be moved down, but I keep it here for debug messages
     TCODPath *path1;
     int path_mode; // 0 = standard 1 = path with monster positions
     int facing; // 0 to 3, N E S W
+    int initML;
 
     int wasstuck; // used for switching path
 
@@ -220,14 +221,18 @@ public: // public should be moved down, but I keep it here for debug messages
     int eye;
     int comeliness;
     int STR;
+    int CON;
     int END;
     int DEX;
     int AGI;
+    int PER;
+    /*
     int SPD;
     int EYE;
     int HEA;
     int SMT;
     int TCH;
+    */
     int VOI;
     int INT;
     int AUR;

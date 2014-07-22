@@ -85,7 +85,35 @@ const int Handsome = 4;
 
 void draw_frame(const char *title1, const char *title2);
 
+void txt_sex(char* here, Game &GAME);
 
+void txt_species(char* here, Game &GAME);
+
+void txt_birthdate(char* here, Game &GAME);
+
+void txt_sunsign(char* here, Game &GAME);
+
+void txt_enstrangement(char* here, Game &GAME);
+
+void txt_handedness(char* here, Game &GAME);
+
+void txt_frame(char* here, Game &GAME);
+
+void txt_complexion(char* here, Game &GAME);
+
+void txt_hair(char* here, Game &GAME);
+
+void txt_eye(char* here, Game &GAME);
+
+void txt_comeliness(char* here, Game &GAME);
+
+const char *txt_voice(int voice);
+
+const char *txt_intelligence(int intel);
+
+const char *txt_morality(Game &GAME);
+
+void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_osety);
 
 int chargen(Game &GAME);
 
