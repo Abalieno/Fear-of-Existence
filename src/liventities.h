@@ -78,6 +78,7 @@ class Skill {
         int initML;
         int lswdSB;
         int lswdML;
+        int lswdB;
         int mobiSB;
         int mobiML;
         int uarmSB;
@@ -226,17 +227,11 @@ public: // public should be moved down, but I keep it here for debug messages
     int DEX;
     int AGI;
     int PER;
-    /*
-    int SPD;
-    int EYE;
-    int HEA;
-    int SMT;
-    int TCH;
-    */
     int VOI;
     int INT;
     int AUR;
     int WIL;
+    int MYS;
     int MOR;
 
     int x;

@@ -2963,6 +2963,9 @@ void player_move_attack(int dx, int dy, Game &tgame){
         }  
         monvector[target].cflag_attacks++; // increment counter (reset at beginning of combat turn)
 
+        p_AML += player.skill.lswdB;
+        std::cout << "Sword bonus: " << player.skill.lswdB << std::endl;
+
         int p_d100 = rng(1, 100);
         int m_d100 = rng(1, 100);
 
@@ -3724,8 +3727,8 @@ void player_death(Game &GAME){
 
 struct Monster { int *initiative; int *speed; };
 
-bool compare(Monster a, Monster b) {if (*(a.initiative) != *(b.initiative)) return (*(a.initiative) < *(b.initiative)); else return
-    (*(a.speed) < *(b.speed));}
+bool compare(Monster a, Monster b) {if (*(a.initiative) != *(b.initiative)) return (*(a.initiative) > *(b.initiative)); else return
+    (*(a.speed) > *(b.speed));}
 
 
 int main() {
@@ -4152,8 +4155,8 @@ int main() {
                     }    
 
                     int roll = 0;
-                    roll = rng(1, 100);
-                    monvector[i].initiative = (200 - monvector[i].initML) - (monvector[i].initML - roll);
+                    roll = rng(1, 20);
+                    monvector[i].initiative = monvector[i].initML + (roll - 10);
                     monvector[i].temp_init = monvector[i].initiative;
 
                     Monster tempm;
@@ -4163,12 +4166,12 @@ int main() {
 
                     msg_log msg1;
                     if(monvector[i].in_sight)
-                        sprintf(msg1.message, "%c>%c%s initiative: Initiative(%d%%) %c1d100%c(%d) Total: %d.",
+                        sprintf(msg1.message, "%c>%c%s initiative: Initiative(%d%%) + %c1d20%c(%d) - 10 Total: %d.",
                             TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
                             monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
                             monvector[i].initiative); 
                     else 
-                        sprintf(msg1.message, "%c>***%c%s initiative: Initiative(%d%%) %c1d100%c(%d) Total: %d.",
+                        sprintf(msg1.message, "%c>***%c%s initiative: Initiative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
                             TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
                             monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
                             monvector[i].initiative);
@@ -4191,8 +4194,8 @@ int main() {
             TCODConsole::root->clear();
 
             int myroll = 0;
-            myroll = rng(1, 100);
-            player.initiative = (200 - GAME.player->skill.initML) - (GAME.player->skill.initML - myroll);
+            myroll = rng(1, 20);
+            player.initiative = GAME.player->skill.initML + (myroll - 10);
             player.temp_init = player.initiative;
 
             Monster tempm; // player counts as monster for initiative
@@ -4201,7 +4204,7 @@ int main() {
             monsters.push_back(tempm);
 
             msg_log msg1;
-            sprintf(msg1.message, "%c>%cPlayer initiative: Inititative(%d%%) %c1d100%c(%d) Total: %d.",
+            sprintf(msg1.message, "%c>%cPlayer initiative: Inititative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, *tempm.speed,
                 TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, 
                 player.initiative);
