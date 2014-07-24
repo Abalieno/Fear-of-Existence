@@ -653,9 +653,9 @@ void gen_MYS(Game &GAME, bool method){
     else if(GAME.player->comeliness == Attractive) GAME.player->MYS += 2;
     else if(GAME.player->comeliness == Handsome) GAME.player->MYS += 4;
 
-    if(GAME.player->VOI > 12) GAME.player->MYS += GAME.player->VOI - 12;
-    else if(GAME.player->VOI < 9) GAME.player->MYS += GAME.player->VOI - 9;
-
+    GAME.player->MYS += (GAME.player->VOI - 10)/2;
+    std::cout << "VOI mod: " << (GAME.player->VOI - 10)/2 << std::endl;
+    
     if(GAME.player->MYS > 20) GAME.player->MYS = 20;
 }
 
@@ -1047,6 +1047,8 @@ int edit_char(Game &GAME, int points){
 
 void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_osety){
     local->setAlignment(TCOD_LEFT);
+    local->setDefaultForeground(TCODColor::lighterGrey);
+    local->setDefaultBackground(TCODColor::black);
     local->setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
     local->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
     local->setColorControl(TCOD_COLCTRL_3, TCODColor::lightRed, TCODColor::black);
