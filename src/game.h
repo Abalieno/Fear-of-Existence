@@ -104,6 +104,7 @@ struct global_state{
     int bigg;
     int bigg2;
     int bigg3;
+    int mapmode;
 
     int off_xx; // offsets to blit during attacks
     int off_yy;

@@ -141,6 +141,9 @@ public: // public should be moved down, but I keep it here for debug messages
     int temp_init; // total initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag, attacks during turn received
 
+    int phase; // combat round phase speed
+    int att_phase; // weapon speed
+
     std::vector<Generic_object> inventory;
 
     Object_monster(int a, int b, char pchar, TCODColor oc, TCODColor oc2, int health, Fighter loc_fighter) : stats(loc_fighter) {
@@ -250,10 +253,13 @@ public: // public should be moved down, but I keep it here for debug messages
     int move_counter; // how many steps moved in the turn
     int speed;
     int initiative;
+    unsigned int player_own; // used to build initiative UI
     int temp_init; // total initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag - number of attacks received in current turn
 
     int facing; // 0 to 3, N E S W
+    int phase;
+    int att_phase; // weapon speed
 
     std::vector<Generic_object> inventory;
 

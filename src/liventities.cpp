@@ -132,6 +132,8 @@ void Object_player::draw(bool uh, Game &tgame) {
     }
 
 void Object_player::clear(Game &tgame) {
+    // disabled due to black holes showing in bigg mode
+    /*
     if (tgame.gstate.fov_map->isInFov(x,y)){
         if(tgame.gstate.bigg){
             tgame.gstate.con->putChar((x*2), (y*2), 503, TCOD_BKGND_NONE);
@@ -142,6 +144,7 @@ void Object_player::clear(Game &tgame) {
             tgame.gstate.con->putChar(x, y, ' ', TCOD_BKGND_NONE);
         }
     }
+    */
 }
 
 bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y, bool myfov, Game &tgame){
