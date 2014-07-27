@@ -3789,6 +3789,7 @@ int init_UI(TCODConsole *r_panel, Game &GAME, std::vector<Unit> Phase, std::vect
                 for(unsigned int n = 0; n<Phase.size(); ++n){ // cycle phase
                     if(Phase[n].mon_index == 666){ // is player in phase?
                         ++init_ln;
+                        mon_list.push_back(255); // for mouse lookup on list
                         if(init_ln-2 < turnseq){ // turnseq == 2 if player 2nd phase
                             r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "%c[%d] Player%c %c %c", TCOD_COLCTRL_5, 
                                 player.temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -3808,6 +3809,7 @@ int init_UI(TCODConsole *r_panel, Game &GAME, std::vector<Unit> Phase, std::vect
                         if ((i+1) == monster_ini ){ // find the monster by matching initiative
                             for(unsigned int n = 0; n<Phase.size(); ++n){ // cycle phase
                                 if(Phase[n].mon_index == b){ // is monster in phase?
+                                    mon_list.push_back(b); // for mouse lookup on list
                                     ++init_ln;
                                     if(init_ln-2 < turnseq){
                                         r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "%c[%d] %s%c %c %c",
@@ -3831,6 +3833,7 @@ int init_UI(TCODConsole *r_panel, Game &GAME, std::vector<Unit> Phase, std::vect
                         if ((i+1) == monster_ini ){
                             for(unsigned int n = 0; n<Phase.size(); ++n){
                                 if(Phase[n].mon_index == b){
+                                    mon_list.push_back(256); // for mouse lookup on list
                                     ++init_ln;
                                     if(init_ln-2 < turnseq){
                                         r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "%c[%d] %s%cX%c %c", TCOD_COLCTRL_5,
@@ -3847,7 +3850,7 @@ int init_UI(TCODConsole *r_panel, Game &GAME, std::vector<Unit> Phase, std::vect
                                             monvector[b].name, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, TCOD_COLCTRL_STOP, 
                                             TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                                     }    
-                                }
+                                } 
                             }
                         }    
                     }    
@@ -3855,6 +3858,7 @@ int init_UI(TCODConsole *r_panel, Game &GAME, std::vector<Unit> Phase, std::vect
             }
         }    
     } else {
+        mon_list.push_back(256); // for mouse lookup on list
         ++init_ln;
         r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "%c %c", TCOD_COLCTRL_1, 
                 TCOD_COLCTRL_STOP);
@@ -3940,49 +3944,12 @@ int player_turn(Game &GAME, std::vector<Monster> monsters, std::vector<Unit> All
         TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::yellow, TCODColor::black);
         TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lightAmber,TCODColor::black);
         TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::darkRed, TCODColor::black);
-        mon_list.clear(); // mouse lookup
 
         int init_ln = 2;
+        mon_list.clear(); // mouse lookup
         for(unsigned int i = 0; i<10; ++i){
             init_ln += init_UI(r_panel, GAME, AllPhases[i], monsters, monvector, init_ln, i+1, turnseq);
         }
-        /*
-        for (unsigned int n = 0; n<monsters.size(); ++n) {
-            if (n == GAME.player->player_own){
-                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] Player <", TCOD_COLCTRL_1, 
-                        player.temp_init, TCOD_COLCTRL_STOP);
-                mon_list.push_back(255); // for mouse lookup on list
-            } else {
-                for (unsigned int b = 0; b<monvector.size(); ++b) {
-                    unsigned int monster_ini = monvector[b].initiative;
-                    if ((n+1) == monster_ini){
-                        if(monvector[b].in_sight){
-                            if(monster_ini < GAME.player->player_own+1){
-                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "%c[%d] %s%c", TCOD_COLCTRL_3,
-                                        monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
-                            } else {  
-                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
-                                        monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
-                                        monvector[b].name, TCOD_COLCTRL_STOP);
-                            }
-                            mon_list.push_back(b); // for mouse lookup on list
-                        } else { // monster hidden
-                            if(monster_ini < GAME.player->player_own+1){
-                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "***%c[%d] %s%c", TCOD_COLCTRL_3,
-                                        monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP);
-
-                            } else {  
-                                r_panel->print((win_x-MAP_WIDTH_AREA)-2, 3+(n), "***[%c%d%c] %c%s%c", TCOD_COLCTRL_1,
-                                        monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, 
-                                        monvector[b].name, TCOD_COLCTRL_STOP);
-                            }
-                            mon_list.push_back(256); // for mouse lookup on list
-                        }    
-                    }
-                }
-            }
-        }
-        */
 
         // COMBAT UI
         panel->clear();
@@ -4016,7 +3983,7 @@ int player_turn(Game &GAME, std::vector<Monster> monsters, std::vector<Unit> All
     TCODConsole::flush(); // this updates the screen
 
     TCODConsole::waitForKeypress(true);
-    mon_list.clear(); // mouse lookup
+    //mon_list.clear(); // mouse lookup
 
     player.combat_move = 8; // player turn ends, so resets the movement points
     return 0;
@@ -4104,7 +4071,7 @@ int monster_turn(Game &GAME, std::vector<Monster> monsters, unsigned int i, std:
 
     } // for
     return 0;
-}    
+} 
 
 int main() {
 
@@ -4482,24 +4449,14 @@ int main() {
                 Unit tempunit;
                 tempunit.mon_index = 666; // player flag
                 AllPhases[2].push_back(tempunit);
-            } 
-            std::cout << "Phase 1: ";
-            for(unsigned int i = 0; i<AllPhases[0].size(); ++i){
-                std::cout << AllPhases[0][i].mon_index << " ";
-            }  
-            std::cout << std::endl;
-
-            std::cout << "Phase 2: ";
-            for(unsigned int i = 0; i<AllPhases[1].size(); ++i){
-                std::cout << AllPhases[1][i].mon_index << " ";
-            }  
-            std::cout << std::endl;
-
-            std::cout << "Phase 3: ";
-            for(unsigned int i = 0; i<AllPhases[2].size(); ++i){
-                std::cout << AllPhases[2][i].mon_index << " ";
-            }  
-            std::cout << std::endl;
+            }
+            for(unsigned int n = 0; n<10; ++n){
+                std::cout << "Phase " << n+1 << ": ";
+                for(unsigned int i = 0; i<AllPhases[n].size(); ++i){
+                    std::cout << AllPhases[n][i].mon_index << " ";
+                }  
+                std::cout << std::endl;
+            }
 
             for (unsigned int i = 0; i<monvector.size(); ++i){
                 in_sight = GAME.gstate.fov_map->isInFov(monvector[i].x,monvector[i].y);
@@ -4637,8 +4594,10 @@ int main() {
 
             TCODConsole::waitForKeypress(true); // to start combat
 
+            mon_list.clear(); // mouse lookup
+
             // TURN SEQUENCE
-            int turnseq = 0; 
+            int turnseq = 0; // raw line number on the initiative list 
             for(unsigned int p = 0; p<10; ++p){ // cycle phases
                 if(AllPhases[p].size() > 0){ // is this phase empty?
                     for(unsigned int i = 0; i<monsters.size(); ++i){ // cycle initiative
