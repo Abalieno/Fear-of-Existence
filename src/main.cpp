@@ -2214,7 +2214,7 @@ void render_all (Game &tgame){
                     tgame.gstate.con->setCharBackground(l, i, TCODColor::black, TCOD_BKGND_SET);
                     tgame.gstate.con->setCharForeground(l, i, TCODColor::black);
                 }
-                else if (tgame.gstate.bigg2){
+                if (tgame.gstate.bigg2){
                     con_mini->putChar(l+1, i+1, ' ', TCOD_BKGND_SET);
                     con_mini->setCharBackground(l+1, i+1, TCODColor::black, TCOD_BKGND_SET);
                     con_mini->setCharForeground(l+1, i+1, TCODColor::black);
