@@ -256,6 +256,7 @@ public: // public should be moved down, but I keep it here for debug messages
     unsigned int player_own; // used to build initiative UI
     int temp_init; // total initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag - number of attacks received in current turn
+    int overpower_l; // overpower counts
 
     int facing; // 0 to 3, N E S W
     int phase;

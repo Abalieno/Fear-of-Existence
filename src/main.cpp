@@ -2943,7 +2943,21 @@ int m_x = 0;
 int m_y = 0;
 bool combat_null = false; // set if waiting instead of moving, in combat
 
-void player_move_attack(int dx, int dy, Game &tgame){
+bool is_overpower(int askill, int aroll, int dskill, int droll){
+    int aindex;
+    aindex = (askill / 10) - (aroll / 10);
+    std::cout << "Aindex: " << aindex;
+    if(aindex < 5) return false;
+    if(dskill == 0) return true; // if defender does not defend
+    if(droll <= dskill) return false; // parried
+    int dindex;
+    dindex = abs((dskill / 10) - (droll / 10));
+    std::cout << " Dindex: " << dindex << std::endl;
+    if(aindex + dindex >= 9) return true;
+    else return false;
+}    
+
+void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
 
     // add movement penalty if player moved
     //int temp_cmove = 0; 
@@ -2976,15 +2990,20 @@ void player_move_attack(int dx, int dy, Game &tgame){
         }
     }
 
+    if(overpowering) player.combat_move += 4; // gives movement points to add attacks
     if (is_it && monvector[target].alive && player.combat_move >= 4){
 
         // calculate AML
         //int p_AML = player.stats.ML; // basic skill
         // first attempt using actual stats from chargen
         int p_AML = player.skill.lswdML; // basic skill
+        int p_crit = p_AML / 10;
+        std::cout << "P_AML: " << p_AML << " P_CRIT: " << p_crit << std::endl;
         p_AML += player.stats.wpn1.wpn_AC; // adding weapon Attack class
         // should check for walls here
         int m_DML = monvector[target].stats.ML; // basic monster skill
+        int m_crit = m_DML / 10;
+        std::cout << "M_DML: " << m_DML << " M_CRIT: " << m_crit << std::endl;
         m_DML += monvector[target].stats.wpn1.wpn_AC; // adding weapon Attack class
 
         // for every attack the player defends from or does, a -10 penality is applied
@@ -3011,39 +3030,37 @@ void player_move_attack(int dx, int dy, Game &tgame){
 
         // player (attack)
         int p_success_level = 0;
-        int crit_val = p_d100 % 10;
-        if (p_d100 <= p_AML){
-            if ( crit_val == 0){
-                p_success_level = 0; // CS Critical Success
-            } else {    
-                p_success_level = 1; // MS Marginal Success
-            }    
-        } else if (p_d100 > p_AML){
-            if ( player.skill.lswdML <= 50 ){
-                if( p_d100 == 100 || p_d100 == 99 ) p_success_level = 3; // CF Critical Failure
-                else p_success_level = 2; // MF Marginal Failure
-            } else {
-                if( p_d100 == 100) p_success_level = 3; // CF Critical Failure
-                else p_success_level = 2; // MF Marginal Failure
-            }
-        }    
+        if (p_d100 <= p_crit){
+            p_success_level = 0; // CS Critical Success
+        } else if(p_d100 <= p_AML) p_success_level = 1; // MS Marginal Success
+        else p_success_level = 2; // MF Marginal Failure
+        if (player.skill.lswdML <= 50){
+            if( p_d100 == 100 || p_d100 == 99 ) p_success_level = 3; // CF Critical Failure
+        } else if(p_d100 == 100) p_success_level = 3; // CF Critical Failure
 
-        short int m_success_level = 0;
-        crit_val = m_d100 % 10;
-        if (m_d100 <= m_DML){
-            if ( crit_val == 0){
-                m_success_level = 0; // CS Critical Success
-            } else {    
-                m_success_level = 1; // MS Marginal Success
-            }    
-        } else if (m_d100 > m_DML){
-            if ( monvector[target].stats.ML <= 50 ){
-                if( m_d100 == 100 || m_d100 == 99 ) m_success_level = 3; // CF Critical Failure
-                else m_success_level = 2; // MF Marginal Failure
-            } else {
-                if( m_d100 == 100) m_success_level = 3; // CF Critical Failure
-                else m_success_level = 2; // MF Marginal Failure
-            }
+        int m_success_level = 0;
+        if (m_d100 <= m_crit){
+            m_success_level = 0; // CS Critical Success
+        } else if(m_d100 <= m_DML) m_success_level = 1; // MS Marginal Success
+        else m_success_level = 2; // MF Marginal Failure
+        if (monvector[target].stats.ML <= 50){
+            if( m_d100 == 100 || m_d100 == 99 ) m_success_level = 3; // CF Critical Failure
+        } else if(m_d100 == 100) m_success_level = 3; // CF Critical Failure
+
+        bool overpower = false;
+        if(player.skill.lswdML >= 80){
+            overpower = is_overpower(p_AML, p_d100, m_DML, m_d100);
+            std::cout << "Overpower: " << overpower << std::endl;
+        }
+        if(overpower) ++player.overpower_l;
+        else player.overpower_l = 0;
+        if(overpowering){
+            msg_log msgo;
+            msgo.c1 = 1;
+            msgo.color1 = TCODColor::white;
+            msgo.bcolor1 = TCODColor::red;
+            sprintf(msgo.message, "%cOverpowering!%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            msg_log_list.push_back(msgo);
         }
 
         // hor def - vert attack - succ to fail
@@ -3062,9 +3079,10 @@ void player_move_attack(int dx, int dy, Game &tgame){
         std::cout << "Melee Result: " << melee_res[p_success_level][m_success_level] << std::endl;
 
         msg_log msgd;
-        sprintf(msgd.message, "Player's skill(%c%d%c) %c1d100%c(%c%d%c) VS Enemy's defense(%c%d%c) %c1d100%c(%c%d%c)",
+        sprintf(msgd.message, "Player's skill(%d/%c%d%c) %c1d100%c(%c%d%c) VS Enemy's defense(%d/%c%d%c) %c1d100%c(%c%d%c)",
+                player.skill.lswdML,
                 TCOD_COLCTRL_1, p_AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_3, p_d100, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_3, p_d100, TCOD_COLCTRL_STOP, monvector[target].stats.ML,
                 TCOD_COLCTRL_1, m_DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                 TCOD_COLCTRL_4, m_d100, TCOD_COLCTRL_STOP);
         msgd.color1 = TCODColor::cyan;
@@ -3257,6 +3275,7 @@ void player_move_attack(int dx, int dy, Game &tgame){
         //std::cout << "TIMES INTO move loop"  << std::endl;
         //player.move(dx, dy, monvector);
         //fov_recompute = true;
+        player.overpower_l = 0;
         m_x = dx;
         m_y = dy;
     }    
@@ -3601,7 +3620,7 @@ int handle_keys(Object_player &duh, Game &tgame) {
             }
         }
         tgame.gstate.fov_recompute = true;
-        player.stats.hp = 30;
+        player.stats.hp = player.stats.max_hp;
         player.selfchar = '@';
         game_state = playing;
         player.combat_move = 8;
@@ -3699,7 +3718,8 @@ int handle_keys(Object_player &duh, Game &tgame) {
     if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_UP ){
         --bloodycount;
         --duh.bloody;  
-        player_move_attack(0, -1, tgame);
+        do player_move_attack(0, -1, tgame, player.overpower_l);
+        while (player.overpower_l > 0);
         //std::cout << " Monster array: " << myvector.size() << std::endl;
     }
 
@@ -3708,7 +3728,8 @@ int handle_keys(Object_player &duh, Game &tgame) {
     else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_DOWN){
         --bloodycount;
         --duh.bloody; 
-        player_move_attack(0, 1, tgame);
+        do player_move_attack(0, 1, tgame, player.overpower_l);
+        while (player.overpower_l > 0);
     }
 
     // end KEY DOWN cycle
@@ -3716,7 +3737,8 @@ int handle_keys(Object_player &duh, Game &tgame) {
     else if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_LEFT){
         --bloodycount;
         --duh.bloody;   
-        player_move_attack(-1, 0, tgame);
+        do player_move_attack(-1, 0, tgame, player.overpower_l);
+        while (player.overpower_l > 0);
     }
 
     // end KEY LEFT cycle
@@ -3724,14 +3746,15 @@ int handle_keys(Object_player &duh, Game &tgame) {
     else if ( eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_RIGHT){
         --bloodycount; 
         --duh.bloody; 
-        player_move_attack(1, 0, tgame);
+        do player_move_attack(1, 0, tgame, player.overpower_l);
+        while (player.overpower_l > 0);
     }
 
     // end KEY RIGHT cycle
 
     else if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == '.'){
         // wasted one mov point without moving
-        player_move_attack(0, 0, tgame);
+        player_move_attack(0, 0, tgame, 0);
         combat_null = true;
     }
 
@@ -3772,7 +3795,7 @@ struct Monster { int *initiative; int *speed; };
 bool compare(Monster a, Monster b) {if (*(a.initiative) != *(b.initiative)) return (*(a.initiative) > *(b.initiative)); else return
     (*(a.speed) > *(b.speed));}
 
-int init_UI(TCODConsole *r_panel, Game &GAME, std::vector<Unit> Phase, std::vector<Monster> monsters, std::vector<Object_monster> monvector, int init_ln, int phase, int turnseq){
+int init_UI(TCODConsole *r_panel, Game &GAME, const std::vector<Unit> &Phase, const std::vector<Monster> &monsters, const std::vector<Object_monster> &monvector, int init_ln, int phase, int turnseq){
     int line_temp = init_ln;
     if(phase == 1 || phase == 6) r_panel->setColorControl(TCOD_COLCTRL_1, TCODColor::black, TCODColor::lighterGreen);
     if(phase == 2 || phase == 7) r_panel->setColorControl(TCOD_COLCTRL_1, TCODColor::black, TCODColor::lighterBlue);
@@ -3867,7 +3890,7 @@ int init_UI(TCODConsole *r_panel, Game &GAME, std::vector<Unit> Phase, std::vect
     return init_ln - line_temp;
 }   
 
-int player_turn(Game &GAME, std::vector<Monster> monsters, std::vector<Unit> AllPhases[10], int turnseq){
+int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Unit> AllPhases[10], int turnseq){
     bool in_sight = false;
     GAME.gstate.con->clear();
     TCODConsole::root->clear();
@@ -3989,7 +4012,7 @@ int player_turn(Game &GAME, std::vector<Monster> monsters, std::vector<Unit> All
     return 0;
 }  
 
-int monster_turn(Game &GAME, std::vector<Monster> monsters, unsigned int i, std::vector<Unit> AllPhases[10], int turnseq){
+int monster_turn(Game &GAME, const std::vector<Monster> &monsters, unsigned int i, std::vector<Unit> AllPhases[10], int turnseq){
     std::cout << "Monster position: " << *(monsters[i].initiative) << std::endl;
     for (unsigned int b = 0; b<monvector.size(); ++b) {
         unsigned int monster_ini = monvector[b].initiative;
@@ -4293,7 +4316,14 @@ int main() {
         if(menu_index == -1) return 0;
         else if(menu_index == 0) break;
         TCODConsole::root->clear();
-    }  
+    } 
+
+    // test custom
+    if(menu_index == 2){
+        player.skill.lswdML = 90;
+        player.stats.hp = 120;
+        player.stats.max_hp = 120;
+    }    
 
     TCODConsole::root->clear();
     vecstr.clear();
@@ -4392,23 +4422,23 @@ int main() {
                 }    
             } // activates combat mode as soon a monster is in sight, deactivates on subsequent loops
 
+        int turn = 1;  
+        std::vector<Monster> monsters; // initiative - moved here to kep it valid between turns
         while (combat_mode){
 
             is_handle_combat = true;
             
             // resets initiative & attack counts on all monsters
             for (unsigned int i = 0; i<monvector.size(); ++i) { 
-                monvector[i].initiative = -1;
+                if(turn == 1) monvector[i].initiative = -1;
                 monvector[i].cflag_attacks = 0; // resets attacks received
                 monvector[i].move_counter = 0; // resets number of movements during turn
-            } 
+            }
             player.cflag_attacks = 0; // resets number of attacks received
             player.move_counter = 0; // resets number of movements during turn
 
             if (alreadydead) break;
          
-            std::vector<Monster> monsters; // vector used for initiative juggling
-  
             GAME.gstate.con->clear();
             TCODConsole::root->clear(); 
 
@@ -4487,29 +4517,32 @@ int main() {
                         break_combat = false; // set flag, so that if this cycle never entered, combat is interrupted
                     }    
 
-                    int roll = 0;
-                    roll = rng(1, 20);
-                    monvector[i].initiative = monvector[i].initML + (roll - 10);
-                    monvector[i].temp_init = monvector[i].initiative;
+                    // calculate initiative only once
+                    if(turn == 1){
+                        int roll = 0;
+                        roll = rng(1, 20);
+                        monvector[i].initiative = monvector[i].initML + (roll - 10);
+                        monvector[i].temp_init = monvector[i].initiative;
 
-                    Monster tempm;
-                    tempm.initiative = &monvector[i].initiative;
-                    tempm.speed = &monvector[i].initML;
-                    monsters.push_back(tempm);
+                        Monster tempm;
+                        tempm.initiative = &monvector[i].initiative;
+                        tempm.speed = &monvector[i].initML;
+                        monsters.push_back(tempm);
 
-                    msg_log msg1;
-                    if(monvector[i].in_sight)
-                        sprintf(msg1.message, "%c>%c%s initiative: Initiative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
-                            TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
-                            monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
-                            monvector[i].initiative); 
-                    else 
-                        sprintf(msg1.message, "%c>***%c%s initiative: Initiative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
-                            TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
-                            monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
-                            monvector[i].initiative);
-                    msg1.color1 = TCODColor::yellow;
-                    msg_log_list.push_back(msg1);
+                        msg_log msg1;
+                        if(monvector[i].in_sight)
+                            sprintf(msg1.message, "%c>%c%s initiative: Initiative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
+                                    monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
+                                    monvector[i].initiative); 
+                        else 
+                            sprintf(msg1.message, "%c>***%c%s initiative: Initiative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
+                                    monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
+                                    monvector[i].initiative);
+                        msg1.color1 = TCODColor::yellow;
+                        msg_log_list.push_back(msg1);
+                    }
                 }
             }
 
@@ -4526,29 +4559,33 @@ int main() {
             r_panel->clear();
             TCODConsole::root->clear();
 
-            int myroll = 0;
-            myroll = rng(1, 20);
-            player.initiative = GAME.player->skill.initML + (myroll - 10);
-            player.temp_init = player.initiative;
+            // roll initiative once (player)
+            if(turn == 1){
+                int myroll = 0;
+                myroll = rng(1, 20);
+                player.initiative = GAME.player->skill.initML + (myroll - 10);
+                player.temp_init = player.initiative;
 
-            Monster tempm; // player counts as monster for initiative
-            tempm.initiative = &player.initiative;
-            tempm.speed = &GAME.player->skill.initML;
-            monsters.push_back(tempm);
+                Monster tempm; // player counts as monster for initiative
+                tempm.initiative = &player.initiative;
+                tempm.speed = &GAME.player->skill.initML;
+                monsters.push_back(tempm);
 
-            msg_log msg1;
-            sprintf(msg1.message, "%c>%cPlayer initiative: Inititative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
-                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, *tempm.speed,
-                TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, 
-                player.initiative);
-            msg1.color1 = TCODColor::yellow;
-            msg_log_list.push_back(msg1);
-           
-            // SORTING INITIATIVE
-            std::sort(monsters.begin(), monsters.end(), compare);
-            for (unsigned int i = 0; i<monsters.size(); ++i) {
-                *(monsters[i].initiative) = i+1;
-            }  
+                msg_log msg1;
+                sprintf(msg1.message, "%c>%cPlayer initiative: Inititative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                        TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, *tempm.speed,
+                        TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, 
+                        player.initiative);
+                msg1.color1 = TCODColor::yellow;
+                msg_log_list.push_back(msg1);
+
+
+                // SORTING INITIATIVE
+                std::sort(monsters.begin(), monsters.end(), compare);
+                for (unsigned int i = 0; i<monsters.size(); ++i) {
+                    *(monsters[i].initiative) = i+1;
+                }
+            }
 
             r_panel->setAlignment(TCOD_RIGHT);
             widget_top->print(win_x-6, 0, "%c%c%c%c%c%c%c%cMode-C%c", TCOD_COLCTRL_FORE_RGB,255,255,255,
@@ -4633,6 +4670,7 @@ int main() {
             sprintf(msg2.message, "%cTURN END%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
             msg2.color1 = TCODColor::magenta;
             msg_log_list.push_back(msg2);
+            ++turn; // number of turns, starting at 1
             
         } // while combat_move
 
@@ -4648,7 +4686,6 @@ int main() {
 
         // maybe needed for death
         player.move(0, 0, monvector);
-        //    fov_recompute = true;
 
         for (unsigned int i = 0; i<monvector.size(); ++i) { 
             if (monvector[i].alive){

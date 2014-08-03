@@ -233,9 +233,11 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
 
         // calculate AML
         int a_AML = monster.stats.ML; // basic skill
+        int a_crit = a_AML / 10;
         a_AML += monster.stats.wpn1.wpn_AC; // adding weapon Attack Class
         // should check for walls here
         int d_DML = player.skill.lswdML; // basic monster skill
+        int d_crit = d_DML / 10;
         d_DML += player.stats.wpn1.wpn_AC; // adding weapon Attack Class
 
         // for every attack the player defends from or does, a -10 penality is applied
@@ -259,41 +261,24 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
         int d_d100 = rng(1, 100);
 
         int a_success_level = 0;
-        int crit_val = a_d100 % 10;
-        if (a_d100 <= a_AML){
-            if ( crit_val == 0 ){
-                a_success_level = 0; // CS Critical Success
-            } else {    
-                a_success_level = 1; // MS Marginal Success
-            }    
-        } else if (a_d100 > a_AML){
-            if ( monster.stats.ML <= 50 ){
-                if( a_d100 == 100 || a_d100 == 99 ) a_success_level = 3; // CF Critical Failure
-                else a_success_level = 2; // MF Marginal Failure
-            } else {
-                if( a_d100 == 100) a_success_level = 3; // CF Critical Failure
-                else a_success_level = 2; // MF Marginal Failure
-            }
-        }
+        if (a_d100 <= a_crit){
+            a_success_level = 0; // CS Critical Success
+        } else if(a_d100 <= a_AML) a_success_level = 1; // MS Marginal Success
+        else a_success_level = 2; // MF Marginal Failure
+        if (monster.stats.ML <= 50){
+            if( a_d100 == 100 || a_d100 == 99 ) a_success_level = 3; // CF Critical Failure
+        } else if(a_d100 == 100) a_success_level = 3; // CF Critical Failure
+        
 
-        // this is player
-        short int d_success_level = 0;
-        crit_val = d_d100 % 10;
-        if (d_d100 <= d_DML){
-            if ( crit_val == 0 ){
-                d_success_level = 0; // CS Critical Success
-            } else {    
-                d_success_level = 1; // MS Marginal Success
-            }    
-        } else if (d_d100 > d_DML){
-            if ( player.skill.lswdML <= 50 ){
-                if( d_d100 == 100 || d_d100 == 99 ) d_success_level = 3; // CF Critical Failure
-                else d_success_level = 2; // MF Marginal Failure
-            } else {
-                if( d_d100 == 100) d_success_level = 3; // CF Critical Failure
-                else d_success_level = 2; // MF Marginal Failure
-            }
-        }
+        int d_success_level = 0;
+        if (d_d100 <= d_crit){
+            d_success_level = 0; // CS Critical Success
+        } else if(d_d100 <= d_DML) d_success_level = 1; // MS Marginal Success
+        else d_success_level = 2; // MF Marginal Failure
+        if (player.skill.lswdML <= 50){
+            if( d_d100 == 100 || d_d100 == 99 ) d_success_level = 3; // CF Critical Failure
+        } else if(d_d100 == 100) d_success_level = 3; // CF Critical Failure
+        
 
         const int melee_res[4][4] = 
         {
@@ -310,10 +295,10 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
         std::cout << "Melee Result: " << melee_res[a_success_level][d_success_level] << std::endl;
 
         msg_log msgd;
-        sprintf(msgd.message, "%c*%cMonster's skill(%c%d%c) %c1d100%c(%c%d%c) VS Player's defense(%c%d%c) %c1d100%c(%c%d%c)",
-                TCOD_COLCTRL_5, TCOD_COLCTRL_STOP,
+        sprintf(msgd.message, "%c*%cMonster's skill(%d/%c%d%c) %c1d100%c(%c%d%c) VS Player's defense(%d/%c%d%c) %c1d100%c(%c%d%c)",
+                TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, monster.stats.ML,
                 TCOD_COLCTRL_1, a_AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_3, a_d100, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_3, a_d100, TCOD_COLCTRL_STOP, player.skill.lswdML,
                 TCOD_COLCTRL_1, d_DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                 TCOD_COLCTRL_4, d_d100, TCOD_COLCTRL_STOP);
         msgd.color1 = TCODColor::cyan;
