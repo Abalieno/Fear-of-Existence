@@ -2947,9 +2947,9 @@ bool is_overpower(int askill, int aroll, int dskill, int droll){
     int aindex;
     aindex = (askill / 10) - (aroll / 10);
     std::cout << "Aindex: " << aindex;
-    if(aindex < 5) return false;
-    if(dskill == 0) return true; // if defender does not defend
-    if(droll <= dskill) return false; // parried
+    if(aindex < 5) {std::cout << " "; return false;}
+    if(dskill == 0) {std::cout << " "; return true;} // if defender does not defend
+    if(droll <= dskill) {std::cout << " "; return false;} // parried
     int dindex;
     dindex = abs((dskill / 10) - (droll / 10));
     std::cout << " Dindex: " << dindex << std::endl;
@@ -2990,7 +2990,7 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
         }
     }
 
-    if(overpowering) player.combat_move += 4; // gives movement points to add attacks
+    if(is_it && monvector[target].alive && overpowering) player.combat_move += 4; // gives movement points to add attacks
     if (is_it && monvector[target].alive && player.combat_move >= 4){
 
         // calculate AML
@@ -3056,7 +3056,7 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
         else player.overpower_l = 0;
         if(overpowering){
             msg_log msgo;
-            msgo.c1 = 1;
+            msgo.c1 = 1; // sets background color (?)
             msgo.color1 = TCODColor::white;
             msgo.bcolor1 = TCODColor::red;
             sprintf(msgo.message, "%cOverpowering!%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -3275,6 +3275,18 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
         //std::cout << "TIMES INTO move loop"  << std::endl;
         //player.move(dx, dy, monvector);
         //fov_recompute = true;
+        if(overpowering && player.overpower_l > 1){ // if trying to overpower but enemy dead
+            m_x = dx; // MOMENTUM
+            m_y = dy;
+            player.overpower_l = 0;
+            return;
+            
+        }else if(overpowering && player.overpower_l == 1){
+            m_x = 0; // don't move
+            m_y = 0;
+            player.overpower_l = 0;
+            return;
+        }    
         player.overpower_l = 0;
         m_x = dx;
         m_y = dy;
@@ -4436,6 +4448,25 @@ int main() {
             }
             player.cflag_attacks = 0; // resets number of attacks received
             player.move_counter = 0; // resets number of movements during turn
+
+            if(turn > 0){
+                for(unsigned int b = 0; b<monvector.size(); ++b){ // cycle all monsters
+                    for(unsigned int i = 0; i<monsters.size(); ++i){ // cycle initiative
+                        unsigned int monster_ini = monvector[b].initiative;
+                        if ((i+1) == monster_ini){ // find the monster by matching initiative
+                            if(!monvector[b].alive){ 
+                                monvector[b].initiative = -1;
+                                monsters.erase(monsters.begin()+i);
+                                break; // breaks initiative for
+                            }    
+                        }
+                    }
+                }
+                // sorting initiative after dead monsters removed
+                for (unsigned int i = 0; i<monsters.size(); ++i) {
+                    *(monsters[i].initiative) = i+1;
+                }
+            }
 
             if (alreadydead) break;
          
