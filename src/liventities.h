@@ -56,7 +56,7 @@ public:
         speed = speedval;
     }
 
-    void attack(Object_player &player, Object_monster &monster, bool who); 
+    void attack(Object_player &player, Object_monster &monster, bool who, int overpowering); 
 
     void take_damage(int damage){
         if (damage > 0) hp -= damage;
@@ -145,6 +145,7 @@ public: // public should be moved down, but I keep it here for debug messages
     int initiative;
     int temp_init; // total initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag, attacks during turn received
+    int overpower_l; // overpower counts
 
     int phase; // combat round phase speed
     int att_phase; // weapon speed
@@ -315,7 +316,7 @@ public:
 };
 
 
-
+bool is_overpower(int askill, int aroll, int dskill, int droll);
 
 
 

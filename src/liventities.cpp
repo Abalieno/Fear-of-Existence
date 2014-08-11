@@ -192,10 +192,8 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
 
                 if(tgame.gstate.bigg){
                     TCODConsole::blit(tgame.gstate.con, 0, 0, 0, 0, TCODConsole::root,0,0);
-                    //TCODConsole::blit(tgame.gstate.con,tgame.gstate.offbig_x,tgame.gstate.offbig_y+2,110,68,TCODConsole::root,0,2);
                 } else {    
                     TCODConsole::blit(tgame.gstate.con, 0, 0, 0, 0, TCODConsole::root,0,0);
-                    //TCODConsole::blit(tgame.gstate.con,tgame.gstate.off_xx,tgame.gstate.off_yy+1,110,69,TCODConsole::root,0,1);
                 }
                 //std::cout << "SMALLOFF: " << off_xx << " " << off_yy << std::endl;
 
@@ -211,7 +209,7 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
                 tgame.gstate.fov_recompute = true;
                 //render_all();
                 
-                monster.stats.attack(player, monster, 1); // calls attack function for monsters
+                monster.stats.attack(player, monster, 1, 0); // calls attack function for monsters
                 TCODConsole::flush();
                 if(!tgame.gstate.no_combat)monster.combat_move -= 4; // decrease the movement points for attack
                 return true;
@@ -222,192 +220,245 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
         return false; 
     }
 
-void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
+bool is_overpower(int askill, int aroll, int dskill, int droll){
+    int aindex;
+    aindex = (askill / 10) - (aroll / 10);
+    std::cout << "Aindex: " << aindex;
+    if(aindex < 5) {std::cout << " "; return false;}
+    if(dskill == 0) {std::cout << " "; return true;} // if defender does not defend
+    if(droll <= dskill) {std::cout << " "; return false;} // parried
+    int dindex;
+    dindex = abs((dskill / 10) - (droll / 10));
+    std::cout << " Dindex: " << dindex << std::endl;
+    if(aindex + dindex >= 9) return true;
+    else return false;
+}
 
-    int damage = 0;
+void Fighter::attack(Object_player &player, Object_monster &monster, bool who, int overpowering){
 
-    if (who){       
+    int AML; // basic skill
+    int wpn_AC;
+    int DML; // basic monster skill
+    int wpn_DC;
+    int *monsterS;
+    int *playerS;
+    int ADB;
+    int DDB;
+    int *AHP;
+    int *DHP;
+    int weapond;
+    int *overpower_who;
+    if(who){ // if MONSTER
+        AML = monster.stats.ML; // basic skill
+        wpn_AC = monster.stats.wpn1.wpn_AC;
+        monsterS = &AML;
+        ADB = 0; // monster no skill bonus
+        AHP = &monster.stats.hp;
+        weapond = monster.stats.power;
+        overpower_who = &monster.overpower_l;
+        DML = player.skill.lswdDML; // basic monster skill
+        wpn_DC = player.stats.wpn1.wpn_DC;
+        playerS = &DML;
+        DDB = player.skill.lswdDB;
+        DHP = &player.stats.hp;
+    } else{ // if PLAYER
+        AML = player.skill.lswdAML; // basic skill
+        wpn_AC = player.stats.wpn1.wpn_AC;
+        playerS = &AML;
+        ADB = player.skill.lswdAB;
+        AHP = &player.stats.hp;
+        DML = monster.stats.ML; // basic monster skill
+        wpn_DC = monster.stats.wpn1.wpn_DC;
+        monsterS = &DML;
+        DDB = 0; // monster no skill bonus
+        DHP = &monster.stats.hp;
+        weapond = player.stats.power;
+        overpower_who = &player.overpower_l;
+    }    
 
-        // calculate AML
-        int a_AML = monster.stats.ML; // basic skill
-        int a_crit = a_AML / 10;
-        // should check for walls here
-        int d_DML = player.skill.lswdDML; // basic monster skill
-        int d_crit = d_DML / 10;
+    // crit chances
+    int a_crit = AML / 10;
+    int d_crit = DML / 10;
+    int raw_AML = AML;
+    int raw_DML = DML;
 
-        // WEAPON COMPARISON TABLE
-        if(monster.stats.wpn1.wpn_AC > player.stats.wpn1.wpn_DC)
-            a_AML += 5 * (monster.stats.wpn1.wpn_AC - player.stats.wpn1.wpn_DC);
-        if(player.stats.wpn1.wpn_DC > monster.stats.wpn1.wpn_AC)
-            d_DML += 5 * (player.stats.wpn1.wpn_DC - monster.stats.wpn1.wpn_AC); 
+    // WEAPON COMPARISON TABLE
+    if(wpn_AC > wpn_DC)
+        AML += 5 * (wpn_AC - wpn_DC);
+    if(wpn_DC > wpn_AC)
+        DML += 5 * (wpn_DC - wpn_AC); 
 
-        // for every attack the player defends from or does, a -10 penality is applied
-        if(player.cflag_attacks >= 1){
-            d_DML += (player.cflag_attacks * 10) * -1;
-            std::cout << "playerD: BASIC " << player.skill.lswdDML << " WEAPON " << player.stats.wpn1.wpn_DC
-                << " TOTAL " << d_DML << std:: endl;
-        }  
-        player.cflag_attacks++; // increment counter (reset at beginning of combat turn)
+    // for every attack the player defends from or does, a -10 penality is applied
+    if(player.cflag_attacks >= 1){
+        playerS += (player.cflag_attacks * 10) * -1;
+        std::cout << "Player actions this round: " << player.cflag_attacks << std::endl;
+    }  
+    player.cflag_attacks++; // increment counter (reset at beginning of combat turn)
 
-        // for every attack the monster defends from or does, a -10 penality is applied
-        if(monster.cflag_attacks >= 1){
-            a_AML += (monster.cflag_attacks * 10) * -1;
-            std::cout << "monsterD: BASIC " << monster.stats.ML << " WEAPON " << monster.stats.wpn1.wpn_AC
-                << " TOTAL " << a_AML << std:: endl;
-        }  
-        monster.cflag_attacks++; // increment counter (reset at beginning of combat turn)
+    // for every attack the monster defends from or does, a -10 penality is applied
+    if(monster.cflag_attacks >= 1){
+        monsterS += (monster.cflag_attacks * 10) * -1;
+        std::cout << "Monster actions this round: " << monster.cflag_attacks << std::endl;
+    }  
+    monster.cflag_attacks++; // increment counter (reset at beginning of combat turn)
 
-        d_DML += player.skill.lswdDB;
-        std::cout << "Sword bonus: " << player.skill.lswdDB << std::endl;
+    // skill bonuses
+    AML += ADB;
+    DML += DDB;
+    std::cout << "Attacker skill bonus: " << ADB << std::endl;
+    std::cout << "Defender skill bonus: " << DDB << std::endl;
 
-        // roll two 1d100, one for player, one for monster
-        int a_d100 = rng(1, 100);
-        int d_d100 = rng(1, 100);
+    // roll two 1d100, one for player, one for monster
+    int a_d100 = rng(1, 100);
+    int d_d100 = rng(1, 100);
 
-        int a_success_level = 0;
-        if (a_d100 <= a_crit){
-            a_success_level = 0; // CS Critical Success
-        } else if(a_d100 <= a_AML) a_success_level = 1; // MS Marginal Success
-        else a_success_level = 2; // MF Marginal Failure
-        if (monster.stats.ML <= 50){
-            if( a_d100 == 100 || a_d100 == 99 ) a_success_level = 3; // CF Critical Failure
-        } else if(a_d100 == 100) a_success_level = 3; // CF Critical Failure
-        
+    int a_success_level = 0;
+    if (a_d100 <= a_crit){
+        a_success_level = 0; // CS Critical Success
+    } else if(a_d100 <= AML) a_success_level = 1; // MS Marginal Success
+    else a_success_level = 2; // MF Marginal Failure
+    if (raw_AML <= 50){
+        if( a_d100 == 100 || a_d100 == 99 ) a_success_level = 3; // CF Critical Failure
+    } else if(a_d100 == 100) a_success_level = 3; // CF Critical Failure
 
-        int d_success_level = 0;
-        if (d_d100 <= d_crit){
-            d_success_level = 0; // CS Critical Success
-        } else if(d_d100 <= d_DML) d_success_level = 1; // MS Marginal Success
-        else d_success_level = 2; // MF Marginal Failure
-        if (player.skill.lswdDML <= 50){
-            if( d_d100 == 100 || d_d100 == 99 ) d_success_level = 3; // CF Critical Failure
-        } else if(d_d100 == 100) d_success_level = 3; // CF Critical Failure
-        
 
-        const int melee_res[4][4] = 
-        {
-            { 4, 5, 6, 7, },
-            { 4, 4, 5, 6, },
-            { 2, 8, 4, 3, },
-            { 2, 2, 2, 1, }
-        };
+    int d_success_level = 0;
+    if (d_d100 <= d_crit){
+        d_success_level = 0; // CS Critical Success
+    } else if(d_d100 <= DML) d_success_level = 1; // MS Marginal Success
+    else d_success_level = 2; // MF Marginal Failure
+    if (raw_DML <= 50){
+        if( d_d100 == 100 || d_d100 == 99 ) d_success_level = 3; // CF Critical Failure
+    } else if(d_d100 == 100) d_success_level = 3; // CF Critical Failure
 
-        std::cout << "aML: " << monster.stats.ML << " a_AML: " << a_AML << " a_d100: " << a_d100 << std::endl;
-        std::cout << "dML: " << player.stats.ML << " d_DML: " << d_DML << " d_d100: " << d_d100 << std::endl;
-        std::cout << "A Success Level: " << a_success_level << std::endl;
-        std::cout << "D Success Level: " << d_success_level << std::endl;
-        std::cout << "Melee Result: " << melee_res[a_success_level][d_success_level] << std::endl;
-
-        msg_log msgd;
-        sprintf(msgd.message, "%c*%cMonster's skill(%d/%c%d%c) %c1d100%c(%c%d%c) VS Player's defense(%d/%c%d%c) %c1d100%c(%c%d%c)",
-                TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, monster.stats.ML,
-                TCOD_COLCTRL_1, a_AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_3, a_d100, TCOD_COLCTRL_STOP, player.skill.lswdDML,
-                TCOD_COLCTRL_1, d_DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_4, d_d100, TCOD_COLCTRL_STOP);
-        msgd.color1 = TCODColor::cyan;
-        msgd.color2 = TCODColor::yellow;
-        msgd.color5 = TCODColor::red;
-        switch(a_success_level){
-            case 0:
-                msgd.c3 = 1;
-                msgd.color3 = TCODColor::white;
-                msgd.bcolor3 = TCODColor::blue;
-                break;
-            case 1:
-                msgd.color3 = TCODColor::lighterBlue;
-                break;
-            case 2:
-                msgd.color3 = TCODColor::red;
-                break;
-            case 3:
-                msgd.c3 = 1;
-                msgd.color3 = TCODColor::white;
-                msgd.bcolor3 = TCODColor::red;
-                break;
-        }        
-        switch(d_success_level){
-            case 0:
-                msgd.c4 = 1;
-                msgd.color4 = TCODColor::white;
-                msgd.bcolor4 = TCODColor::blue;
-                break;
-            case 1:
-                msgd.color4 = TCODColor::lighterBlue;
-                break;
-            case 2:
-                msgd.color4 = TCODColor::red;
-                break;
-            case 3:
-                msgd.c4 = 1;
-                msgd.color4 = TCODColor::white;
-                msgd.bcolor4 = TCODColor::red;
-                break;
-        }
-        msg_log_list.push_back(msgd);        
-
-        msg_log msg1;
-        switch(melee_res[a_success_level][d_success_level]){
-            case 1:
-                monster.stats.hp -= 1;
-                player.stats.hp -= 1;
-                std::cout << "[CF] Both you and your enemy fumble! -1 to HP for both." << std::endl;
-                sprintf(msg1.message, "%c*%cBoth your enemy and you fumble! %c-1%c to HP for both.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 2:
-                monster.stats.hp -= 1;
-                std::cout << "[CF] You fumble the attack! -1 to HP." <<std::endl;
-                sprintf(msg1.message, "%c*%cThe monster fumbles the attack! %c-1%c to HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 3:
-                player.stats.hp -= 1;
-                std::cout << "[MF] You fail the attack, but the monster fumbles and hits himself! -1 to monster HP." 
-                    << std::endl;
-                sprintf(msg1.message, "%c*%cThe monster misses, but you fumble the parry and hurt yourself! %c-1%c to HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 4:
-                std::cout << "You try to attack, but the monster defends itself!" << std::endl;
-                sprintf(msg1.message, "%c*%cThe monster swings his weapon, but you parry.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 5:
-                player.stats.hp -= monster.stats.power;
-                std::cout << "Your attack does standard damage." << std::endl;
-                sprintf(msg1.message, "%c!%cThe monster hits you for %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, monster.stats.power, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 6:
-                player.stats.hp -= monster.stats.power * 2;
-                std::cout << "You attack does double damage!" << std::endl;
-                sprintf(msg1.message, "%c!%cCritial attack! %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (monster.stats.power * 2), TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 7:
-                player.stats.hp -= monster.stats.power * 3;
-                std::cout << "Your attack does triple damage!" << std::endl;
-                sprintf(msg1.message, "%c!%cTriple damage! %c%d%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (monster.stats.power * 3), TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;
-            case 8:
-                std::cout << "You try to attack, but the monster defends itself!" << std::endl;
-                sprintf(msg1.message, "%c*%cThe monster misses.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-                msg1.color1 = TCODColor::red;
-                break;    
-        }
-        msg_log_list.push_back(msg1);
-
-    } else {
-        damage = player.stats.power - monster.stats.defense;
-
-        if (damage > 0){
-            std::cout << player.name << " attacks " << monster.name << " for " << damage << " hit points." << std::endl;
-            monster.stats.take_damage(damage);
-        } else std::cout << player.name << " attacks " << monster.name << " but it has no effect!" << std::endl;       
+    bool overpower = false;
+    int skilltot = raw_AML + ADB;
+    if(raw_AML >= 80 && skilltot >= 80){ // checks if bonus is malus
+        overpower = is_overpower(AML, a_d100, DML, d_d100);
+        std::cout << "Overpower: " << overpower << std::endl;
+    }
+    if(overpower) ++overpower_who;
+    else overpower_who = 0;
+    if(overpowering){
+        msg_log msgo;
+        msgo.c1 = 1; // sets background color (?)
+        msgo.color1 = TCODColor::white;
+        msgo.bcolor1 = TCODColor::red;
+        sprintf(msgo.message, "%cOverpowering!%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgo);
     }
 
+    const int melee_res[4][4] = 
+    {
+        { 4, 5, 6, 7, },
+        { 4, 4, 5, 6, },
+        { 2, 8, 4, 3, },
+        { 2, 2, 2, 1, }
+    };
+
+    std::cout << "Pure AML: " << raw_AML << " Final AML: " << AML << " a_d100: " << a_d100 << std::endl;
+    std::cout << "Pure DML: " << raw_DML << " Final DML: " << DML << " d_d100: " << d_d100 << std::endl;
+    std::cout << "A Success Level: " << a_success_level << std::endl;
+    std::cout << "D Success Level: " << d_success_level << std::endl;
+    std::cout << "Melee Result: " << melee_res[a_success_level][d_success_level] << std::endl;
+
+    msg_log msgd;
+    char whois;
+    char a_string[20];
+    char d_string[20];
+    if(who) {whois = '*'; strcpy(a_string, monster.name); strcpy(d_string, "Player");}
+    else {whois = '>'; strcpy(a_string, "Player"); strcpy(d_string, monster.name);}
+    sprintf(msgd.message, "%c%c%c%s's skill(%d/%c%d%c) %c1d100%c(%c%d%c) VS %s's defense(%d/%c%d%c) %c1d100%c(%c%d%c)",
+            TCOD_COLCTRL_5, whois, TCOD_COLCTRL_STOP, a_string, raw_AML,
+            TCOD_COLCTRL_1, AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+            TCOD_COLCTRL_3, a_d100, TCOD_COLCTRL_STOP, d_string, raw_DML,
+            TCOD_COLCTRL_1, DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+            TCOD_COLCTRL_4, d_d100, TCOD_COLCTRL_STOP);
+    msgd.color1 = TCODColor::cyan;
+    msgd.color2 = TCODColor::yellow;
+    if(who) msgd.color5 = TCODColor::red;
+    else msgd.color5 = TCODColor::lighterBlue;
+    switch(a_success_level){
+        case 0:
+            msgd.c3 = 1;
+            msgd.color3 = TCODColor::white;
+            msgd.bcolor3 = TCODColor::blue;
+            break;
+        case 1:
+            msgd.color3 = TCODColor::lighterBlue;
+            break;
+        case 2:
+            msgd.color3 = TCODColor::red;
+            break;
+        case 3:
+            msgd.c3 = 1;
+            msgd.color3 = TCODColor::white;
+            msgd.bcolor3 = TCODColor::red;
+            break;
+    }        
+    switch(d_success_level){
+        case 0:
+            msgd.c4 = 1;
+            msgd.color4 = TCODColor::white;
+            msgd.bcolor4 = TCODColor::blue;
+            break;
+        case 1:
+            msgd.color4 = TCODColor::lighterBlue;
+            break;
+        case 2:
+            msgd.color4 = TCODColor::red;
+            break;
+        case 3:
+            msgd.c4 = 1;
+            msgd.color4 = TCODColor::white;
+            msgd.bcolor4 = TCODColor::red;
+            break;
+    }
+    msg_log_list.push_back(msgd);        
+
+    msg_log msg1;
+    switch(melee_res[a_success_level][d_success_level]){
+        case 1:
+            AHP -= 1;
+            DHP -= 1;
+            sprintf(msg1.message, "%c%c%cBoth fumble! %c-1%c to HP for both.", TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP, 
+                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            break;
+        case 2:
+            AHP -= 1;
+            sprintf(msg1.message, "%c%c%cThe %s fumbles the attack! %c-1%c to HP.", TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP, 
+                    a_string, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            break;
+        case 3:
+            DHP -= 1;
+            sprintf(msg1.message, "%c%c%cThe %s misses, but the %s fumbles the parry and hurt himself! %c-1%c to HP.", 
+                    TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP, a_string, d_string, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            break;
+        case 4:
+            sprintf(msg1.message, "%c%c%cThe %s swings his weapon, but the %s parries.", TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP,
+                    a_string, d_string);
+            break;
+        case 5:
+            DHP -= weapond;
+            sprintf(msg1.message, "%c!%cThe %s hits the %s for %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
+                    a_string, d_string, TCOD_COLCTRL_1, monster.stats.power, TCOD_COLCTRL_STOP);
+            break;
+        case 6:
+            DHP -= weapond * 2;
+            sprintf(msg1.message, "%c!%cCritial attack! %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (weapond * 2), TCOD_COLCTRL_STOP);
+            break;
+        case 7:
+            DHP -= weapond * 3;
+            sprintf(msg1.message, "%c!%cTriple damage! %c%d%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (weapond * 3), TCOD_COLCTRL_STOP);
+            msg1.color1 = TCODColor::red;
+            break;
+        case 8:
+            sprintf(msg1.message, "%c*%cThe %s misses.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, a_string);
+            break;    
+    }
+    if(who) msg1.color1 = TCODColor::red;
+    else msg1.color1 = TCODColor::lighterBlue;
+    msg_log_list.push_back(msg1);
 }
 
 void move_obj(int x, int y, std::vector<Generic_object> &wrd_inv){

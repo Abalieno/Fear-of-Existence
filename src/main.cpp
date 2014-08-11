@@ -335,29 +335,16 @@ void create_v_tunnel(int y1, int y2, int x){
     }
 }
 
-   
-
-
-
-
 std::vector<Object_player*> myvector; // player vector object
 
-
-
-
-
-Fighter fighter_component(30, 2, 5, 8); // hp, defense, power
-//Statistics stati(0);
+Fighter fighter_component(30, 2, 5, 8); // hp, defense, power, speed
 
 //Object_player playera(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
 //Object_player playerb(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
 
 Object_player player(win_x/2, win_y/2, '@', TCODColor::white, TCODColor::black, 5, fighter_component);
-// , stati
-//
 //strcpy(player.name, "Playername");
 //strcpy(monster.name, "orc");
-
 
 std::vector<Object_monster> monvector; // MAIN MONSTER VECTOR
 
@@ -2943,27 +2930,8 @@ int m_x = 0;
 int m_y = 0;
 bool combat_null = false; // set if waiting instead of moving, in combat
 
-bool is_overpower(int askill, int aroll, int dskill, int droll){
-    int aindex;
-    aindex = (askill / 10) - (aroll / 10);
-    std::cout << "Aindex: " << aindex;
-    if(aindex < 5) {std::cout << " "; return false;}
-    if(dskill == 0) {std::cout << " "; return true;} // if defender does not defend
-    if(droll <= dskill) {std::cout << " "; return false;} // parried
-    int dindex;
-    dindex = abs((dskill / 10) - (droll / 10));
-    std::cout << " Dindex: " << dindex << std::endl;
-    if(aindex + dindex >= 9) return true;
-    else return false;
-}    
-
 void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
 
-    // add movement penalty if player moved
-    //int temp_cmove = 0; 
-    //if(player.combat_move == 4) {player.cflag_attacks++; temp_cmove++;}
-    //if(player.combat_move == 1) {player.cflag_attacks++; temp_cmove++;}
-    
     int x = player.x + dx;
     int y = player.y + dy;
 
@@ -2976,13 +2944,12 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
         else player.facing = 1;
     }
 
-    //Object *target;
-     unsigned int target = 0;
-     bool is_it = false;
-    
-    for (unsigned int i = 0; i<monvector.size(); ++i){ // checks if monster is in next cell
+    unsigned int target = 0;
+    bool is_it = false;
+   
+    // checks if monster is in next cell
+    for (unsigned int i = 0; i<monvector.size(); ++i){ 
         if (monvector[i].x == x && monvector[i].y == y){
-            //*target = &monvector[i];
             if (monvector[i].alive == true){
                 target = i;
                 is_it = true;
@@ -2991,7 +2958,7 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
     }
 
     if(is_it && monvector[target].alive && overpowering) player.combat_move += 4; // gives movement points to add attacks
-    if (is_it && monvector[target].alive && player.combat_move >= 4){
+    if(is_it && monvector[target].alive && player.combat_move >= 4){
 
         // calculate AML
         //int p_AML = player.stats.ML; // basic skill
