@@ -2996,20 +2996,24 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
         // calculate AML
         //int p_AML = player.stats.ML; // basic skill
         // first attempt using actual stats from chargen
-        int p_AML = player.skill.lswdML; // basic skill
+        int p_AML = player.skill.lswdAML; // basic skill
         int p_crit = p_AML / 10;
         std::cout << "P_AML: " << p_AML << " P_CRIT: " << p_crit << std::endl;
-        p_AML += player.stats.wpn1.wpn_AC; // adding weapon Attack class
         // should check for walls here
         int m_DML = monvector[target].stats.ML; // basic monster skill
         int m_crit = m_DML / 10;
         std::cout << "M_DML: " << m_DML << " M_CRIT: " << m_crit << std::endl;
-        m_DML += monvector[target].stats.wpn1.wpn_AC; // adding weapon Attack class
+        
+        // WEAPON COMPARISON TABLE
+        if(player.stats.wpn1.wpn_AC > monvector[target].stats.wpn1.wpn_DC)
+            p_AML += 5 * (player.stats.wpn1.wpn_AC - monvector[target].stats.wpn1.wpn_DC);
+        if(monvector[target].stats.wpn1.wpn_DC > player.stats.wpn1.wpn_AC)
+            m_DML += 5 * (monvector[target].stats.wpn1.wpn_DC - player.stats.wpn1.wpn_AC);
 
         // for every attack the player defends from or does, a -10 penality is applied
         if(player.cflag_attacks >= 1){
             p_AML += (player.cflag_attacks * 10) * -1;
-            std::cout << "playerA: BASIC " << player.stats.ML << " WEAPON " << player.stats.wpn1.wpn_AC
+            std::cout << "playerA: BASIC " << player.skill.lswdAML << " WEAPON " << player.stats.wpn1.wpn_AC
                 << " TOTAL " << p_AML << std:: endl;
         }  
         player.cflag_attacks++; // increment counter (reset at beginning of combat turn)
@@ -3017,13 +3021,13 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
         // for every attack the monster defends from or does, a -10 penality is applied
         if(monvector[target].cflag_attacks >= 1){
             m_DML += (monvector[target].cflag_attacks * 10) * -1;
-            std::cout << "monsterD: BASIC " << monvector[target].stats.ML << " WEAPON " << monvector[target].stats.wpn1.wpn_AC
+            std::cout << "monsterD: BASIC " << monvector[target].stats.ML << " WEAPON " << monvector[target].stats.wpn1.wpn_DC
                 << " TOTAL " << m_DML << std:: endl;
         }  
         monvector[target].cflag_attacks++; // increment counter (reset at beginning of combat turn)
 
-        p_AML += player.skill.lswdB;
-        std::cout << "Sword bonus: " << player.skill.lswdB << std::endl;
+        p_AML += player.skill.lswdAB;
+        std::cout << "Sword bonus: " << player.skill.lswdAB << std::endl;
 
         int p_d100 = rng(1, 100);
         int m_d100 = rng(1, 100);
@@ -3034,7 +3038,7 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
             p_success_level = 0; // CS Critical Success
         } else if(p_d100 <= p_AML) p_success_level = 1; // MS Marginal Success
         else p_success_level = 2; // MF Marginal Failure
-        if (player.skill.lswdML <= 50){
+        if (player.skill.lswdAML <= 50){
             if( p_d100 == 100 || p_d100 == 99 ) p_success_level = 3; // CF Critical Failure
         } else if(p_d100 == 100) p_success_level = 3; // CF Critical Failure
 
@@ -3048,7 +3052,8 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
         } else if(m_d100 == 100) m_success_level = 3; // CF Critical Failure
 
         bool overpower = false;
-        if(player.skill.lswdML >= 80){
+        int skilltot = tgame.player->skill.lswdAML + tgame.player->skill.lswdAB;
+        if(player.skill.lswdAML >= 80 && skilltot >= 80){ // checks if bonus is malus
             overpower = is_overpower(p_AML, p_d100, m_DML, m_d100);
             std::cout << "Overpower: " << overpower << std::endl;
         }
@@ -3072,7 +3077,7 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
             { 2, 2, 2, 1, }
         };
 
-        std::cout << "pML: " << player.skill.lswdML << " p_AML: " << p_AML << " p_d100: " << p_d100 << std::endl;
+        std::cout << "pML: " << player.skill.lswdAML << " p_AML: " << p_AML << " p_d100: " << p_d100 << std::endl;
         std::cout << "mML: " << monvector[target].stats.ML << " m_DML: " << m_DML << " m_d100: " << m_d100 << std::endl;
         std::cout << "P Success Level: " << p_success_level << std::endl;
         std::cout << "M Success Level: " << m_success_level << std::endl;
@@ -3080,7 +3085,7 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
 
         msg_log msgd;
         sprintf(msgd.message, "Player's skill(%d/%c%d%c) %c1d100%c(%c%d%c) VS Enemy's defense(%d/%c%d%c) %c1d100%c(%c%d%c)",
-                player.skill.lswdML,
+                player.skill.lswdAML,
                 TCOD_COLCTRL_1, p_AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                 TCOD_COLCTRL_3, p_d100, TCOD_COLCTRL_STOP, monvector[target].stats.ML,
                 TCOD_COLCTRL_1, m_DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
@@ -4165,8 +4170,8 @@ int main() {
     player.combat_move = 8; // movement points
     player.speed = 6;
     // wrapon setup
-    player.stats.wpn1.wpn_AC = 15;
-    player.stats.wpn1.wpn_DC = 10;
+    player.stats.wpn1.wpn_AC = 3;
+    player.stats.wpn1.wpn_DC = 2;
     player.stats.wpn1.wpn_B = 3;
     player.stats.wpn1.wpn_E = 5;
     player.stats.wpn1.wpn_P = 3;
@@ -4332,7 +4337,8 @@ int main() {
 
     // test custom
     if(menu_index == 2){
-        player.skill.lswdML = 90;
+        player.skill.lswdAML = 90;
+        player.skill.lswdDML = 85;
         player.stats.hp = 120;
         player.stats.max_hp = 120;
     }    

@@ -23,8 +23,8 @@ CAVE LVL 1
   h: 4
   combat_move: 6
   speed: 4
-  wpn_AC: 12
-  wpn_DC: 4
+  wpn_AC: 3
+  wpn_DC: 1
   wpn_B: 3
   wpn_aspect: 1
   ML: 35
@@ -45,8 +45,8 @@ CAVE LVL 1
   h: 5
   combat_move: 10
   speed: 8 
-  wpn_AC: 15
-  wpn_DC: 5 
+  wpn_AC: 4
+  wpn_DC: 1 
   wpn_B: 4
   wpn_aspect: 1
   ML: 50

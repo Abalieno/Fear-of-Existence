@@ -224,9 +224,6 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
 
 void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
 
-
-
-
     int damage = 0;
 
     if (who){       
@@ -234,16 +231,20 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
         // calculate AML
         int a_AML = monster.stats.ML; // basic skill
         int a_crit = a_AML / 10;
-        a_AML += monster.stats.wpn1.wpn_AC; // adding weapon Attack Class
         // should check for walls here
-        int d_DML = player.skill.lswdML; // basic monster skill
+        int d_DML = player.skill.lswdDML; // basic monster skill
         int d_crit = d_DML / 10;
-        d_DML += player.stats.wpn1.wpn_AC; // adding weapon Attack Class
+
+        // WEAPON COMPARISON TABLE
+        if(monster.stats.wpn1.wpn_AC > player.stats.wpn1.wpn_DC)
+            a_AML += 5 * (monster.stats.wpn1.wpn_AC - player.stats.wpn1.wpn_DC);
+        if(player.stats.wpn1.wpn_DC > monster.stats.wpn1.wpn_AC)
+            d_DML += 5 * (player.stats.wpn1.wpn_DC - monster.stats.wpn1.wpn_AC); 
 
         // for every attack the player defends from or does, a -10 penality is applied
         if(player.cflag_attacks >= 1){
             d_DML += (player.cflag_attacks * 10) * -1;
-            std::cout << "playerD: BASIC " << player.stats.ML << " WEAPON " << player.stats.wpn1.wpn_AC
+            std::cout << "playerD: BASIC " << player.skill.lswdDML << " WEAPON " << player.stats.wpn1.wpn_DC
                 << " TOTAL " << d_DML << std:: endl;
         }  
         player.cflag_attacks++; // increment counter (reset at beginning of combat turn)
@@ -255,6 +256,9 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
                 << " TOTAL " << a_AML << std:: endl;
         }  
         monster.cflag_attacks++; // increment counter (reset at beginning of combat turn)
+
+        d_DML += player.skill.lswdDB;
+        std::cout << "Sword bonus: " << player.skill.lswdDB << std::endl;
 
         // roll two 1d100, one for player, one for monster
         int a_d100 = rng(1, 100);
@@ -275,7 +279,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
             d_success_level = 0; // CS Critical Success
         } else if(d_d100 <= d_DML) d_success_level = 1; // MS Marginal Success
         else d_success_level = 2; // MF Marginal Failure
-        if (player.skill.lswdML <= 50){
+        if (player.skill.lswdDML <= 50){
             if( d_d100 == 100 || d_d100 == 99 ) d_success_level = 3; // CF Critical Failure
         } else if(d_d100 == 100) d_success_level = 3; // CF Critical Failure
         
@@ -298,7 +302,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who){
         sprintf(msgd.message, "%c*%cMonster's skill(%d/%c%d%c) %c1d100%c(%c%d%c) VS Player's defense(%d/%c%d%c) %c1d100%c(%c%d%c)",
                 TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, monster.stats.ML,
                 TCOD_COLCTRL_1, a_AML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_3, a_d100, TCOD_COLCTRL_STOP, player.skill.lswdML,
+                TCOD_COLCTRL_3, a_d100, TCOD_COLCTRL_STOP, player.skill.lswdDML,
                 TCOD_COLCTRL_1, d_DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                 TCOD_COLCTRL_4, d_d100, TCOD_COLCTRL_STOP);
         msgd.color1 = TCODColor::cyan;

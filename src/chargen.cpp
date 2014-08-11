@@ -677,7 +677,7 @@ int skillSB(int a, int b, int c){
 }    
 
 void gen_rollskill(Game &GAME){
-    GAME.player->skill.condSB = skillSB(GAME.player->END, GAME.player->END, GAME.player->WIL); 
+    GAME.player->skill.condSB = skillSB(GAME.player->CON, GAME.player->CON, GAME.player->END); 
     GAME.player->skill.slthSB = skillSB(GAME.player->AGI, GAME.player->DEX, GAME.player->PER);
     GAME.player->skill.thrwSB = skillSB(GAME.player->STR, GAME.player->DEX, GAME.player->PER);
     GAME.player->skill.condML = GAME.player->skill.condSB * 5;
@@ -686,12 +686,14 @@ void gen_rollskill(Game &GAME){
 
     GAME.player->skill.dodgSB = skillSB(GAME.player->AGI, GAME.player->AGI, GAME.player->DEX);
     GAME.player->skill.initSB = skillSB(GAME.player->AGI, GAME.player->PER, GAME.player->WIL);
-    GAME.player->skill.lswdSB = skillSB(GAME.player->STR, GAME.player->STR, GAME.player->DEX);
+    GAME.player->skill.lswdASB = skillSB(GAME.player->STR, GAME.player->STR, GAME.player->DEX);
+    GAME.player->skill.lswdDSB = skillSB(GAME.player->DEX, GAME.player->DEX, GAME.player->AGI);
     GAME.player->skill.mobiSB = skillSB(GAME.player->AGI, GAME.player->AGI, GAME.player->AGI);
     GAME.player->skill.uarmSB = skillSB(GAME.player->STR, GAME.player->DEX, GAME.player->AGI);
     GAME.player->skill.dodgML = GAME.player->skill.dodgSB * 5;
     GAME.player->skill.initML = GAME.player->skill.initSB * 5;
-    GAME.player->skill.lswdML = GAME.player->skill.lswdSB * 3;
+    GAME.player->skill.lswdAML = GAME.player->skill.lswdASB * 3;
+    GAME.player->skill.lswdDML = GAME.player->skill.lswdDSB * 3;
     GAME.player->skill.mobiML = GAME.player->skill.mobiSB * 5;
     GAME.player->skill.uarmML = GAME.player->skill.uarmSB * 3;
 
@@ -1033,7 +1035,7 @@ int edit_char(Game &GAME, int points){
         TCODConsole::flush(); // this updates the screen
     } 
     GAME.player->STR += str;
-    GAME.player->CON += str;
+    GAME.player->CON += con;
     GAME.player->END += end;
     GAME.player->DEX += dex;
     GAME.player->AGI += agi;
@@ -1043,7 +1045,18 @@ int edit_char(Game &GAME, int points){
     GAME.player->AUR += aur;
     GAME.player->WIL += wil;
     return points;
-}   
+}  
+
+int calc_bonuses(Game &GAME, int stat1, int stat2, int stat3){
+    int bonus = 0;
+    if(stat1 > 12) bonus += stat1 - 12;
+    else if(stat1 < 9) bonus += stat1 - 9;
+    if(stat2 > 12) bonus += stat2 - 12;
+    else if(stat2 < 9) bonus += stat2 - 9;
+    if(stat3 > 12) bonus += stat3 - 12;
+    else if(stat3 < 9) bonus += stat3 - 9;
+    return bonus;
+}
 
 void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_osety){
     local->setAlignment(TCOD_LEFT);
@@ -1133,7 +1146,7 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
     local->print(main_osetx+90, 9, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.condSB, TCOD_COLCTRL_STOP);
     local->print(main_osetx+95, 9, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.condML, TCOD_COLCTRL_STOP);
     int maxs = 0;
-    maxs = (GAME.player->END + GAME.player->END + GAME.player->WIL) * 2;
+    maxs = (GAME.player->CON + GAME.player->CON + GAME.player->END) * 2;
     local->print(main_osetx+100, 9, "%c(%d)%c", TCOD_COLCTRL_3, maxs, TCOD_COLCTRL_STOP);
     local->print(main_osetx+72, 10, "STEALTH");
     local->print(main_osetx+90, 10, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.slthSB, TCOD_COLCTRL_STOP);
@@ -1160,8 +1173,8 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
     maxs = (GAME.player->AGI + GAME.player->PER + GAME.player->WIL) * 2;
     local->print(main_osetx+100, 16, "%c(%d)%c", TCOD_COLCTRL_3, maxs, TCOD_COLCTRL_STOP);
     local->print(main_osetx+72, 17, "Longswords");
-    local->print(main_osetx+90, 17, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.lswdSB, TCOD_COLCTRL_STOP);
-    local->print(main_osetx+95, 17, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.lswdML, TCOD_COLCTRL_STOP);
+    local->print(main_osetx+90, 17, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.lswdASB, TCOD_COLCTRL_STOP);
+    local->print(main_osetx+95, 17, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.lswdAML, TCOD_COLCTRL_STOP);
     maxs = (GAME.player->STR + GAME.player->STR + GAME.player->DEX) * 2;
     local->print(main_osetx+100, 17, "%c(%d)%c", TCOD_COLCTRL_3, maxs, TCOD_COLCTRL_STOP);
     local->print(main_osetx+72, 18, "MOBILITY");
@@ -1198,22 +1211,56 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
     local->print(main_osetx+95, 26, "%c%d%%%c", TCOD_COLCTRL_2, GAME.player->skill.rhetML, TCOD_COLCTRL_STOP);
     maxs = (GAME.player->VOI + GAME.player->INT + GAME.player->WIL) * 2;
     local->print(main_osetx+100, 26, "%c(%d)%c", TCOD_COLCTRL_3, maxs, TCOD_COLCTRL_STOP);
+
+    int combatpr_x = 5;
+    int combatpr_y = 37;
+    local->print(combatpr_x, combatpr_y, "%cCOMBAT FACTORS%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+2, combatpr_y+2, "CONDITION");
+    local->print(combatpr_x+2, combatpr_y+3, "DODGE");
+    local->print(combatpr_x+2, combatpr_y+4, "FATIGUE RATE");
+    local->print(combatpr_x+2, combatpr_y+5, "FATIGUE RECOVERY");
+    local->print(combatpr_x+2, combatpr_y+6, "INITIATIVE");
+    local->print(combatpr_x+2, combatpr_y+7, "MOVE");
+    local->setAlignment(TCOD_RIGHT);
+    local->print(combatpr_x+21, combatpr_y+2, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.condML, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+21, combatpr_y+3, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.dodgML, TCOD_COLCTRL_STOP);
+    GAME.player->Load = 50;
+    if(GAME.player->END < 1) GAME.player->END = 1;
+    local->print(combatpr_x+21, combatpr_y+4, "%c%d%c", TCOD_COLCTRL_2, GAME.player->Load / GAME.player->END, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+21, combatpr_y+5, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END / 6, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+21, combatpr_y+6, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.initML, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+21, combatpr_y+7, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.mobiML / 5, TCOD_COLCTRL_STOP);
+    combatpr_x = 32;
+    local->setAlignment(TCOD_LEFT);
+    local->print(combatpr_x, combatpr_y, "%cWEAPON%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+20, combatpr_y, "%cWT%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+25, combatpr_y, "%cWQ%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+31, combatpr_y, "%cA/D%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+39, combatpr_y, "%cB/E/P%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+51, combatpr_y, "%cAML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+61, combatpr_y, "%cDML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    
+    local->print(combatpr_x+2, combatpr_y+2, "%cBroadsword%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    local->setAlignment(TCOD_RIGHT);
+    local->print(combatpr_x+21, combatpr_y+2, "%c3%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+26, combatpr_y+2, "%c12%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+33, combatpr_y+2, "%c3/2%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+43, combatpr_y+2, "%c3/5/3%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+53, combatpr_y+2, "%c%d(%d)%c", TCOD_COLCTRL_2, GAME.player->skill.lswdAML, GAME.player->skill.lswdAB, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+63, combatpr_y+2, "%c%d(%d)%c", TCOD_COLCTRL_2, GAME.player->skill.lswdDML, GAME.player->skill.lswdDB, TCOD_COLCTRL_STOP);
+
+    for(int n = 0; n < 3; ++n){
+        local->putChar(combatpr_x+22, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+27, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+34, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+44, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+54, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+64, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+    }
+
+    local->setAlignment(TCOD_LEFT);
     return;
 }  
-
-void calc_bonuses(Game &GAME){
-    GAME.player->skill.lswdB = 0;
-    if(GAME.player->STR > 12) GAME.player->skill.lswdB += GAME.player->STR - 12;
-    else if(GAME.player->STR < 9) GAME.player->skill.lswdB += GAME.player->STR - 9;
-    std::cout << "Sword bonus: " << GAME.player->skill.lswdB << std::endl;
-    if(GAME.player->STR > 12) GAME.player->skill.lswdB += GAME.player->STR - 12;
-    else if(GAME.player->STR < 9) GAME.player->skill.lswdB += GAME.player->STR - 9;
-    std::cout << "Sword bonus: " << GAME.player->skill.lswdB << std::endl;
-    if(GAME.player->DEX > 12) GAME.player->skill.lswdB += GAME.player->DEX - 12;
-    else if(GAME.player->DEX < 9) GAME.player->skill.lswdB += GAME.player->DEX - 9;
-    std::cout << "Sword bonus: " << GAME.player->skill.lswdB << std::endl;
-    return;
-}    
 
 int chargen(Game &GAME){
     bool method = false; // using 4 dice or point allocation
@@ -1317,6 +1364,8 @@ int chargen(Game &GAME){
         }
         override:
         gen_rollskill(GAME);
+        GAME.player->skill.lswdAB = calc_bonuses(GAME, GAME.player->STR, GAME.player->STR, GAME.player->DEX);
+        GAME.player->skill.lswdDB = calc_bonuses(GAME, GAME.player->DEX, GAME.player->DEX, GAME.player->AGI);
         TCODConsole::root->clear();
         TCODConsole::root->setColorControl(TCOD_COLCTRL_3, TCODColor::lighterBlue, TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_4, TCODColor::black, TCODColor::lighterBlue);
@@ -1343,7 +1392,6 @@ int chargen(Game &GAME){
                 return -1;
                 break;
             case 1: 
-                calc_bonuses(GAME);
                 return 0;
                 break;
             case 2:

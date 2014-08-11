@@ -76,9 +76,14 @@ class Skill {
         int dodgML;
         int initSB;
         int initML;
-        int lswdSB;
-        int lswdML;
-        int lswdB;
+
+        int lswdASB;
+        int lswdDSB;
+        int lswdAML;
+        int lswdDML;
+        int lswdAB;
+        int lswdDB;
+
         int mobiSB;
         int mobiML;
         int uarmSB;
@@ -236,6 +241,7 @@ public: // public should be moved down, but I keep it here for debug messages
     int WIL;
     int MYS;
     int MOR;
+    int Load; // temp set to 50 in chargen
 
     int x;
     int y;
