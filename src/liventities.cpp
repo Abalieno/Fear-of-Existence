@@ -207,9 +207,11 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
                 monster.draw(0, tgame);
                 tgame.gstate.con->clear();
                 tgame.gstate.fov_recompute = true;
-                //render_all();
                 
-                monster.stats.attack(player, monster, 1, 0); // calls attack function for monsters
+                do monster.stats.attack(player, monster, 1, monster.overpower_l); // calls attack function for monsters
+                while (monster.overpower_l > 0);
+                monster.overpower_l = 0; // reset
+
                 TCODConsole::flush();
                 if(!tgame.gstate.no_combat)monster.combat_move -= 4; // decrease the movement points for attack
                 return true;
@@ -274,7 +276,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         DHP = &monster.stats.hp;
         weapond = player.stats.power;
         overpower_who = &player.overpower_l;
-    }    
+    }   
 
     // crit chances
     int a_crit = AML / 10;
@@ -290,14 +292,14 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
 
     // for every attack the player defends from or does, a -10 penality is applied
     if(player.cflag_attacks >= 1){
-        playerS += (player.cflag_attacks * 10) * -1;
+        *playerS += (player.cflag_attacks * 10) * -1;
         std::cout << "Player actions this round: " << player.cflag_attacks << std::endl;
     }  
     player.cflag_attacks++; // increment counter (reset at beginning of combat turn)
 
     // for every attack the monster defends from or does, a -10 penality is applied
     if(monster.cflag_attacks >= 1){
-        monsterS += (monster.cflag_attacks * 10) * -1;
+        *monsterS += (monster.cflag_attacks * 10) * -1;
         std::cout << "Monster actions this round: " << monster.cflag_attacks << std::endl;
     }  
     monster.cflag_attacks++; // increment counter (reset at beginning of combat turn)
@@ -337,8 +339,8 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         overpower = is_overpower(AML, a_d100, DML, d_d100);
         std::cout << "Overpower: " << overpower << std::endl;
     }
-    if(overpower) ++overpower_who;
-    else overpower_who = 0;
+    if(overpower) ++*overpower_who;
+    else *overpower_who = 0;
     if(overpowering){
         msg_log msgo;
         msgo.c1 = 1; // sets background color (?)
@@ -419,18 +421,18 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
     msg_log msg1;
     switch(melee_res[a_success_level][d_success_level]){
         case 1:
-            AHP -= 1;
-            DHP -= 1;
+            *AHP -= 1;
+            *DHP -= 1;
             sprintf(msg1.message, "%c%c%cBoth fumble! %c-1%c to HP for both.", TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP, 
                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
             break;
         case 2:
-            AHP -= 1;
+            *AHP -= 1;
             sprintf(msg1.message, "%c%c%cThe %s fumbles the attack! %c-1%c to HP.", TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP, 
                     a_string, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
             break;
         case 3:
-            DHP -= 1;
+            *DHP -= 1;
             sprintf(msg1.message, "%c%c%cThe %s misses, but the %s fumbles the parry and hurt himself! %c-1%c to HP.", 
                     TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP, a_string, d_string, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
             break;
@@ -439,16 +441,16 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
                     a_string, d_string);
             break;
         case 5:
-            DHP -= weapond;
+            *DHP -= weapond;
             sprintf(msg1.message, "%c!%cThe %s hits the %s for %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
                     a_string, d_string, TCOD_COLCTRL_1, monster.stats.power, TCOD_COLCTRL_STOP);
             break;
         case 6:
-            DHP -= weapond * 2;
+            *DHP -= weapond * 2;
             sprintf(msg1.message, "%c!%cCritial attack! %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (weapond * 2), TCOD_COLCTRL_STOP);
             break;
         case 7:
-            DHP -= weapond * 3;
+            *DHP -= weapond * 3;
             sprintf(msg1.message, "%c!%cTriple damage! %c%d%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (weapond * 3), TCOD_COLCTRL_STOP);
             msg1.color1 = TCODColor::red;
             break;

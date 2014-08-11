@@ -27,7 +27,7 @@ CAVE LVL 1
   wpn_DC: 1
   wpn_B: 3
   wpn_aspect: 1
-  ML: 35
+  ML: 100
   ]
 
 1
