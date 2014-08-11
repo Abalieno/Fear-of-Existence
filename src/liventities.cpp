@@ -443,7 +443,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         case 5:
             *DHP -= weapond;
             sprintf(msg1.message, "%c!%cThe %s hits the %s for %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
-                    a_string, d_string, TCOD_COLCTRL_1, monster.stats.power, TCOD_COLCTRL_STOP);
+                    a_string, d_string, TCOD_COLCTRL_1, weapond, TCOD_COLCTRL_STOP);
             break;
         case 6:
             *DHP -= weapond * 2;
