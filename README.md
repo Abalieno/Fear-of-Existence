@@ -5,7 +5,7 @@ Programming "diary" currently here: http://brokenforum.com/index.php?threads/kno
 
 With commit 95 I moved from standard MinGW to MinGW-w64. This means the compiled .exe will likely require a 64bit Windows, for the time being. The process was detailed here: http://www.cesspit.net/drupal/node/2103 explaining how to install properly(?) MinGW-w64 along with MSYS on Windows, and to compile libtcod and SDL to work with 64bits
 
-SUMMARY: I’m not a programmer who now attempts to write a roguelike, I’m a total noob who’s learning how to program through a roguelike. The "ideal" at this stage is that I move through the basics of game programming as if ideally following the history of RPGs from the very beginning. In the process, I hope to capture both what was the unique flavor of those old games as well the complexity of modern games.
+SUMMARY: I’m not a programmer who now attempts to write a roguelike, I’m a total noob who’s learning how to program through a roguelike. The principle at this stage is that I move through the basics of game programming as if ideally following the history of Computer RPGs from the very beginning. In the process, I hope to capture both what was the unique flavor of those old games as well the complexity of modern games. The design goal is to mix many different game ideas and rules, integrated into a unique vision.
 
 --
 Ok, this is essentially a purely conceptual stage, it will take me years to get closer to a playable/interesting stage, and I'm not asking for money, neither now nor later. (but I could always use some help)
@@ -39,14 +39,14 @@ Long-term, the game has quite an ambitious set of goals that will keep me busy f
 - Menu-driven (no memorization of esoteric commands required)
 
 
-The idea is to work toward a fully realized game-world that still has a 'story' to follow, but that it can also be 'lived-in' in a sort of sandbox-lite mode. Where it is the player who decides what to do and when. Including if to go after the story(ies) or completely ignore it.
+The idea is to work toward a fully realized (ideally epic-sized) game-world that still has a 'story' to follow, but that it can also be 'lived-in' in a sort of sandbox-lite mode. Where it is the player who decides what to do and when. Including if to go after the story(ies) or completely ignore it.
 
 All that stuff is moved far into the future, because first I need to have a shell of a game that can support all that. What I'm currently doing is learn C++ (on my own, thanks to some help online, and some books) and working with the libtcod library. Right now going through tutorials and implementing a shell of a combat system.
 
 How far this project will actually go I cannot say. But I'm at least committed to it and if nothing changes I'll keep trying. Despite what I'll able to do or not, I believe there are plenty of absolutely great ideas involved, and that could make this project interesting for other people, maybe simply as inspiration. I doubt anyone wants to help, but if you do you're welcome ;)
 
 Some other details on the system:
-As I said, skill based and no levels/classes. Since the goal is a fully realized world, and not a modular, randomized dungeon like most RL, I can't use permdeath. I don't know how death will be handled, but a character will have access to all systems, without the need to reroll, so there's no real need for replayability and the focus will be instead on longevity (depth and breadth). The experience system will be similar to Dark Souls, where the points earned can be spent (and lost if something goes wrong) as a form of currency to improve attributes and statistics.
+As I said, skill based and no levels/classes. Since the goal is a fully realized and massive world, and not a modular, randomized dungeon like most RL, I can't use permdeath. I don't know how death will be handled, but a character will have access to all systems, without the need to reroll. There's no real need for replayability and the focus will be instead on longevity (depth and breadth). The experience system will be similar to Dark Souls, where the points earned can be spent (and lost if something goes wrong) as a form of currency to improve attributes and skills.
 
 The party system instead will be 'virtualized' out of combat, so you'll move around just one character. But whenever combat is initiated (either automatically or manually) all party members will be 'deployed', and will then be moved independently in turn-based combat. Similarly to those lovely GoldBox games we all love (but with a much more complex and deeper system governing combat).
 
