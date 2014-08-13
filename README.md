@@ -7,6 +7,8 @@ With commit 95 I moved from standard MinGW to MinGW-w64. This means the compiled
 
 SUMMARY: I’m not a programmer who now attempts to write a roguelike, I’m a total noob who’s learning how to program through a roguelike. The principle at this stage is that I move through the basics of game programming as if ideally following the history of Computer RPGs from the very beginning. In the process, I hope to capture both what was the unique flavor of those old games as well the complexity of modern games. The design goal is to mix many different game ideas and rules, integrated into a unique vision.
 
+For meaningful nostalgia (but I'm not related to this site): http://crpgaddict.blogspot.com
+
 --
 Ok, this is essentially a purely conceptual stage, it will take me years to get closer to a playable/interesting stage, and I'm not asking for money, neither now nor later. (but I could always use some help)
 
