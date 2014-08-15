@@ -148,6 +148,9 @@ public: // public should be moved down, but I keep it here for debug messages
     unsigned int cflag_attacks; // combat-flag, attacks during turn received
     int overpower_l; // overpower counts
     int distance; // reach rules
+    bool hasmoved; // this and the one below used to "phase" monster actions
+    int phase_attack; // number of attacks this phase
+    bool pass; // pass a phase
 
     int phase; // combat round phase speed
     int att_phase; // weapon speed

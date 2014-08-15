@@ -2197,20 +2197,20 @@ void render_prompt(Game &GAME){
                 TCODConsole::root->print(loc_x, loc_y+2, "%cHOLD%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
             }  
         }else if(GAME.gstate.mode_move){
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::red,TCODColor::lighterYellow);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::lightRed,TCODColor::black);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lightRed,TCODColor::lighterYellow);
             if(prompt_selection == 1){ 
-                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::red);
-                TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::red);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::lightRed);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::lightRed);
             }    
             TCODConsole::root->print(loc_x, loc_y+2, "%cE%c%cND MOVEMENT%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         } else if(GAME.gstate.mode_attack){
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::lighterRed,TCODColor::black);
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lighterRed,TCODColor::lighterYellow);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::lightRed,TCODColor::black);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lightRed,TCODColor::lighterYellow);
             if(prompt_selection == 1){ 
-                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::lighterRed);
-                TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::lighterRed);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::lightRed);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::lightRed);
             }    
             TCODConsole::root->print(loc_x, loc_y+2, "%cE%c%cND ATTACK%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -3833,7 +3833,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         if(action == 1){ // HOLD
             for(unsigned int n = 0; n<AllPhases[phase].size(); ++n){ // cycle this phase
                 if(AllPhases[phase][n].mon_index == 666){ // is player in phase
-                    //AllPhases[phase].erase(AllPhases[phase].begin()+n);
+                    //AllPhases[phase].erase(AllPhases[phase].begin()+n); // no need, i stays in history
                     Unit tempunit;
                     tempunit.mon_index = 666; // player flag
                     AllPhases[phase+1].push_back(tempunit);
@@ -3970,8 +3970,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     return 0;
 }  
 
-int monster_turn(Game &GAME, const std::vector<Monster> &monsters, unsigned int i, std::vector<Unit> AllPhases[10], int turnseq){
-    std::cout << "Monster position: " << *(monsters[i].initiative) << std::endl;
+int monster_turn(Game &GAME, const std::vector<Monster> &monsters, unsigned int i, std::vector<Unit> AllPhases[10], int turnseq, int phase, int phaseplace){
     for (unsigned int b = 0; b<monvector.size(); ++b) {
         unsigned int monster_ini = monvector[b].initiative;
 
@@ -3988,8 +3987,7 @@ int monster_turn(Game &GAME, const std::vector<Monster> &monsters, unsigned int 
             r_panel->clear();
             widget_popup->clear();
             TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
-            widget_popup->print(0, 0, "%cMONSTER TURNS%c",
-                    TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+            widget_popup->print(0, 0, "%cMONSTER TURNS%c",TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
             TCODConsole::blit(widget_popup,0,0,13,1,TCODConsole::root, (MAP_WIDTH_AREA/2)-6, 66);
 
             // Initiative UI list in monster turn
@@ -4007,11 +4005,8 @@ int monster_turn(Game &GAME, const std::vector<Monster> &monsters, unsigned int 
 
             bool seehere = false;
             seehere = GAME.gstate.fov_map->isInFov(monvector[b].x,monvector[b].y);
-            std::cout << "monster doing something" << std::endl;
             int ctl = 0;
-            while (monvector[b].combat_move > 0){
-                std::cout << "cfgmonster move: " << monvector[b].combat_move;
-
+            while (monvector[b].combat_move > 0 && !monvector[b].pass){
                 // take turn (monster)
                 if (monvector[b].myai->take_turn(monvector[b], player, monvector[b].pl_x,
                             monvector[b].pl_y,seehere, GAME) );// render_all();
@@ -4020,15 +4015,25 @@ int monster_turn(Game &GAME, const std::vector<Monster> &monsters, unsigned int 
                     player_death(GAME);
                     alreadydead = 1;
                     return 5;
-                } else {
-                    //player.move(m_x, m_y, monvector);
-                    //fov_recompute = true; // disables monster trail
-                }
+                } 
 
                 if (ctl > 1){
                     GAME.gstate.con->clear();
                     GAME.gstate.fov_recompute = true;
                     ctl = 0;
+                }
+
+                // jump to next phase if movement points (enough for attack) are left
+                if(monvector[b].pass && monvector[b].combat_move >= 4 && phase < 9){
+                    Unit tempunit;
+                    tempunit.mon_index = b;
+                    AllPhases[phase+1].push_back(tempunit);
+                    int init_ln = 2;
+                    mon_list.clear(); // mouse lookup
+                    for(unsigned int z = 0; z<10; ++z){
+                        init_ln += init_UI(r_panel, GAME, AllPhases[z], 
+                                monsters, monvector, init_ln, z+1, turnseq);
+                    }
                 }
 
                 widget_popup->clear();
@@ -4040,9 +4045,9 @@ int monster_turn(Game &GAME, const std::vector<Monster> &monsters, unsigned int 
                 Sleep(100);
                 ++ctl; // for trail animation on monster movement
             }
-            // end turn, so resets movement points
-            if(monvector[b].color == orc) monvector[b].combat_move = 6;
-            else monvector[b].combat_move = 10;
+            monvector[b].hasmoved = false; // resets movement flag for next phase
+            monvector[b].pass = false; // reset
+            monvector[b].phase_attack = 0;
             // couldn't move this turn ?
             if(monvector[b].stuck == true) ++monvector[b].wasstuck;
             else monvector[b].wasstuck = 0;
@@ -4384,7 +4389,7 @@ int main() {
             } // activates combat mode as soon a monster is in sight, deactivates on subsequent loops
 
         int turn = 1;  
-        std::vector<Monster> monsters; // initiative - moved here to kep it valid between turns
+        std::vector<Monster> monsters; // initiative - moved here to keep it valid between turns
         while (combat_mode){
 
             is_handle_combat = true;
@@ -4397,28 +4402,12 @@ int main() {
                 }
                 monvector[i].cflag_attacks = 0; // resets attacks received
                 monvector[i].move_counter = 0; // resets number of movements during turn
+                monvector[i].hasmoved = false; // reset flag for monster phases
+                monvector[i].phase_attack = 0; // reset attack count for monster phases
+                monvector[i].pass = false; // reset bool used for phases
             }
             player.cflag_attacks = 0; // resets number of attacks received
             player.move_counter = 0; // resets number of movements during turn
-
-            if(turn > 0){
-                for(unsigned int b = 0; b<monvector.size(); ++b){ // cycle all monsters
-                    for(unsigned int i = 0; i<monsters.size(); ++i){ // cycle initiative
-                        unsigned int monster_ini = monvector[b].initiative;
-                        if ((i+1) == monster_ini){ // find the monster by matching initiative
-                            if(!monvector[b].alive){ 
-                                monvector[b].initiative = -1;
-                                monsters.erase(monsters.begin()+i);
-                                break; // breaks initiative for
-                            }    
-                        }
-                    }
-                }
-                // sorting initiative after dead monsters removed
-                for (unsigned int i = 0; i<monsters.size(); ++i) {
-                    *(monsters[i].initiative) = i+1;
-                }
-            }
 
             if (alreadydead) break;
          
@@ -4460,6 +4449,7 @@ int main() {
             tempunit.mon_index = 666; // player flag
             AllPhases[player.phase-1].push_back(tempunit);
 
+            // phase output in cout
             for(unsigned int n = 0; n<10; ++n){
                 std::cout << "Phase " << n+1 << ": ";
                 for(unsigned int i = 0; i<AllPhases[n].size(); ++i){
@@ -4509,6 +4499,14 @@ int main() {
                         tempm.speed = &monvector[i].initML;
                         monsters.push_back(tempm);
 
+                        if(turn > 1){
+                            msg_log msg2;
+                            sprintf(msg2.message, "%c!%cJoining the fray: %s.", 
+                                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, monvector[i].name);
+                            msg2.color1 = TCODColor::yellow;
+                            msg_log_list.push_back(msg2);
+                        }
+
                         msg_log msg1;
                         if(monvector[i].in_sight)
                             sprintf(msg1.message, "%c>%c%s initiative: Initiative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
@@ -4523,6 +4521,25 @@ int main() {
                         msg1.color1 = TCODColor::yellow;
                         msg_log_list.push_back(msg1);
                     }
+                }
+            }
+
+            if(turn > 0){
+                for(unsigned int b = 0; b<monvector.size(); ++b){ // cycle all monsters
+                    for(unsigned int i = 0; i<monsters.size(); ++i){ // cycle initiative
+                        unsigned int monster_ini = monvector[b].initiative;
+                        if ((i+1) == monster_ini){ // find the monster by matching initiative
+                            if(!monvector[b].alive){ 
+                                monvector[b].initiative = -1;
+                                monsters.erase(monsters.begin()+i);
+                                break; // breaks initiative for
+                            }    
+                        }
+                    }
+                }
+                // sorting initiative after dead monsters removed
+                for (unsigned int i = 0; i<monsters.size(); ++i) {
+                    *(monsters[i].initiative) = i+1;
                 }
             }
 
@@ -4638,7 +4655,7 @@ int main() {
                                 for(unsigned int n = 0; n<AllPhases[p].size(); ++n){ // cycle phase
                                     if(AllPhases[p][n].mon_index == b){ // is monster in phase?
                                         ++turnseq;
-                                        monster_turn(GAME, monsters, i, AllPhases, turnseq);
+                                        monster_turn(GAME, monsters, i, AllPhases, turnseq, p, n);
                                     } 
                                 }
                             } 
@@ -4653,7 +4670,12 @@ int main() {
             msg_log_list.push_back(msg2);
             ++turn; // number of turns, starting at 1
             mon_list.clear(); // mouse lookup
+            // end turn, so resets movement points
             player.combat_move = 8; // resets player's movement points
+            for(unsigned int b = 0; b<monvector.size(); ++b){
+                if(monvector[b].color == orc) monvector[b].combat_move = 6;
+                else monvector[b].combat_move = 10;
+            }
         } // while combat_move
 
         } else { // no combat

@@ -148,74 +148,65 @@ void Object_player::clear(Game &tgame) {
 }
 
 bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y, bool myfov, Game &tgame){
-   
-            std::cout << "The " << monster.name << " is active." << std::endl;
 
-            // 1.1 so the monster attacks but still moves closer instead of stopping diagonally
-            if ( (monster.distance_to(p_x, p_y) >= 1.1) || (monster.chasing && !myfov)){
+    std::cout << "The " << monster.name << " is active." << std::endl;
 
-                if (tgame.gstate.no_combat || monster.combat_move >= 1){ // move up to and including player pos    
-                    monster.move_towards(p_x, p_y);
-                    if(!tgame.gstate.no_combat){
-                        monster.combat_move -= 1;
-                    }    
-                    std::cout << "The " << monster.name << " moves." << std::endl;
-                    return false;
-                }
+    // 1.1 so the monster attacks but still moves closer instead of stopping diagonally
+    if ( (monster.distance_to(p_x, p_y) >= 1.1) || (monster.chasing && !myfov)){
 
-            } else if (myfov){ 
-                if (tgame.gstate.no_combat || (monster.combat_move >= 4)) {
-                
-                monster.path_mode = 0;
+        if (tgame.gstate.no_combat || monster.combat_move >= 1){ // move up to and including player pos    
+            monster.move_towards(p_x, p_y);
+            if(!tgame.gstate.no_combat){
+                monster.combat_move -= 1;
+                monster.hasmoved = true;
+            }    
+            std::cout << "The " << monster.name << " moves." << std::endl;
+            return false;
+        }
 
-                    // sets facing
-                    if(monster.x < player.x) monster.facing = 1;
-                    if(monster.x > player.x) monster.facing = 3;
-                    if(monster.y > player.y) monster.facing = 0;
-                    if(monster.y < player.y) monster.facing = 2;
+    } else if (myfov){ 
+        if (tgame.gstate.no_combat || ((monster.combat_move >= 4) && !monster.hasmoved && monster.phase_attack == 0)) {
 
-                tgame.gstate.mesg->setAlignment(TCOD_LEFT);
-                tgame.gstate.mesg->setDefaultForeground(TCODColor::yellow);
-                tgame.gstate.mesg->setDefaultBackground(TCODColor::black);
-                player.colorb = TCODColor::red; // otherwise colorb is set in draw(), by looking at floor
-                monster.colorb = TCODColor::black;
-                player.selfchar = '/';
-                player.draw(1, tgame);
-                monster.draw(1, tgame);
-                tgame.gstate.mesg->print(1, 1, "Hit!");
-                //if(!(player.y > MAP_HEIGHT-8 )) TCODConsole::blit(mesg,0,0,33,3,con,1,MAP_HEIGHT-4);
-                //else TCODConsole::blit(mesg,0,0,33,3,con,MAP_WIDTH-37,1);
+            monster.path_mode = 0; // switches back to default pathing on attack
 
-                if(tgame.gstate.bigg){
-                    TCODConsole::blit(tgame.gstate.con, 0, 0, 0, 0, TCODConsole::root,0,0);
-                } else {    
-                    TCODConsole::blit(tgame.gstate.con, 0, 0, 0, 0, TCODConsole::root,0,0);
-                }
-                //std::cout << "SMALLOFF: " << off_xx << " " << off_yy << std::endl;
+            // sets facing
+            if(monster.x < player.x) monster.facing = 1;
+            if(monster.x > player.x) monster.facing = 3;
+            if(monster.y > player.y) monster.facing = 0;
+            if(monster.y < player.y) monster.facing = 2;
 
-                TCODConsole::flush();
+            tgame.gstate.mesg->setAlignment(TCOD_LEFT);
+            tgame.gstate.mesg->setDefaultForeground(TCODColor::yellow);
+            tgame.gstate.mesg->setDefaultBackground(TCODColor::black);
+            player.colorb = TCODColor::red; // otherwise colorb is set in draw(), by looking at floor
+            monster.colorb = TCODColor::black;
+            player.selfchar = '/';
+            player.draw(1, tgame);
+            monster.draw(1, tgame);
 
-                Sleep(250); // shitty way for attack "animation", uses windows.h
-                player.colorb = tgame.gstate.color_dark_ground;
-                monster.colorb = tgame.gstate.color_dark_ground;
-                player.selfchar = '@';
-                player.draw(0, tgame);
-                monster.draw(0, tgame);
-                tgame.gstate.con->clear();
-                tgame.gstate.fov_recompute = true;
-                
-                do monster.stats.attack(player, monster, 1, monster.overpower_l); // calls attack function for monsters
-                while (monster.overpower_l > 0);
-                monster.overpower_l = 0; // reset
+            TCODConsole::blit(tgame.gstate.con, 0, 0, 0, 0, TCODConsole::root,0,0);
+            TCODConsole::flush();
 
-                TCODConsole::flush();
-                if(!tgame.gstate.no_combat)monster.combat_move -= 4; // decrease the movement points for attack
-                return true;
-            } else if (myfov && !tgame.gstate.no_combat) monster.combat_move = 0; // movement points to 0 if couldn't make the attack
-            }
-        
-        //else std::cout << "The " << monster.name << " lurks in the dark! " ;
-        return false; 
+            Sleep(250); // shitty way for attack "animation", uses windows.h
+            player.colorb = tgame.gstate.color_dark_ground;
+            monster.colorb = tgame.gstate.color_dark_ground;
+            player.selfchar = '@';
+            player.draw(0, tgame);
+            monster.draw(0, tgame);
+            tgame.gstate.con->clear();
+            tgame.gstate.fov_recompute = true;
+
+            do monster.stats.attack(player, monster, 1, monster.overpower_l); // calls attack function for monsters
+            while (monster.overpower_l > 0);
+            monster.overpower_l = 0; // reset
+            ++monster.phase_attack; // add one attack executed, for phases
+
+            TCODConsole::flush();
+            if(!tgame.gstate.no_combat)monster.combat_move -= 4; // spends movement points for attack
+            return true;
+        } else if (myfov && !tgame.gstate.no_combat) monster.pass = true; // can't attack, so "pass"
+    }
+    return false; 
     }
 
 bool is_overpower(int askill, int aroll, int dskill, int droll){
