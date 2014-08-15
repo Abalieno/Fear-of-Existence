@@ -27,6 +27,7 @@ CAVE LVL 1
   wpn_DC: 1
   wpn_B: 3
   wpn_aspect: 1
+  reach: 2
   ML: 35
   ]
 
@@ -49,6 +50,7 @@ CAVE LVL 1
   wpn_DC: 1 
   wpn_B: 4
   wpn_aspect: 1
+  reach: 4
   ML: 50
   ]
 end

@@ -106,6 +106,12 @@ struct global_state{
     int bigg3;
     int mapmode;
 
+    bool first; // used to set player combat states
+    bool second;
+    bool third;
+    bool mode_move;
+    bool mode_attack;
+
     int off_xx; // offsets to blit during attacks
     int off_yy;
     int offbig_x;

@@ -904,11 +904,11 @@ void addpoint(unsigned int &stat, int ostat, int &points, bool subadd, int who){
     if(stat == 0) TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
     else TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
 
-    if(who == 5) TCODConsole::root->print(57, 17, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP);
-    else if(who == 9) TCODConsole::root->print(57, 21, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP); 
-    else if(who == 6) TCODConsole::root->print(57, 18, "%c%d (%s)      %c", TCOD_COLCTRL_2, ostat+stat, txt_intelligence(ostat+stat), TCOD_COLCTRL_STOP);
-    else if(who > 6) TCODConsole::root->print(57, 12+who, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP);
-    else TCODConsole::root->print(57, 9+who, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP);
+    if(who == 5) TCODConsole::root->print(56, 17, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP);
+    else if(who == 9) TCODConsole::root->print(56, 21, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP); 
+    else if(who == 6) TCODConsole::root->print(56, 18, "%c%d (%s)      %c", TCOD_COLCTRL_2, ostat+stat, txt_intelligence(ostat+stat), TCOD_COLCTRL_STOP);
+    else if(who > 6) TCODConsole::root->print(56, 12+who, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP);
+    else TCODConsole::root->print(56, 9+who, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP);
 }   
 
 int edit_char(Game &GAME, int points){
@@ -1114,29 +1114,29 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
 
     local->print(main_osetx+35, 7, "%cPHYSICAL%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 9, "Strength:");
-    local->print(57, 9, "%c%d%c", TCOD_COLCTRL_2, GAME.player->STR, TCOD_COLCTRL_STOP);
+    local->print(56, 9, "%c%d%c", TCOD_COLCTRL_2, GAME.player->STR, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 10, "Constitution:");
-    local->print(57, 10, "%c%d%c", TCOD_COLCTRL_2, GAME.player->CON, TCOD_COLCTRL_STOP);
+    local->print(56, 10, "%c%d%c", TCOD_COLCTRL_2, GAME.player->CON, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 11, "Endurance:");
-    local->print(57, 11, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END, TCOD_COLCTRL_STOP);
+    local->print(56, 11, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 12, "Agility:");
-    local->print(57, 12, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AGI, TCOD_COLCTRL_STOP);
+    local->print(56, 12, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AGI, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 13, "Dexterity:");
-    local->print(57, 13, "%c%d%c", TCOD_COLCTRL_2, GAME.player->DEX, TCOD_COLCTRL_STOP);
+    local->print(56, 13, "%c%d%c", TCOD_COLCTRL_2, GAME.player->DEX, TCOD_COLCTRL_STOP);
 
     local->print(main_osetx+35, 15, "%cPERSONALITY%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 17, "Perception:");
-    local->print(57, 17, "%c%d%c", TCOD_COLCTRL_2, GAME.player->PER, TCOD_COLCTRL_STOP);
+    local->print(56, 17, "%c%d%c", TCOD_COLCTRL_2, GAME.player->PER, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 18, "Intelligence:");
-    local->print(57, 18, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->INT, txt_intelligence(GAME.player->INT), TCOD_COLCTRL_STOP);
+    local->print(56, 18, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->INT, txt_intelligence(GAME.player->INT), TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 19, "Aura:");
-    local->print(57, 19, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AUR, TCOD_COLCTRL_STOP);
+    local->print(56, 19, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AUR, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 20, "Will:");
-    local->print(57, 20, "%c%d%c", TCOD_COLCTRL_2, GAME.player->WIL, TCOD_COLCTRL_STOP);
+    local->print(56, 20, "%c%d%c", TCOD_COLCTRL_2, GAME.player->WIL, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 21, "Mystique:");
-    local->print(57, 21, "%c%d%c", TCOD_COLCTRL_2, GAME.player->MYS, TCOD_COLCTRL_STOP);
+    local->print(56, 21, "%c%d%c", TCOD_COLCTRL_2, GAME.player->MYS, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 23, "Morality:");
-    local->print(57, 23, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->MOR, txt_morality(GAME), TCOD_COLCTRL_STOP);
+    local->print(56, 23, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->MOR, txt_morality(GAME), TCOD_COLCTRL_STOP);
 
     local->print(main_osetx+70, 7, "%cPHYSICAL SKILLS%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     local->print(main_osetx+90, 7, "%cSB%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -1233,29 +1233,32 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
     combatpr_x = 32;
     local->setAlignment(TCOD_LEFT);
     local->print(combatpr_x, combatpr_y, "%cWEAPON%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+20, combatpr_y, "%cWT%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+25, combatpr_y, "%cWQ%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+31, combatpr_y, "%cA/D%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+39, combatpr_y, "%cB/E/P%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+51, combatpr_y, "%cAML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+61, combatpr_y, "%cDML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+18, combatpr_y, "%cReach%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+26, combatpr_y, "%cWT%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+31, combatpr_y, "%cWQ%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+37, combatpr_y, "%cA/D%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+45, combatpr_y, "%cB/E/P%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+57, combatpr_y, "%cAML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+67, combatpr_y, "%cDML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     
     local->print(combatpr_x+2, combatpr_y+2, "%cBroadsword%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
     local->setAlignment(TCOD_RIGHT);
-    local->print(combatpr_x+21, combatpr_y+2, "%c3%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+26, combatpr_y+2, "%c12%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+33, combatpr_y+2, "%c3/2%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+43, combatpr_y+2, "%c3/5/3%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+53, combatpr_y+2, "%c%d(%d)%c", TCOD_COLCTRL_2, GAME.player->skill.lswdAML, GAME.player->skill.lswdAB, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+63, combatpr_y+2, "%c%d(%d)%c", TCOD_COLCTRL_2, GAME.player->skill.lswdDML, GAME.player->skill.lswdDB, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+22, combatpr_y+2, "%cL%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+27, combatpr_y+2, "%c3%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+32, combatpr_y+2, "%c12%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+39, combatpr_y+2, "%c3/2%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+49, combatpr_y+2, "%c3/5/3%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+59, combatpr_y+2, "%c%d(%d)%c", TCOD_COLCTRL_2, GAME.player->skill.lswdAML, GAME.player->skill.lswdAB, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+69, combatpr_y+2, "%c%d(%d)%c", TCOD_COLCTRL_2, GAME.player->skill.lswdDML, GAME.player->skill.lswdDB, TCOD_COLCTRL_STOP);
 
     for(int n = 0; n < 3; ++n){
-        local->putChar(combatpr_x+22, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
-        local->putChar(combatpr_x+27, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
-        local->putChar(combatpr_x+34, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
-        local->putChar(combatpr_x+44, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
-        local->putChar(combatpr_x+54, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
-        local->putChar(combatpr_x+64, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+23, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+28, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+33, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+40, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+50, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+60, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+70, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
     }
 
     local->setAlignment(TCOD_LEFT);

@@ -29,7 +29,7 @@ struct mob_types {
     int combat_move; // total action points
     int speed; // for initiative
 
-    int wpn_AC, wpn_DC, wpn_B, wpn_aspect;
+    int wpn_AC, wpn_DC, wpn_B, wpn_aspect, reach;
     int ML;
 };  
 

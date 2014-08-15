@@ -27,6 +27,7 @@ public:
     int wpn_B; // blunt
     int wpn_E;
     int wpn_P;
+    int reach; // 1Hand, 2Short, 3Medium, 4Long, 5Very Long, 6Extremely Long
 
     int wpn_aspect;
 
@@ -146,6 +147,7 @@ public: // public should be moved down, but I keep it here for debug messages
     int temp_init; // total initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag, attacks during turn received
     int overpower_l; // overpower counts
+    int distance; // reach rules
 
     int phase; // combat round phase speed
     int att_phase; // weapon speed
@@ -264,6 +266,7 @@ public: // public should be moved down, but I keep it here for debug messages
     int temp_init; // total initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag - number of attacks received in current turn
     int overpower_l; // overpower counts
+    int distance; // reach rules
 
     int facing; // 0 to 3, N E S W
     int phase;

@@ -217,6 +217,7 @@ bool load_data(std::istream &data, lvl1 &enc){
                 else if (ident == "wpn_DC:") {data >> tempmob.wpn_DC;}
                 else if (ident == "wpn_B:") {data >> tempmob.wpn_B;}
                 else if (ident == "wpn_aspect:") {data >> tempmob.wpn_aspect;}
+                else if (ident == "reach:") {data >> tempmob.reach;}
                 else if (ident == "ML:") {data >> tempmob.ML; }   
                 data >> ident;
             } 

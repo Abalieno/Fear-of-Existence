@@ -250,6 +250,10 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
     int *DHP;
     int weapond;
     int *overpower_who;
+    int Areach;
+    int Dreach;
+    int *Adistance;
+    int *Ddistance;
     if(who){ // if MONSTER
         AML = monster.stats.ML; // basic skill
         wpn_AC = monster.stats.wpn1.wpn_AC;
@@ -258,24 +262,32 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         AHP = &monster.stats.hp;
         weapond = monster.stats.power;
         overpower_who = &monster.overpower_l;
+        Areach = monster.stats.wpn1.reach;
+        Adistance = &monster.distance;
         DML = player.skill.lswdDML; // basic monster skill
         wpn_DC = player.stats.wpn1.wpn_DC;
         playerS = &DML;
         DDB = player.skill.lswdDB;
         DHP = &player.stats.hp;
+        Dreach = player.stats.wpn1.reach;
+        Ddistance = &player.distance;
     } else{ // if PLAYER
         AML = player.skill.lswdAML; // basic skill
         wpn_AC = player.stats.wpn1.wpn_AC;
         playerS = &AML;
         ADB = player.skill.lswdAB;
         AHP = &player.stats.hp;
+        Areach = player.stats.wpn1.reach;
+        Adistance = &player.distance;
         DML = monster.stats.ML; // basic monster skill
         wpn_DC = monster.stats.wpn1.wpn_DC;
         monsterS = &DML;
         DDB = 0; // monster no skill bonus
         DHP = &monster.stats.hp;
+        Dreach = monster.stats.wpn1.reach;
         weapond = player.stats.power;
         overpower_who = &player.overpower_l;
+        Ddistance = &monster.distance;
     }   
 
     // crit chances
@@ -288,7 +300,21 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
     if(wpn_AC > wpn_DC)
         AML += 5 * (wpn_AC - wpn_DC);
     if(wpn_DC > wpn_AC)
-        DML += 5 * (wpn_DC - wpn_AC); 
+        DML += 5 * (wpn_DC - wpn_AC);
+
+    // REACH
+    if(Areach > *Adistance){ 
+        AML -= 5 * (Areach - *Adistance); // longer attack weapon is engaged at closer range
+        std::cout << "Longer attack weapon in close range: -" << 5 * (Areach - *Adistance) << std::endl;
+    }    
+    if(Dreach > *Ddistance){ 
+        DML -= 5 * (Dreach - *Ddistance); // longer defending weapon is engaged at closer range
+        std::cout << "Longer defense weapon in close range: -" << 5 * (Dreach - *Ddistance) << std::endl;
+    }    
+    if(Areach < *Ddistance){ 
+        AML -= 5 * (*Ddistance - Areach); // shorter attacking weapon is engaged out of its range
+        std::cout << "Shorter attack weapon out of range: -" << 5 * (*Ddistance - Areach) << std::endl;
+    }
 
     // for every attack the player defends from or does, a -10 penality is applied
     if(player.cflag_attacks >= 1){
@@ -437,19 +463,25 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
                     TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP, a_string, d_string, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
             break;
         case 4:
-            sprintf(msg1.message, "%c%c%cThe %s swings his weapon, but the %s parries.", TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP,
+            sprintf(msg1.message, "%c%c%cThe %s swings the weapon, but the %s parries.", TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP,
                     a_string, d_string);
             break;
         case 5:
+            if(Areach < Dreach) *Ddistance = Areach;
+            if(*Adistance < Areach) *Adistance = Areach;
             *DHP -= weapond;
             sprintf(msg1.message, "%c!%cThe %s hits the %s for %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
                     a_string, d_string, TCOD_COLCTRL_1, weapond, TCOD_COLCTRL_STOP);
             break;
         case 6:
+            if(Areach < Dreach) *Ddistance = Areach;
+            if(*Adistance < Areach) *Adistance = Areach;
             *DHP -= weapond * 2;
             sprintf(msg1.message, "%c!%cCritial attack! %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (weapond * 2), TCOD_COLCTRL_STOP);
             break;
         case 7:
+            if(Areach < Dreach) *Ddistance = Areach;
+            if(*Adistance < Areach) *Adistance = Areach;
             *DHP -= weapond * 3;
             sprintf(msg1.message, "%c!%cTriple damage! %c%d%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (weapond * 3), TCOD_COLCTRL_STOP);
             msg1.color1 = TCODColor::red;
