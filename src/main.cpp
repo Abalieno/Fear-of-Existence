@@ -2133,51 +2133,87 @@ void render_prompt(Game &GAME){
         TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_2,colorbase,TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_3,colorbase,TCODColor::black);
+        TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
         if(!GAME.gstate.mode_move && !GAME.gstate.mode_attack){
-        if(prompt_selection == 1 && GAME.gstate.first){
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
-        }else if(prompt_selection == 2 && GAME.gstate.second){
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::black,TCODColor::white);
-        }else if(prompt_selection == 3 && GAME.gstate.third){
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::black,TCODColor::white);
-        }  
-        if(!GAME.gstate.third){
-            int phaseswitch = player.att_phase;
-            if(phaseswitch > 5) phaseswitch = phaseswitch - 5; // restart from 1
-            switch(phaseswitch){
-                case 1:
-                    TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lighterGreen,TCODColor::black);
-                    break;
-                case 2:
-                    TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lighterBlue,TCODColor::black);
-                    break;
-                case 3:
-                    TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lighterYellow,TCODColor::black);
-                    break;
-                case 4:
-                    TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lightOrange,TCODColor::black);
-                    break;
-                case 5:
-                    TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lightRed,TCODColor::black);
-                    break;
+            if(prompt_selection == 1 && GAME.gstate.first){
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::white);
+                TCODConsole::root->print(loc_x, loc_y+2, "%cH%c%cOLD%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+            } else if(GAME.gstate.first){
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
+                TCODConsole::root->print(loc_x, loc_y+2, "%cH%c%cOLD%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+            }
+            if(prompt_selection == 2 && GAME.gstate.second){
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::black,TCODColor::white);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::white);
+                TCODConsole::root->print(loc_x, loc_y+3, "%cM%c%cOVE%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP);
+            } else if(GAME.gstate.second){  
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
+                TCODConsole::root->print(loc_x, loc_y+3, "%cM%c%cOVE%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP);
+            }
+            if(prompt_selection == 3 && GAME.gstate.third){
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::black,TCODColor::white);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::white);
+                TCODConsole::root->print(loc_x, loc_y+4, "%cA%c%cTTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_3,TCOD_COLCTRL_STOP);
+            } else if(GAME.gstate.third){
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
+                TCODConsole::root->print(loc_x, loc_y+4, "%cA%c%cTTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_3,TCOD_COLCTRL_STOP);
             }    
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::darkGrey,TCODColor::black);
-            TCODConsole::root->print(loc_x+6, loc_y+4, ">Attack phase: %c%d%c",
-                    TCOD_COLCTRL_5, player.att_phase, TCOD_COLCTRL_STOP);
-        }    
-        if(!GAME.gstate.second) TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::darkGrey,TCODColor::black);
-        if(!GAME.gstate.first) TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::darkGrey,TCODColor::black);
-        TCODConsole::root->print(loc_x, loc_y+2, "%c%s%c", TCOD_COLCTRL_1, "HOLD", TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(loc_x, loc_y+3, "%c%s%c", TCOD_COLCTRL_2, "MOVE", TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(loc_x, loc_y+4, "%c%s%c", TCOD_COLCTRL_3, "ATTACK", TCOD_COLCTRL_STOP);
+            if(!GAME.gstate.third){
+                int phaseswitch = player.att_phase;
+                if(phaseswitch > 5) phaseswitch = phaseswitch - 5; // restart from 1
+                switch(phaseswitch){
+                    case 1:
+                        TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lighterGreen,TCODColor::black);
+                        break;
+                    case 2:
+                        TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lighterBlue,TCODColor::black);
+                        break;
+                    case 3:
+                        TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lighterYellow,TCODColor::black);
+                        break;
+                    case 4:
+                        TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lightOrange,TCODColor::black);
+                        break;
+                    case 5:
+                        TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lightRed,TCODColor::black);
+                        break;
+                }    
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::darkGrey,TCODColor::black);
+                TCODConsole::root->print(loc_x+6, loc_y+4, ">Attack phase: %c%d%c",
+                        TCOD_COLCTRL_5, player.att_phase, TCOD_COLCTRL_STOP);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
+                TCODConsole::root->print(loc_x, loc_y+4, "%cATTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
+            }    
+            if(!GAME.gstate.second){ 
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
+                TCODConsole::root->print(loc_x, loc_y+3, "%cMOVE%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
+            }    
+            if(!GAME.gstate.first){ 
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
+                TCODConsole::root->print(loc_x, loc_y+2, "%cHOLD%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
+            }  
         }else if(GAME.gstate.mode_move){
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::black);
-            if(prompt_selection == 1) TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::red);
-            TCODConsole::root->print(loc_x, loc_y+2, "%c%s%c", TCOD_COLCTRL_1, "END MOVEMENT", TCOD_COLCTRL_STOP);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::red,TCODColor::lighterYellow);
+            if(prompt_selection == 1){ 
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::red);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::red);
+            }    
+            TCODConsole::root->print(loc_x, loc_y+2, "%cE%c%cND MOVEMENT%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         } else if(GAME.gstate.mode_attack){
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::black);
-            if(prompt_selection == 1) TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::red);
-            TCODConsole::root->print(loc_x, loc_y+2, "%c%s%c", TCOD_COLCTRL_1, "END ATTACK", TCOD_COLCTRL_STOP);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::red,TCODColor::lighterYellow);
+            if(prompt_selection == 1){ 
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::red);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::red);
+            }    
+            TCODConsole::root->print(loc_x, loc_y+2, "%cE%c%cND ATTACK%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         }    
     }    
 }    
@@ -3147,14 +3183,30 @@ int handle_keys(Object_player &duh, Game &tgame) {
     if (bloodycount < 0) bloodycount = 0; // if ... change color 
 
     if (keyr.vk==TCODK_F1) {
-			// switch renderers with F1,F2,F3 
-			TCODSystem::setRenderer(TCOD_RENDERER_GLSL);
-		} else if (keyr.vk==TCODK_F2) {
-			TCODSystem::setRenderer(TCOD_RENDERER_OPENGL);
-		} else if (keyr.vk==TCODK_F3) {
-			TCODSystem::setRenderer(TCOD_RENDERER_SDL);
-		}
+        // switch renderers with F1,F2,F3 
+        TCODSystem::setRenderer(TCOD_RENDERER_GLSL);
+    } else if (keyr.vk==TCODK_F2) {
+        TCODSystem::setRenderer(TCOD_RENDERER_OPENGL);
+    } else if (keyr.vk==TCODK_F3) {
+        TCODSystem::setRenderer(TCOD_RENDERER_SDL);
+    }
 
+    // COMBAT PROMPT
+    if(!tgame.gstate.mode_move && !tgame.gstate.mode_attack){ 
+        if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'h' && wid_prompt_open){
+            if(tgame.gstate.first) fetch = 1;
+        } 
+        if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'm' && wid_prompt_open){
+            if(tgame.gstate.second) fetch = 2;
+        }
+        if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'a' && wid_prompt_open){
+            if(tgame.gstate.third) fetch = 3;
+        }
+    }
+    if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'e' && wid_prompt_open){
+        if(tgame.gstate.mode_move || tgame.gstate.mode_attack) fetch = 1;
+    }    
+ 
     if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == '`' ){ 
         if(LIMIT_FPS == 30) LIMIT_FPS = 3000;
         else LIMIT_FPS = 30;
