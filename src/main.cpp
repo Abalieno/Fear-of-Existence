@@ -2121,15 +2121,15 @@ void render_prompt(Game &GAME){
         TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
         TCODConsole::root->setDefaultBackground(TCODColor::black);
         for(int x = 0; x < w; ++x){ 
-            TCODConsole::root->putChar(x+loc_x, loc_y, '=', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+6, '-', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+1, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+2, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+3, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+4, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+5, ' ', TCOD_BKGND_SET);
-        } 
+        }
         TCODConsole::root->setAlignment(TCOD_LEFT);
+        TCODConsole::root->print(loc_x, loc_y, "Combat Prompt");
         TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_2,colorbase,TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_3,colorbase,TCODColor::black);
@@ -2206,11 +2206,11 @@ void render_prompt(Game &GAME){
             TCODConsole::root->print(loc_x, loc_y+2, "%cE%c%cND MOVEMENT%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         } else if(GAME.gstate.mode_attack){
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
-            TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::red,TCODColor::lighterYellow);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::lighterRed,TCODColor::black);
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lighterRed,TCODColor::lighterYellow);
             if(prompt_selection == 1){ 
-                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::red);
-                TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::red);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::lighterRed);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::lighterRed);
             }    
             TCODConsole::root->print(loc_x, loc_y+2, "%cE%c%cND ATTACK%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -3071,9 +3071,10 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
     }
 
     if(is_it && monvector[target].alive && overpowering) player.combat_move += 4; // gives movement points to add attacks
-    if(is_it && monvector[target].alive && player.combat_move >= 4 && tgame.gstate.mode_attack){
+    if(is_it && monvector[target].alive && player.combat_move >= 4 && tgame.gstate.mode_attack && player.phase_attack == 0){
 
         player.stats.attack(player, monvector[target], 0, player.overpower_l);
+        ++player.phase_attack;
 
         if(!tgame.gstate.no_combat)player.combat_move -= 4; // decrease combat movement only if in combat mode
         if (monvector[target].stats.hp < 1){
@@ -3809,7 +3810,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
     if(phase < 9) GAME.gstate.first = true;
     if(player.phase <= phase+1) GAME.gstate.second = true;
-    if(player.att_phase <= phase+1) GAME.gstate.third = true;
+    if(player.att_phase <= phase+1 && player.combat_move >= 4) GAME.gstate.third = true;
 
     if (player.combat_move > 0){
         UI_hook(GAME, 4); // hooks the prompt
@@ -3959,6 +3960,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     widget_popup->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
     widget_popup->print(0, 0, "%cpress any key to END Player's phase%c",
             TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+    player.phase_attack = 0;
     GAME.gstate.fov_recompute = true;
     render_all(GAME);
     TCODConsole::blit(widget_popup,0,0,35,1,TCODConsole::root, 40, 66);
@@ -4540,6 +4542,7 @@ int main() {
             // roll initiative once (player)
             if(turn == 1){
                 player.distance = player.stats.wpn1.reach; // initial reach
+                player.phase_attack = 0;
                 int myroll = 0;
                 myroll = rng(1, 20);
                 player.initiative = GAME.player->skill.initML + (myroll - 10);

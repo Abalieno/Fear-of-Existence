@@ -267,6 +267,7 @@ public: // public should be moved down, but I keep it here for debug messages
     unsigned int cflag_attacks; // combat-flag - number of attacks received in current turn
     int overpower_l; // overpower counts
     int distance; // reach rules
+    int phase_attack; // number of attacks this phase
 
     int facing; // 0 to 3, N E S W
     int phase;

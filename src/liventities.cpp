@@ -148,13 +148,10 @@ void Object_player::clear(Game &tgame) {
 }
 
 bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int p_x, int p_y, bool myfov, Game &tgame){
-            //float dist = 0;
-            //std::cout << monster.combat_move << std::endl; 
    
-            std::cout << "The " << monster.name << " is active! " << std::endl;
-            //dist = monster.distance_to(p_x, p_y);
+            std::cout << "The " << monster.name << " is active." << std::endl;
 
-            // 1.1 so the monster attacks, but still moves closer instead of stopping diagonally
+            // 1.1 so the monster attacks but still moves closer instead of stopping diagonally
             if ( (monster.distance_to(p_x, p_y) >= 1.1) || (monster.chasing && !myfov)){
 
                 if (tgame.gstate.no_combat || monster.combat_move >= 1){ // move up to and including player pos    
@@ -162,13 +159,12 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
                     if(!tgame.gstate.no_combat){
                         monster.combat_move -= 1;
                     }    
-                    std::cout << "The " << monster.name << " is moving." << std::endl;
+                    std::cout << "The " << monster.name << " moves." << std::endl;
                     return false;
                 }
 
             } else if (myfov){ 
                 if (tgame.gstate.no_combat || (monster.combat_move >= 4)) {
-                //TCODConsole::root->clear();
                 
                 monster.path_mode = 0;
 
