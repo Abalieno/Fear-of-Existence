@@ -144,12 +144,13 @@ public: // public should be moved down, but I keep it here for debug messages
     bool c_mode; // flag monsters for active combat mode
     int speed;
     int initiative;
-    int temp_init; // total initiative value for messages/list
+    int temp_init; // raw unchanged initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag, attacks during turn received
     int overpower_l; // overpower counts
     int distance; // reach rules
     bool hasmoved; // this and the one below used to "phase" monster actions
     int phase_attack; // number of attacks this phase
+    int step; // how many points used for movement in same phase
     bool pass; // pass a phase
 
     int phase; // combat round phase speed

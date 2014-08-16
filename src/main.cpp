@@ -3825,7 +3825,6 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     while (player.combat_move >= 1 && !exitcycle){
 
         if(fetch != 0){ 
-            std::cout << "SELECTION: " << fetch << std::endl;
             action = fetch;
             fetch = 0;
         }  
@@ -3836,6 +3835,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
                     //AllPhases[phase].erase(AllPhases[phase].begin()+n); // no need, i stays in history
                     Unit tempunit;
                     tempunit.mon_index = 666; // player flag
+                    if(phase == 9) {player.combat_move = 0; break;} // if exausted move steps but phases maxed
                     AllPhases[phase+1].push_back(tempunit);
                     int init_ln = 2;
                     mon_list.clear(); // mouse lookup
@@ -4024,7 +4024,7 @@ int monster_turn(Game &GAME, const std::vector<Monster> &monsters, unsigned int 
                 }
 
                 // jump to next phase if movement points (enough for attack) are left
-                if(monvector[b].pass && monvector[b].combat_move >= 4 && phase < 9){
+                if(monvector[b].pass && monvector[b].combat_move >= 1 && phase < 9){
                     Unit tempunit;
                     tempunit.mon_index = b;
                     AllPhases[phase+1].push_back(tempunit);
@@ -4048,6 +4048,7 @@ int monster_turn(Game &GAME, const std::vector<Monster> &monsters, unsigned int 
             monvector[b].hasmoved = false; // resets movement flag for next phase
             monvector[b].pass = false; // reset
             monvector[b].phase_attack = 0;
+            monvector[b].step = 0;
             // couldn't move this turn ?
             if(monvector[b].stuck == true) ++monvector[b].wasstuck;
             else monvector[b].wasstuck = 0;
@@ -4394,10 +4395,11 @@ int main() {
 
             is_handle_combat = true;
             
-            // resets initiative & attack counts on all monsters
+            // intial and cycle combat resets
             for (unsigned int i = 0; i<monvector.size(); ++i) { 
                 if(turn == 1){ 
-                    monvector[i].initiative = -1;
+                    monvector[i].initiative = -1; // on turn 1 resets initiative for all monsters
+                    monvector[i].temp_init = -1;
                     monvector[i].distance = monvector[i].stats.wpn1.reach;
                 }
                 monvector[i].cflag_attacks = 0; // resets attacks received
@@ -4405,6 +4407,7 @@ int main() {
                 monvector[i].hasmoved = false; // reset flag for monster phases
                 monvector[i].phase_attack = 0; // reset attack count for monster phases
                 monvector[i].pass = false; // reset bool used for phases
+                monvector[i].step = 0; // movements each phase
             }
             player.cflag_attacks = 0; // resets number of attacks received
             player.move_counter = 0; // resets number of movements during turn
@@ -4413,12 +4416,12 @@ int main() {
          
             GAME.gstate.con->clear();
             TCODConsole::root->clear(); 
-
             GAME.gstate.fov_recompute = true;
             render_all(GAME);
             TCODConsole::flush(); // this updates the screen
                 
             bool break_combat = true;
+            bool messed_initiative = false;
 
             // updates monster map so that pathing includes monsters position
             for (unsigned int i = 0; i<monvector.size(); ++i){
@@ -4428,12 +4431,12 @@ int main() {
                 }    
             }
 
-            // clear turn phases elements
+            // clear all phases
             for(unsigned int i = 0; i<10; ++i){
                 AllPhases[i].clear();
             }
 
-            // populate turn phases
+            // populate turn phases with everything visible
             for (unsigned int i = 0; i<monvector.size(); ++i){
                 if(GAME.gstate.fov_map->isInFov(monvector[i].x,monvector[i].y) || monvector[i].chasing){
                     if(monvector[i].phase == 3){
@@ -4443,13 +4446,12 @@ int main() {
                     }            
                 }    
             }  
-
-            // player in phase
+            // player added to phase
             Unit tempunit;
             tempunit.mon_index = 666; // player flag
             AllPhases[player.phase-1].push_back(tempunit);
 
-            // phase output in cout
+            // phase output
             for(unsigned int n = 0; n<10; ++n){
                 std::cout << "Phase " << n+1 << ": ";
                 for(unsigned int i = 0; i<AllPhases[n].size(); ++i){
@@ -4487,7 +4489,7 @@ int main() {
                         break_combat = false; // set flag, so that if this cycle never entered, combat is interrupted
                     }    
 
-                    // calculate initiative only once
+                    // calculate initiative only once, or whenever a monster joins combat
                     if(turn == 1 || monvector[i].initiative == -1){
                         int roll = 0;
                         roll = rng(1, 20);
@@ -4497,7 +4499,7 @@ int main() {
                         Monster tempm;
                         tempm.initiative = &monvector[i].initiative;
                         tempm.speed = &monvector[i].initML;
-                        monsters.push_back(tempm);
+                        monsters.push_back(tempm); // pushed to initiative vector
 
                         if(turn > 1){
                             msg_log msg2;
@@ -4505,16 +4507,17 @@ int main() {
                                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, monvector[i].name);
                             msg2.color1 = TCODColor::yellow;
                             msg_log_list.push_back(msg2);
+                            messed_initiative = true;
                         }
 
                         msg_log msg1;
                         if(monvector[i].in_sight)
-                            sprintf(msg1.message, "%c>%c%s initiative: Initiative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                            sprintf(msg1.message, "%c>%c%s initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d.",
                                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
                                     monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
                                     monvector[i].initiative); 
                         else 
-                            sprintf(msg1.message, "%c>***%c%s initiative: Initiative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                            sprintf(msg1.message, "%c>***%c%s initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d.",
                                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
                                     monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
                                     monvector[i].initiative);
@@ -4524,7 +4527,7 @@ int main() {
                 }
             }
 
-            if(turn > 0){
+            if(turn > 1){
                 for(unsigned int b = 0; b<monvector.size(); ++b){ // cycle all monsters
                     for(unsigned int i = 0; i<monsters.size(); ++i){ // cycle initiative
                         unsigned int monster_ini = monvector[b].initiative;
@@ -4536,7 +4539,10 @@ int main() {
                             }    
                         }
                     }
+                    if(messed_initiative) ; // temporary 
+                    monvector[b].initiative = monvector[b].temp_init; // resets to original values
                 }
+                std::sort(monsters.begin(), monsters.end(), compare); // re-sort for new monsters
                 // sorting initiative after dead monsters removed
                 for (unsigned int i = 0; i<monsters.size(); ++i) {
                     *(monsters[i].initiative) = i+1;
@@ -4571,13 +4577,10 @@ int main() {
                 monsters.push_back(tempm);
 
                 msg_log msg1;
-                sprintf(msg1.message, "%c>%cPlayer initiative: Inititative(%d%%) %c1d20%c(%d) - 10 Total: %d.",
-                        TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, *tempm.speed,
-                        TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, 
-                        player.initiative);
+                sprintf(msg1.message, "Player initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                        *tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, player.initiative);
                 msg1.color1 = TCODColor::yellow;
                 msg_log_list.push_back(msg1);
-
 
                 // SORTING INITIATIVE
                 std::sort(monsters.begin(), monsters.end(), compare);

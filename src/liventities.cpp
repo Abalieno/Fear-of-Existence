@@ -154,17 +154,22 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
     // 1.1 so the monster attacks but still moves closer instead of stopping diagonally
     if ( (monster.distance_to(p_x, p_y) >= 1.1) || (monster.chasing && !myfov)){
 
-        if (tgame.gstate.no_combat || monster.combat_move >= 1){ // move up to and including player pos    
-            monster.move_towards(p_x, p_y);
-            if(!tgame.gstate.no_combat){
-                monster.combat_move -= 1;
-                monster.hasmoved = true;
-            }    
-            std::cout << "The " << monster.name << " moves." << std::endl;
+        if (tgame.gstate.no_combat || monster.combat_move >= 1){ // move up to and including player pos 
+            if(monster.step < 4){ // max in a phase
+                monster.move_towards(p_x, p_y);
+                if(!tgame.gstate.no_combat){
+                    monster.combat_move -= 1;
+                    ++monster.step;
+                    monster.hasmoved = true;
+                }    
+                std::cout << "The " << monster.name << " moves." << std::endl;
+                return false;
+            } else monster.pass = true;
             return false;
         }
 
-    } else if (myfov){ 
+    } else if (myfov){
+        if(monster.combat_move < 4) monster.combat_move = 0; // if in range but can't attack, desist
         if (tgame.gstate.no_combat || ((monster.combat_move >= 4) && !monster.hasmoved && monster.phase_attack == 0)) {
 
             monster.path_mode = 0; // switches back to default pathing on attack
