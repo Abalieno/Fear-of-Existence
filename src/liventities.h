@@ -7,7 +7,7 @@
 #include "libtcod.hpp"
 #include "game.h"
 #include "inventory.h"
-
+#include "armor.h"
 
 class Game;
 
@@ -248,7 +248,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int WIL;
     int MYS;
     int MOR;
-    int Load; // temp set to 50 in chargen
+    float Load;     
+    int enc_pen; // encumberance penalty
 
     int x;
     int y;
@@ -276,6 +277,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int facing; // 0 to 3, N E S W
     int phase;
     int att_phase; // weapon speed
+
+    std::vector<Armor> armor_worn;
 
     std::vector<Generic_object> inventory;
 

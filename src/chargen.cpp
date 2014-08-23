@@ -1,6 +1,7 @@
 #include <iostream> // debug
 #include <algorithm>    // std::sort
 #include <math.h> // for rounding
+#include <iomanip> // for setprecision
 
 #include "chargen.h"
 #include "rng.h"
@@ -1058,6 +1059,216 @@ int calc_bonuses(Game &GAME, int stat1, int stat2, int stat3){
     return bonus;
 }
 
+void enc_pen(Game &GAME){
+    int load_rating = 2 * GAME.player->STR;
+    GAME.player->enc_pen = (GAME.player->Load - load_rating) / GAME.player->END;
+    if (GAME.player->enc_pen < 0) GAME.player->enc_pen = 0;
+}  
+
+void build_armor(Game &GAME){
+    Armor thispiece = make_piece("Helm 3/4", PLATE, {SK, FA});
+    GAME.player->armor_worn.push_back(thispiece);
+    thispiece = make_piece("Cowl", LEATHER, {SK, NK});
+    GAME.player->armor_worn.push_back(thispiece);
+    thispiece = make_piece("Tunic", LEATHER, {SH, UA, TX, AB, HP, GR});
+    GAME.player->armor_worn.push_back(thispiece);
+    thispiece = make_piece("Vest", SCALE, {SH, TX, AB});
+    GAME.player->armor_worn.push_back(thispiece);
+    thispiece = make_piece("Arms", LEATHER, {EL, FO});
+    GAME.player->armor_worn.push_back(thispiece);
+    thispiece = make_piece("Gauntlets", LEATHER, {HA});
+    GAME.player->armor_worn.push_back(thispiece);
+    thispiece = make_piece("Leggings", LEATHER, {HP, GR, TH, KN, CF});
+    GAME.player->armor_worn.push_back(thispiece);
+    thispiece = make_piece("Knee-boots", LEATHER, {KN, CF, FE});
+    GAME.player->armor_worn.push_back(thispiece);
+    for(unsigned int n = 0; n < GAME.player->armor_worn.size(); ++n){
+        std::cout << "Armor name: "<< GAME.player->armor_worn[n].name << std::endl;
+        std::cout << "Weight: " << std::fixed << std::setprecision(2) << GAME.player->armor_worn[n].weight << std::endl;
+    }    
+}
+
+const char *txt_armormat(int material){
+    if(material == PLATE) return "Plate";
+    else if(material == SCALE) return "Scale";
+    else if(material == LEATHER) return "Leather";
+    else return "NONE";
+}
+
+float total_weight(Game &GAME){
+    float total;
+    for(unsigned int n = 0; n < GAME.player->armor_worn.size(); ++n){
+        total += GAME.player->armor_worn[n].weight;
+    }
+    total += 3; // computer weapon weight, placeholder
+    return total;
+}   
+
+int prot_value(Armor piece, int type, int location){
+    int val;
+    switch(piece.material){
+        case PLATE:
+            if(type == 0) val = 5;
+            if(type == 1) val = 8;
+            if(type == 2) val = 7;
+            break;
+        case LEATHER:
+            if(type == 0) val = 1;
+            if(type == 1) val = 2;
+            if(type == 2) val = 1;
+            break; 
+        case SCALE:
+            if(type == 0) val = 3;
+            if(type == 1) val = 5;
+            if(type == 2) val = 4;
+            break;    
+    }
+    for(unsigned int n = 0; n < piece.loc.size(); ++n){
+        if(piece.loc[n].first == location) return val;
+    }   
+    return 0;
+}    
+
+void compile_armor(Game &GAME, TCODConsole *local){
+    int sety = 44;
+    int setx = 32;
+    local->setAlignment(TCOD_LEFT);
+    local->print(setx, sety, "%cARMOR%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    for(unsigned int n = 0; n < GAME.player->armor_worn.size(); ++n){
+        local->print(setx+2, sety+2+n, "%c%s%c", TCOD_COLCTRL_2, GAME.player->armor_worn[n].name, TCOD_COLCTRL_STOP);
+    }
+
+    local->print(setx, sety+11, "%cWeight Total%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+2, sety+13, "%c%.2f%c", TCOD_COLCTRL_2, total_weight(GAME), TCOD_COLCTRL_STOP);
+
+    local->setAlignment(TCOD_RIGHT);
+    local->print(setx+41, sety+10, "%cTOTALS%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+34, sety+11, "%cBlunt%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+34, sety+12, "%cEdge%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+34, sety+13, "%cPoint%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+
+    local->print(setx+28, sety, "%cMATERIAL%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    for(unsigned int n = 0; n < GAME.player->armor_worn.size(); ++n){
+        local->print(setx+28, sety+2+n, "%c%s%c", TCOD_COLCTRL_2, txt_armormat(GAME.player->armor_worn[n].material), TCOD_COLCTRL_STOP);
+    }
+
+    local->print(setx+34, sety, "%cWT%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    for(unsigned int n = 0; n < GAME.player->armor_worn.size(); ++n){
+        local->print(setx+34, sety+2+n, "%c%.2f%c", TCOD_COLCTRL_2, GAME.player->armor_worn[n].weight, TCOD_COLCTRL_STOP);
+    }
+
+    local->setColorControl(TCOD_COLCTRL_1, TCODColor::lightRed, TCODColor::black);
+
+    // build location display
+    for(unsigned int n = 0; n < GAME.player->armor_worn.size(); ++n){
+        for(unsigned int l = 0; l < GAME.player->armor_worn[n].loc.size(); ++l){
+            switch(GAME.player->armor_worn[n].loc[l].first){
+                case SK:
+                    local->print(setx+37, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;
+                case FA:
+                    local->print(setx+40, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;  
+                case NK:
+                    local->print(setx+43, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break; 
+                case TX:
+                    local->print(setx+46, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;    
+                case AB:
+                    local->print(setx+49, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break; 
+                case HP:
+                    local->print(setx+52, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;
+                case GR:
+                    local->print(setx+55, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;    
+                case SH:
+                    local->print(setx+58, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;  
+                case UA:
+                    local->print(setx+61, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break; 
+                case EL:
+                    local->print(setx+64, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;
+                case FO:
+                    local->print(setx+67, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;
+                case HA:
+                    local->print(setx+70, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;  
+                case TH:
+                    local->print(setx+73, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;  
+                case KN:
+                    local->print(setx+76, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break; 
+                case CF:
+                    local->print(setx+79, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;  
+                case FE:
+                    local->print(setx+82, sety+2+n, "%cX%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                    break;    
+            }    
+        }    
+    }
+
+    // build tot protection values
+    for(unsigned int n = 0; n < 16; ++n){
+        int protval = 0;
+        for(unsigned int l = 0; l < GAME.player->armor_worn.size(); ++l){
+            protval += prot_value(GAME.player->armor_worn[l], 0, n);
+        }
+        local->print(setx+37+(3*n), sety+11, "%c%d%c", TCOD_COLCTRL_2, protval, TCOD_COLCTRL_STOP);
+        protval = 0;
+        for(unsigned int l = 0; l < GAME.player->armor_worn.size(); ++l){
+            protval += prot_value(GAME.player->armor_worn[l], 1, n);    
+        }
+        local->print(setx+37+(3*n), sety+12, "%c%d%c", TCOD_COLCTRL_2, protval, TCOD_COLCTRL_STOP);
+        protval = 0;
+        for(unsigned int l = 0; l < GAME.player->armor_worn.size(); ++l){
+            protval += prot_value(GAME.player->armor_worn[l], 2, n);    
+        }
+        local->print(setx+37+(3*n), sety+13, "%c%d%c", TCOD_COLCTRL_2, protval, TCOD_COLCTRL_STOP);
+        protval = 0;
+    }    
+
+    local->print(setx+37, sety, "%cSK%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+40, sety, "%cFA%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+43, sety, "%cNK%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->setColorControl(TCOD_COLCTRL_1, TCODColor::lighterOrange, TCODColor::black);
+    local->print(setx+46, sety, "%cTX%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+49, sety, "%cAB%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+52, sety, "%cHP%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+55, sety, "%cGR%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->setColorControl(TCOD_COLCTRL_1, TCODColor::lighterGreen, TCODColor::black);
+    local->print(setx+58, sety, "%cSH%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+61, sety, "%cUA%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+64, sety, "%cEL%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+67, sety, "%cFO%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+70, sety, "%cHA%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->setColorControl(TCOD_COLCTRL_1, TCODColor::lighterBlue, TCODColor::black);
+    local->print(setx+73, sety, "%cTH%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+76, sety, "%cKN%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+79, sety, "%cCF%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(setx+82, sety, "%cFE%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+
+    for(int n = 0; n < 10; ++n){
+        local->putChar(setx+29, sety+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        for(int o = 0; o < 17; ++o){
+            local->putChar(setx+35+(3*o), sety+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        }    
+    }
+    for(int n = 0; n < 3; ++n){
+        for(int o = 0; o < 17; ++o){
+            local->putChar(setx+35+(3*o), sety+n+11, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        }    
+    }
+    local->setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
+}    
+
 void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_osety){
     local->setAlignment(TCOD_LEFT);
     local->setDefaultForeground(TCODColor::lighterGrey);
@@ -1221,15 +1432,18 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
     local->print(combatpr_x+2, combatpr_y+5, "FATIGUE RECOVERY");
     local->print(combatpr_x+2, combatpr_y+6, "INITIATIVE");
     local->print(combatpr_x+2, combatpr_y+7, "MOVE");
+    local->print(combatpr_x+2, combatpr_y+8, "ENCUMBRANCE PEN.");
     local->setAlignment(TCOD_RIGHT);
     local->print(combatpr_x+21, combatpr_y+2, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.condML, TCOD_COLCTRL_STOP);
     local->print(combatpr_x+21, combatpr_y+3, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.dodgML, TCOD_COLCTRL_STOP);
-    GAME.player->Load = 50;
+    GAME.player->Load = total_weight(GAME);
     if(GAME.player->END < 1) GAME.player->END = 1;
-    local->print(combatpr_x+21, combatpr_y+4, "%c%d%c", TCOD_COLCTRL_2, GAME.player->Load / GAME.player->END, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+21, combatpr_y+4, "%c%d%c", TCOD_COLCTRL_2, int(GAME.player->Load) / GAME.player->END, TCOD_COLCTRL_STOP);
     local->print(combatpr_x+21, combatpr_y+5, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END / 6, TCOD_COLCTRL_STOP);
     local->print(combatpr_x+21, combatpr_y+6, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.initML, TCOD_COLCTRL_STOP);
     local->print(combatpr_x+21, combatpr_y+7, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.mobiML / 5, TCOD_COLCTRL_STOP);
+    enc_pen(GAME);
+    local->print(combatpr_x+21, combatpr_y+8, "%c%d%c", TCOD_COLCTRL_2, GAME.player->enc_pen, TCOD_COLCTRL_STOP);
     combatpr_x = 32;
     local->setAlignment(TCOD_LEFT);
     local->print(combatpr_x, combatpr_y, "%cWEAPON%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -1260,6 +1474,8 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
         local->putChar(combatpr_x+60, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
         local->putChar(combatpr_x+70, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
     }
+
+    compile_armor(GAME, local);
 
     local->setAlignment(TCOD_LEFT);
     return;

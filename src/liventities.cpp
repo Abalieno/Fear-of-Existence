@@ -287,6 +287,12 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
     int d_crit = DML / 10;
     int raw_AML = AML;
     int raw_DML = DML;
+    int a_critF = (100 - raw_AML) / 20; // half of index
+    if(a_critF < 1) a_critF = 1;
+    std::cout << "Attack critF: " << a_critF << std::endl;
+    int d_critF = (100 - raw_DML) / 20;
+    if(d_critF < 1) d_critF = 1;
+    std::cout << "Defense critF: " << d_critF << std::endl;
 
     // WEAPON COMPARISON TABLE
     if(wpn_AC > wpn_DC)
@@ -337,19 +343,14 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         a_success_level = 0; // CS Critical Success
     } else if(a_d100 <= AML) a_success_level = 1; // MS Marginal Success
     else a_success_level = 2; // MF Marginal Failure
-    if (raw_AML <= 50){
-        if( a_d100 == 100 || a_d100 == 99 ) a_success_level = 3; // CF Critical Failure
-    } else if(a_d100 == 100) a_success_level = 3; // CF Critical Failure
-
+    if(a_d100 > (100 - a_critF)) a_success_level = 3; // CF Critical Failure
 
     int d_success_level = 0;
     if (d_d100 <= d_crit){
         d_success_level = 0; // CS Critical Success
     } else if(d_d100 <= DML) d_success_level = 1; // MS Marginal Success
     else d_success_level = 2; // MF Marginal Failure
-    if (raw_DML <= 50){
-        if( d_d100 == 100 || d_d100 == 99 ) d_success_level = 3; // CF Critical Failure
-    } else if(d_d100 == 100) d_success_level = 3; // CF Critical Failure
+    if(d_d100 > (100 - d_critF)) d_success_level = 3; // CF Critical Failure
 
     bool overpower = false;
     int skilltot = raw_AML + ADB;

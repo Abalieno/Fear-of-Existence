@@ -3,6 +3,7 @@
 
 #include <string>
 #include "game.h"
+#include "armor.h"
 
 const int Human = 0;
 const int Sindarin = 1;
@@ -112,6 +113,8 @@ const char *txt_voice(int voice);
 const char *txt_intelligence(int intel);
 
 const char *txt_morality(Game &GAME);
+
+void build_armor(Game &GAME);
 
 void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_osety);
 

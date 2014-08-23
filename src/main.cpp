@@ -1583,7 +1583,7 @@ void I_am_moused(Game &tgame){
                     found = true;
                 }    
             } else if(i.ID == 0 && (x == 24 && y == 0) && mousez.lbutton){
-                char_sheet(tgame);
+                char_sheet(tgame); // screens.cpp
             } else if(i.ID == 4){ // combat prompt
                 //int in_x = x - i.x; // sets mouse origin to the panel
                 int in_y = y - i.y; 
@@ -3824,6 +3824,10 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     bool exitcycle = false;
     while (player.combat_move >= 1 && !exitcycle){
 
+        bool didmove = false; // flag if player moved in this loop
+
+        player_action = handle_keys(player, GAME);
+
         if(fetch != 0){ 
             action = fetch;
             fetch = 0;
@@ -3856,10 +3860,6 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         if(action == 3 && player.combat_move >= 4){ // ATTACK
             GAME.gstate.mode_attack = true;
         }
-
-        bool didmove = false; // flag if player moved in this loop
-
-        player_action = handle_keys(player, GAME);
 
         if (player_action == quit2){ // quit combat
             Sleep(100);
@@ -4129,6 +4129,8 @@ int main() {
     player.stats.ML = 60;
     player.phase = 2; // 1veryfast 2fast 3average 4slow 5veryslow 
     player.att_phase = 3; // boardsword is average
+
+    build_armor(GAME);
 
     bool quit_now = false;
 
