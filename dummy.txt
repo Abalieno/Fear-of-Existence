@@ -26,6 +26,8 @@ CAVE LVL 1
   wpn_AC: 3
   wpn_DC: 1
   wpn_B: 3
+  wpn_E: 0
+  wpn_P: 0
   wpn_aspect: 1
   reach: 2
   ML: 35
@@ -48,7 +50,9 @@ CAVE LVL 1
   speed: 8 
   wpn_AC: 4
   wpn_DC: 1 
-  wpn_B: 4
+  wpn_B: 5
+  wpn_E: 0
+  wpn_P: 0
   wpn_aspect: 1
   reach: 4
   ML: 50

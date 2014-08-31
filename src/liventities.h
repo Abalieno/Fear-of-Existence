@@ -27,6 +27,9 @@ public:
     int wpn_B; // blunt
     int wpn_E;
     int wpn_P;
+    std::pair<int,int> wp_B; 
+    std::pair<int,int> wp_E;
+    std::pair<int,int> wp_P;
     int reach; // 1Hand, 2Short, 3Medium, 4Long, 5Very Long, 6Extremely Long
 
     int wpn_aspect;

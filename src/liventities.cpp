@@ -1,6 +1,7 @@
 #include <iostream>
 #include <windows.h> // for Sleep() and not currently used
 #include <stdio.h>
+#include <algorithm> // sort
 
 //#include "tilevalues.h"
 #include "game.h"
@@ -228,6 +229,153 @@ bool is_overpower(int askill, int aroll, int dskill, int droll){
     else return false;
 }
 
+bool wayToSort(int i, int j) { return i > j; }
+
+bool pairCompare(const std::pair<int, int>& firstElem, const std::pair<int, int>& secondElem){
+  return firstElem.first > secondElem.first; // descending
+}
+
+void build_loc(std::vector<std::pair<int, int>> &locator){
+    locator.push_back({86,100}); // 15% lower legs
+    locator.push_back({61,86}); // 25% upper legs
+    locator.push_back({21,60}); // 40% horizontal
+
+    locator.push_back({11,20}); // 10% overhand
+    locator.push_back({6,10}); // 5% vertical
+    locator.push_back({1,5}); // 5% upward
+} 
+
+struct preciseloc{
+    int lrange; // d6 lower result
+    int hrange;
+    int ploc; // precise location 1-16
+};    
+
+void build_preciseloc(std::vector<std::vector <preciseloc>> &prec_loc){
+    std::vector<preciseloc> tempvect;
+    prec_loc.push_back(tempvect);
+    prec_loc.push_back(tempvect);
+    prec_loc.push_back(tempvect);
+    prec_loc.push_back(tempvect);
+    prec_loc.push_back(tempvect);
+    prec_loc.push_back(tempvect);
+    prec_loc.push_back(tempvect);
+    preciseloc here;
+    here.lrange = 1;
+    here.hrange = 1;
+    here.ploc = 16;
+    prec_loc[0].push_back(here);
+    here.lrange = 2;
+    here.hrange = 4;
+    here.ploc = 15;
+    prec_loc[0].push_back(here);
+    here.lrange = 5;
+    here.hrange = 6;
+    here.ploc = 14;
+    prec_loc[0].push_back(here);
+
+    here.lrange = 1;
+    here.hrange = 2;
+    here.ploc = 14;
+    prec_loc[1].push_back(here);
+    here.lrange = 3;
+    here.hrange = 5;
+    here.ploc = 13;
+    prec_loc[1].push_back(here);
+    here.lrange = 6;
+    here.hrange = 6;
+    here.ploc = 12;
+    prec_loc[1].push_back(here);
+
+    here.lrange = 1;
+    here.hrange = 1;
+    here.ploc = 12;
+    prec_loc[2].push_back(here);
+    here.lrange = 2;
+    here.hrange = 3;
+    here.ploc = 10;
+    prec_loc[2].push_back(here);
+    here.lrange = 4;
+    here.hrange = 5;
+    here.ploc = 9;
+    prec_loc[2].push_back(here);
+    here.lrange = 6;
+    here.hrange = 6;
+    here.ploc = 77; // reroll for zone 6 [5]
+    prec_loc[2].push_back(here);
+
+    here.lrange = 1;
+    here.hrange = 2;
+    here.ploc = 4;
+    prec_loc[3].push_back(here);
+    here.lrange = 3;
+    here.hrange = 3;
+    here.ploc = 9;
+    prec_loc[3].push_back(here);
+    here.lrange = 4;
+    here.hrange = 4;
+    here.ploc = 3;
+    prec_loc[3].push_back(here);
+    here.lrange = 5;
+    here.hrange = 5;
+    here.ploc = 2; 
+    prec_loc[3].push_back(here);
+    here.lrange = 6;
+    here.hrange = 6;
+    here.ploc = 1; 
+    prec_loc[3].push_back(here);
+
+    here.lrange = 1;
+    here.hrange = 3;
+    here.ploc = 1;
+    prec_loc[4].push_back(here);
+    here.lrange = 4;
+    here.hrange = 4;
+    here.ploc = 2;
+    prec_loc[4].push_back(here);
+    here.lrange = 5;
+    here.hrange = 6;
+    here.ploc = 4;
+    prec_loc[4].push_back(here);
+
+    here.lrange = 1;
+    here.hrange = 3;
+    here.ploc = 13;
+    prec_loc[5].push_back(here);
+    here.lrange = 4;
+    here.hrange = 4;
+    here.ploc = 11;
+    prec_loc[5].push_back(here);
+    here.lrange = 5;
+    here.hrange = 5;
+    here.ploc = 10;
+    prec_loc[5].push_back(here);
+    here.lrange = 6;
+    here.hrange = 6;
+    here.ploc = 9; 
+    prec_loc[5].push_back(here);
+
+    here.lrange = 1;
+    here.hrange = 1;
+    here.ploc = 8;
+    prec_loc[6].push_back(here);
+    here.lrange = 2;
+    here.hrange = 3;
+    here.ploc = 7;
+    prec_loc[6].push_back(here);
+    here.lrange = 4;
+    here.hrange = 4;
+    here.ploc = 6;
+    prec_loc[6].push_back(here);
+    here.lrange = 5;
+    here.hrange = 6;
+    here.ploc = 5; 
+    prec_loc[6].push_back(here);
+
+
+    
+}    
+
 void Fighter::attack(Object_player &player, Object_monster &monster, bool who, int overpowering){
 
     int AML; // basic skill
@@ -246,6 +394,14 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
     int Dreach;
     int *Adistance;
     int *Ddistance;
+    std::vector<std::pair<int,int>> aspects;
+
+    std::vector<std::pair<int,int>> locator; // locations
+    build_loc(locator);
+    
+    std::vector<std::vector <preciseloc>> prec_loc;
+    build_preciseloc(prec_loc);
+
     if(who){ // if MONSTER
         AML = monster.stats.ML; // basic skill
         wpn_AC = monster.stats.wpn1.wpn_AC;
@@ -263,6 +419,9 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         DHP = &player.stats.hp;
         Dreach = player.stats.wpn1.reach;
         Ddistance = &player.distance;
+        aspects.push_back(monster.stats.wpn1.wp_B); 
+        aspects.push_back(monster.stats.wpn1.wp_E);
+        aspects.push_back(monster.stats.wpn1.wp_P);
     } else{ // if PLAYER
         AML = player.skill.lswdAML; // basic skill
         wpn_AC = player.stats.wpn1.wpn_AC;
@@ -280,6 +439,9 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         weapond = player.stats.power;
         overpower_who = &player.overpower_l;
         Ddistance = &monster.distance;
+        aspects.push_back(player.stats.wpn1.wp_B); 
+        aspects.push_back(player.stats.wpn1.wp_E);
+        aspects.push_back(player.stats.wpn1.wp_P);
     }   
 
     // crit chances
@@ -435,10 +597,76 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
             msgd.bcolor4 = TCODColor::red;
             break;
     }
-    msg_log_list.push_back(msgd);        
+    msg_log_list.push_back(msgd);   
+
+    int result = melee_res[a_success_level][d_success_level];
+
+    // random weapon aspect
+    std::pair<int,int> aspect;
+    int location = 20; // if 20 = broken
+    if(result >= 5 && result <= 7){
+        int rnd_asp = dice(1,6);
+        std::cout << "Weapon aspect roll: " << rnd_asp << std::endl;
+        std::sort(aspects.begin(), aspects.end(), pairCompare);
+        std::cout << "Primary: " << aspects[0].first << "," << aspects[0].second << 
+            " Secondary: " << aspects[1].first << "," << aspects[1].second << " Tertiary: " << 
+            aspects[2].first << "," << aspects[2].second << std::endl;
+        if(rnd_asp >= 4){ 
+            std::cout << "Using Primary." << std::endl;
+            aspect.first = aspects[0].first;
+            aspect.second = aspects[0].second;
+        }    
+        if(rnd_asp == 2 || rnd_asp == 3){
+            if(aspects[1].first == 0){ 
+                std::cout << "Using Primary." << std::endl;
+                aspect.first = aspects[0].first;
+                aspect.second = aspects[0].second;
+            }else{ 
+                std::cout << "Using Secondary." << std::endl;
+                aspect.first = aspects[1].first;
+                aspect.second = aspects[1].second;
+            }    
+        }  
+        if(rnd_asp == 1){
+            if(aspects[2].first == 0){
+                if(aspects[1].first == 0){ 
+                    std::cout << "Using Primary." << std::endl;
+                    aspect.first = aspects[0].first;
+                    aspect.second = aspects[0].second;
+                }else{ 
+                    std::cout << "Using Secondary." << std::endl;
+                    aspect.first = aspects[1].first;
+                    aspect.second = aspects[1].second;
+                }    
+            }else{ 
+                std::cout << "Using Tertiary." << std::endl; 
+                aspect.first = aspects[2].first;
+                aspect.second = aspects[2].second;
+            }    
+        }  
+        // location roll
+        int locroll = dice(1,100);
+        for (unsigned int n = 0; n < locator.size(); ++n){
+            if(locroll >= locator[n].first && locroll <= locator[n].second) location = n; 
+        }
+        std::cout << "Location swing(1-6): " << location+1 << "(" << locroll << ")" << std::endl;
+        locroll = dice(1,6);
+        int finloc = 666;
+        for (unsigned int n = 0; n < prec_loc[location].size(); ++n){
+            if(locroll >= prec_loc[location][n].lrange && locroll <= prec_loc[location][n].hrange) finloc = prec_loc[location][n].ploc; 
+        }
+        if(finloc == 77){ // reroll for arms
+            std::cout << "Rerolling for arms." << std::endl;
+            locroll = dice(1,6);
+            for (unsigned int n = 0; n < prec_loc[6].size(); ++n){
+                if(locroll >= prec_loc[6][n].lrange && locroll <= prec_loc[6][n].hrange) finloc = prec_loc[6][n].ploc; 
+            } 
+        }    
+        std::cout << "Location hit(1-16): " << finloc << "(" << locroll << ")" << std::endl;
+    }    
 
     msg_log msg1;
-    switch(melee_res[a_success_level][d_success_level]){
+    switch(result){
         case 1:
             *AHP -= 1;
             *DHP -= 1;

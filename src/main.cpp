@@ -557,6 +557,13 @@ void place_objects(Rect room, lvl1 myenc, Game &GAME){
                     monster.stats.wpn1.wpn_aspect = myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_aspect;
                     monster.stats.wpn1.reach =      myenc.vmob_types[myenc.cave1[u].enc[i]].reach;
 
+                    monster.stats.wpn1.wp_B.first = myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_B;
+                    monster.stats.wpn1.wp_B.second = 0;
+                    monster.stats.wpn1.wp_E.first = myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_E;
+                    monster.stats.wpn1.wp_E.second = 1;
+                    monster.stats.wpn1.wp_P.first = myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_P;
+                    monster.stats.wpn1.wp_P.second = 2;
+
                     monster.stats.ML = myenc.vmob_types[myenc.cave1[u].enc[i]].ML;
 
                     Generic_object item;
@@ -4123,6 +4130,12 @@ int main() {
     player.stats.wpn1.wpn_B = 3;
     player.stats.wpn1.wpn_E = 5;
     player.stats.wpn1.wpn_P = 3;
+    player.stats.wpn1.wp_B.first = 3;
+    player.stats.wpn1.wp_B.second = 0;
+    player.stats.wpn1.wp_E.first = 5;
+    player.stats.wpn1.wp_E.second = 1;
+    player.stats.wpn1.wp_P.first = 3;
+    player.stats.wpn1.wp_P.second = 2;
     player.stats.wpn1.wpn_aspect = 2;
     player.stats.wpn1.reach = 4;
 
