@@ -9,6 +9,12 @@
 #include "inventory.h"
 #include "armor.h"
 
+struct armorsection{
+    int B; 
+    int E;
+    int P; 
+};
+
 class Game;
 
 class AI;
@@ -27,7 +33,7 @@ public:
     int wpn_B; // blunt
     int wpn_E;
     int wpn_P;
-    std::pair<int,int> wp_B; 
+    std::pair<int,int> wp_B; // first = value, second = 0-3 B-E-P  
     std::pair<int,int> wp_E;
     std::pair<int,int> wp_P;
     int reach; // 1Hand, 2Short, 3Medium, 4Long, 5Very Long, 6Extremely Long
@@ -146,6 +152,7 @@ public: // public should be moved down, but I keep it here for debug messages
     int move_counter; // how many steps moved in the turn
     bool c_mode; // flag monsters for active combat mode
     int speed;
+    int STR; // Strength
     int initiative;
     int temp_init; // raw unchanged initiative value for messages/list
     unsigned int cflag_attacks; // combat-flag, attacks during turn received
@@ -155,6 +162,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int phase_attack; // number of attacks this phase
     int step; // how many points used for movement in same phase
     bool pass; // pass a phase
+
+    std::vector<armorsection> armor_tot;
 
     int phase; // combat round phase speed
     int att_phase; // weapon speed
@@ -282,6 +291,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int att_phase; // weapon speed
 
     std::vector<Armor> armor_worn;
+
+    std::vector<armorsection> armor_tot; // total values for each loc
 
     std::vector<Generic_object> inventory;
 

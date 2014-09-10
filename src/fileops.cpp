@@ -213,6 +213,8 @@ bool load_data(std::istream &data, lvl1 &enc){
                 else if (ident == "h:") {data >> tempmob.h;}
                 else if (ident == "combat_move:") {data >> tempmob.combat_move;}
                 else if (ident == "speed:") {data >> tempmob.speed;}
+                else if (ident == "STR:") {data >> tempmob.STR;}
+                else if (ident == "armor:") {data >> tempmob.armor;}
                 else if (ident == "wpn_AC:") {data >> tempmob.wpn_AC;}
                 else if (ident == "wpn_DC:") {data >> tempmob.wpn_DC;}
                 else if (ident == "wpn_B:") {data >> tempmob.wpn_B;}

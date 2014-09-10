@@ -215,6 +215,43 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
     return false; 
     }
 
+const char *txt_atype(int type){
+    if(type == 0) return "lower legs";
+    else if(type == 1) return "upper legs";
+    else if(type == 2) return "horizontal";
+    else if(type == 3) return "overhand";
+    else if(type == 4) return "vertical";
+    else if(type == 5) return "upward";
+    else return "NONE";
+}
+
+const char *txt_aspect(int aspect){
+    if(aspect == 0) return "Blunt";
+    else if(aspect == 1) return "Edge";
+    else if(aspect == 2) return "Point";
+    else return "NONE";
+}
+
+const char *txt_loc(int loc){
+    if(loc == 15) return "Feet";
+    else if(loc == 14) return "Calf";
+    else if(loc == 13) return "Knee";
+    else if(loc == 12) return "Thigh";
+    else if(loc == 11) return "Hand";
+    else if(loc == 10) return "Forearm";
+    else if(loc == 9) return "Elbow";
+    else if(loc == 8) return "Upper Arm";
+    else if(loc == 7) return "Shoulder";
+    else if(loc == 6) return "Groin";
+    else if(loc == 5) return "Hip";
+    else if(loc == 4) return "Abs";
+    else if(loc == 3) return "Thorax";
+    else if(loc == 2) return "Neck";
+    else if(loc == 1) return "Face";
+    else if(loc == 0) return "Skull";
+    else return "NONE";
+}
+
 bool is_overpower(int askill, int aroll, int dskill, int droll){
     int aindex;
     aindex = (askill / 10) - (aroll / 10);
@@ -249,7 +286,7 @@ struct preciseloc{
     int lrange; // d6 lower result
     int hrange;
     int ploc; // precise location 1-16
-};    
+};   
 
 void build_preciseloc(std::vector<std::vector <preciseloc>> &prec_loc){
     std::vector<preciseloc> tempvect;
@@ -261,119 +298,124 @@ void build_preciseloc(std::vector<std::vector <preciseloc>> &prec_loc){
     prec_loc.push_back(tempvect);
     prec_loc.push_back(tempvect);
     preciseloc here;
+
+    // lower legs
     here.lrange = 1;
     here.hrange = 1;
-    here.ploc = 16;
+    here.ploc = 15; // feet
     prec_loc[0].push_back(here);
     here.lrange = 2;
     here.hrange = 4;
-    here.ploc = 15;
+    here.ploc = 14; // calf
     prec_loc[0].push_back(here);
     here.lrange = 5;
     here.hrange = 6;
-    here.ploc = 14;
+    here.ploc = 13; // knee
     prec_loc[0].push_back(here);
 
+    // upper legs
     here.lrange = 1;
     here.hrange = 2;
-    here.ploc = 14;
+    here.ploc = 13; // knee
     prec_loc[1].push_back(here);
     here.lrange = 3;
     here.hrange = 5;
-    here.ploc = 13;
+    here.ploc = 12; // thigh
     prec_loc[1].push_back(here);
     here.lrange = 6;
     here.hrange = 6;
-    here.ploc = 12;
+    here.ploc = 5; // hip
     prec_loc[1].push_back(here);
 
+    // horizontal
     here.lrange = 1;
     here.hrange = 1;
-    here.ploc = 12;
+    here.ploc = 5; // hip
     prec_loc[2].push_back(here);
     here.lrange = 2;
     here.hrange = 3;
-    here.ploc = 10;
+    here.ploc = 4; // abs
     prec_loc[2].push_back(here);
     here.lrange = 4;
     here.hrange = 5;
-    here.ploc = 9;
+    here.ploc = 3; // thorax
     prec_loc[2].push_back(here);
     here.lrange = 6;
     here.hrange = 6;
     here.ploc = 77; // reroll for zone 6 [5]
     prec_loc[2].push_back(here);
 
+    // overhand
     here.lrange = 1;
     here.hrange = 2;
-    here.ploc = 4;
+    here.ploc = 7; // shoulder
     prec_loc[3].push_back(here);
     here.lrange = 3;
     here.hrange = 3;
-    here.ploc = 9;
+    here.ploc = 3; // thorax
     prec_loc[3].push_back(here);
     here.lrange = 4;
     here.hrange = 4;
-    here.ploc = 3;
+    here.ploc = 2; // neck
     prec_loc[3].push_back(here);
     here.lrange = 5;
     here.hrange = 5;
-    here.ploc = 2; 
+    here.ploc = 1; // face
     prec_loc[3].push_back(here);
     here.lrange = 6;
     here.hrange = 6;
-    here.ploc = 1; 
+    here.ploc = 0; // skull
     prec_loc[3].push_back(here);
 
+    // vertical
     here.lrange = 1;
     here.hrange = 3;
-    here.ploc = 1;
+    here.ploc = 0; // skull
     prec_loc[4].push_back(here);
     here.lrange = 4;
     here.hrange = 4;
-    here.ploc = 2;
+    here.ploc = 1; // face
     prec_loc[4].push_back(here);
     here.lrange = 5;
     here.hrange = 6;
-    here.ploc = 4;
+    here.ploc = 7; // shoulder
     prec_loc[4].push_back(here);
 
+    // upward
     here.lrange = 1;
     here.hrange = 3;
-    here.ploc = 13;
+    here.ploc = 12; // thigh
     prec_loc[5].push_back(here);
     here.lrange = 4;
     here.hrange = 4;
-    here.ploc = 11;
+    here.ploc = 6; // groin
     prec_loc[5].push_back(here);
     here.lrange = 5;
     here.hrange = 5;
-    here.ploc = 10;
+    here.ploc = 4; // abs
     prec_loc[5].push_back(here);
     here.lrange = 6;
     here.hrange = 6;
-    here.ploc = 9; 
+    here.ploc = 3; // thorax
     prec_loc[5].push_back(here);
 
     here.lrange = 1;
     here.hrange = 1;
-    here.ploc = 8;
+    here.ploc = 11; // hand
     prec_loc[6].push_back(here);
     here.lrange = 2;
     here.hrange = 3;
-    here.ploc = 7;
+    here.ploc = 10; // forearm
     prec_loc[6].push_back(here);
     here.lrange = 4;
     here.hrange = 4;
-    here.ploc = 6;
+    here.ploc = 9; // elbow
     prec_loc[6].push_back(here);
     here.lrange = 5;
     here.hrange = 6;
-    here.ploc = 5; 
+    here.ploc = 8; // upper arm
     prec_loc[6].push_back(here);
 
-
-    
 }    
 
 void Fighter::attack(Object_player &player, Object_monster &monster, bool who, int overpowering){
@@ -388,12 +430,13 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
     int DDB;
     int *AHP;
     int *DHP;
-    int weapond;
     int *overpower_who;
     int Areach;
     int Dreach;
     int *Adistance;
     int *Ddistance;
+    int astrength; // strength of attacker, for damage calc
+    std::vector<armorsection> armor_used;
     std::vector<std::pair<int,int>> aspects;
 
     std::vector<std::pair<int,int>> locator; // locations
@@ -408,10 +451,10 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         monsterS = &AML;
         ADB = 0; // monster no skill bonus
         AHP = &monster.stats.hp;
-        weapond = monster.stats.power;
         overpower_who = &monster.overpower_l;
         Areach = monster.stats.wpn1.reach;
         Adistance = &monster.distance;
+        astrength = monster.STR;
         DML = player.skill.lswdDML; // basic monster skill
         wpn_DC = player.stats.wpn1.wpn_DC;
         playerS = &DML;
@@ -422,7 +465,14 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         aspects.push_back(monster.stats.wpn1.wp_B); 
         aspects.push_back(monster.stats.wpn1.wp_E);
         aspects.push_back(monster.stats.wpn1.wp_P);
-    } else{ // if PLAYER
+        for(unsigned int n = 0; n < 16; ++n){
+            armorsection armortemp;
+            armortemp.B = player.armor_tot[n].B;
+            armortemp.E = player.armor_tot[n].E;
+            armortemp.P = player.armor_tot[n].P;
+            armor_used.push_back(armortemp);
+        }
+    }else{ // if PLAYER
         AML = player.skill.lswdAML; // basic skill
         wpn_AC = player.stats.wpn1.wpn_AC;
         playerS = &AML;
@@ -430,18 +480,25 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         AHP = &player.stats.hp;
         Areach = player.stats.wpn1.reach;
         Adistance = &player.distance;
+        astrength = player.STR;
         DML = monster.stats.ML; // basic monster skill
         wpn_DC = monster.stats.wpn1.wpn_DC;
         monsterS = &DML;
         DDB = 0; // monster no skill bonus
         DHP = &monster.stats.hp;
         Dreach = monster.stats.wpn1.reach;
-        weapond = player.stats.power;
         overpower_who = &player.overpower_l;
         Ddistance = &monster.distance;
         aspects.push_back(player.stats.wpn1.wp_B); 
         aspects.push_back(player.stats.wpn1.wp_E);
         aspects.push_back(player.stats.wpn1.wp_P);
+        for(unsigned int n = 0; n < 16; ++n){
+            armorsection armortemp;
+            armortemp.B = monster.armor_tot[n].B;
+            armortemp.E = monster.armor_tot[n].E;
+            armortemp.P = monster.armor_tot[n].P;
+            armor_used.push_back(armortemp);
+        }
     }   
 
     // crit chances
@@ -604,10 +661,12 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
     // random weapon aspect
     std::pair<int,int> aspect;
     int location = 20; // if 20 = broken
+    int dam_index;
     if(result >= 5 && result <= 7){
         int rnd_asp = dice(1,6);
         std::cout << "Weapon aspect roll: " << rnd_asp << std::endl;
         std::sort(aspects.begin(), aspects.end(), pairCompare);
+        // blunt = 0, edge = 1, point = 2
         std::cout << "Primary: " << aspects[0].first << "," << aspects[0].second << 
             " Secondary: " << aspects[1].first << "," << aspects[1].second << " Tertiary: " << 
             aspects[2].first << "," << aspects[2].second << std::endl;
@@ -658,62 +717,136 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         if(finloc == 77){ // reroll for arms
             std::cout << "Rerolling for arms." << std::endl;
             locroll = dice(1,6);
-            for (unsigned int n = 0; n < prec_loc[6].size(); ++n){
+            for (unsigned int n = 0; n < prec_loc[6].size(); ++n){ // loc 6 is arms area
                 if(locroll >= prec_loc[6][n].lrange && locroll <= prec_loc[6][n].hrange) finloc = prec_loc[6][n].ploc; 
             } 
         }    
-        std::cout << "Location hit(1-16): " << finloc << "(" << locroll << ")" << std::endl;
+        std::cout << "Location hit(0-15): " << finloc << "(" << locroll << ")" << std::endl;
+
+        // damage calculation
+        dam_index = (AML / 10) - (a_d100 / 10); // attack
+        if(dam_index < 1) dam_index = 1;
+        dam_index += ( (d_d100 / 10) - (DML / 10) ) / 2; // defense (half the index)
+        std::cout << "Damage Index: " << dam_index << std::endl;
+        int txt_index = dam_index;
+        dam_index += astrength;
+        dam_index += aspect.first;
+        std::cout << "Damage total (STR, weapon value): " << dam_index << "(" << astrength << ", " << aspect.first << ")" << std::endl;
+        int armor_prot = 0;
+        std::cout << "Aspect: " << aspect.second << std::endl;
+        switch(aspect.second){
+            case 0:
+                armor_prot = armor_used[finloc].B;
+                break;
+            case 1:
+                armor_prot = armor_used[finloc].E;
+                break;
+            case 2:
+                armor_prot = armor_used[finloc].P;
+                break;
+        }    
+        std::cout << "Armor protection factor: " << armor_prot << std::endl;
+        dam_index -= armor_prot;
+        std::cout << "Final damage: " << dam_index << std::endl;
+        int dam_text = dam_index;
+
+        if(aspect.second == 0) dam_index -= 5;
+        if(aspect.second == 2) dam_index -= 2;
+
+        if(finloc == 3) dam_index -= 6;
+        if(finloc == 8) dam_index -= 6;
+        if(finloc == 10) dam_index -= 6;
+        if(finloc == 14) dam_index -= 6;
+
+        if(finloc == 1) dam_index += 6;
+        if(finloc == 2) dam_index += 6;
+        if(finloc == 6) dam_index += 6;
+        
+        if(dam_index <= 0) dam_index = 0;
+        else if(dam_index >= 1 && dam_index < 7) dam_index = 1;
+        else if(dam_index >= 7 && dam_index < 13) dam_index = 2;
+        else if(dam_index >= 13 && dam_index < 19) dam_index = 3;
+        else if(dam_index >= 19 && dam_index < 25) dam_index = 4;
+        else if(dam_index >= 25 && dam_index < 30) dam_index = 5;
+        else if(dam_index >= 30 && dam_index < 90) dam_index = 60;
+
+        msg_log msgh;
+        msgh.c1 = 1; // sets background color (?)
+        msgh.color1 = TCODColor::yellow;
+        msgh.bcolor1 = TCODColor::black;
+        msgh.color2 = TCODColor::lighterBlue;
+        msgh.bcolor2 = TCODColor::black;
+        sprintf(msgh.message, "  Attack type %c%s%c with aspect %c%s%c, hitting %c%s%c.", 
+                TCOD_COLCTRL_1, txt_atype(location), TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, txt_aspect(aspect.second), TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, txt_loc(finloc), TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgh);
+        sprintf(msgh.message, "  Damage done: %c%d%c. Index(%c%d%c) STR(%c%d%c) Weapon(%c%d%c) Armor Abs.(%c%d%c)", 
+                TCOD_COLCTRL_2, dam_text, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, txt_index, TCOD_COLCTRL_STOP, 
+                TCOD_COLCTRL_1, astrength, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, aspect.first, TCOD_COLCTRL_STOP, 
+                TCOD_COLCTRL_1, armor_prot, TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgh);
+        msgh.color3 = TCODColor::lighterRed;
+        msgh.bcolor3 = TCODColor::black;
+        sprintf(msgh.message, "  Wound severity: %c%d%c Temp damage %c%d%c.", 
+                TCOD_COLCTRL_3, dam_index, TCOD_COLCTRL_STOP, TCOD_COLCTRL_3, dam_index, TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgh);
+        // 1 7 13 19 25 30M
+        
+        *DHP -= dam_index;
     }    
 
     msg_log msg1;
+    bool skip = false;
     switch(result){
         case 1:
             *AHP -= 1;
             *DHP -= 1;
-            sprintf(msg1.message, "%c%c%cBoth fumble! %c-1%c to HP for both.", TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP, 
-                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            sprintf(msg1.message, "  Both fumble! %c-1%c to HP for both.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
             break;
         case 2:
             *AHP -= 1;
-            sprintf(msg1.message, "%c%c%cThe %s fumbles the attack! %c-1%c to HP.", TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP, 
-                    a_string, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            sprintf(msg1.message, "  The %s fumbles the attack! %c-1%c to HP.", a_string, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);  
             break;
         case 3:
             *DHP -= 1;
-            sprintf(msg1.message, "%c%c%cThe %s misses, but the %s fumbles the parry and hurt himself! %c-1%c to HP.", 
-                    TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP, a_string, d_string, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            sprintf(msg1.message, "  The %s misses, but the %s fumbles the parry and hurt himself! %c-1%c to HP.", 
+                    a_string, d_string, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
             break;
         case 4:
-            sprintf(msg1.message, "%c%c%cThe %s swings the weapon, but the %s parries.", TCOD_COLCTRL_1, whois, TCOD_COLCTRL_STOP,
+            sprintf(msg1.message, "  The %s swings the weapon, but the %s parries.", 
                     a_string, d_string);
             break;
         case 5:
             if(Areach < Dreach) *Ddistance = Areach;
             if(*Adistance < Areach) *Adistance = Areach;
-            *DHP -= weapond;
-            sprintf(msg1.message, "%c!%cThe %s hits the %s for %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
-                    a_string, d_string, TCOD_COLCTRL_1, weapond, TCOD_COLCTRL_STOP);
+            skip = true;
+            //*DHP -= weapond;
+            //sprintf(msg1.message, "%c!%cThe %s hits the %s for %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
+            //        a_string, d_string, TCOD_COLCTRL_1, weapond, TCOD_COLCTRL_STOP);
             break;
         case 6:
             if(Areach < Dreach) *Ddistance = Areach;
             if(*Adistance < Areach) *Adistance = Areach;
-            *DHP -= weapond * 2;
-            sprintf(msg1.message, "%c!%cCritial attack! %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (weapond * 2), TCOD_COLCTRL_STOP);
+            skip = true;
+            //*DHP -= weapond * 2;
+            //sprintf(msg1.message, "%c!%cCritial attack! %c%d%c damage.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (weapond * 2), TCOD_COLCTRL_STOP);
             break;
         case 7:
             if(Areach < Dreach) *Ddistance = Areach;
             if(*Adistance < Areach) *Adistance = Areach;
-            *DHP -= weapond * 3;
-            sprintf(msg1.message, "%c!%cTriple damage! %c%d%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (weapond * 3), TCOD_COLCTRL_STOP);
+            skip = true;
+            //*DHP -= weapond * 3;
+            //sprintf(msg1.message, "%c!%cTriple damage! %c%d%c HP.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, (weapond * 3), TCOD_COLCTRL_STOP);
             msg1.color1 = TCODColor::red;
             break;
         case 8:
-            sprintf(msg1.message, "%c*%cThe %s misses.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, a_string);
+            sprintf(msg1.message, "  The %s misses.", a_string);
             break;    
     }
     if(who) msg1.color1 = TCODColor::red;
     else msg1.color1 = TCODColor::lighterBlue;
-    msg_log_list.push_back(msg1);
+    if(skip){
+    } else msg_log_list.push_back(msg1);
 }
 
 void move_obj(int x, int y, std::vector<Generic_object> &wrd_inv){

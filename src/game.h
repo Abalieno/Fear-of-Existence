@@ -109,8 +109,10 @@ struct global_state{
     bool first; // used to set player combat states
     bool second;
     bool third;
+    bool fourth;
     bool mode_move;
     bool mode_attack;
+    bool mode_pass;
 
     int off_xx; // offsets to blit during attacks
     int off_yy;

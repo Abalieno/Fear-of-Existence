@@ -23,6 +23,8 @@ CAVE LVL 1
   h: 4
   combat_move: 6
   speed: 4
+  STR: 8
+  armor: 8
   wpn_AC: 3
   wpn_DC: 1
   wpn_B: 3
@@ -48,6 +50,8 @@ CAVE LVL 1
   h: 5
   combat_move: 10
   speed: 8 
+  STR: 12
+  armor: 12
   wpn_AC: 4
   wpn_DC: 1 
   wpn_B: 5

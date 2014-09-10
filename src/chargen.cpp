@@ -1108,19 +1108,19 @@ int prot_value(Armor piece, int type, int location){
     int val;
     switch(piece.material){
         case PLATE:
-            if(type == 0) val = 5;
-            if(type == 1) val = 8;
-            if(type == 2) val = 7;
+            if(type == 0) val = 15;
+            if(type == 1) val = 24;
+            if(type == 2) val = 21;
             break;
         case LEATHER:
-            if(type == 0) val = 1;
-            if(type == 1) val = 2;
-            if(type == 2) val = 1;
+            if(type == 0) val = 3;
+            if(type == 1) val = 6;
+            if(type == 2) val = 3;
             break; 
         case SCALE:
-            if(type == 0) val = 3;
-            if(type == 1) val = 5;
-            if(type == 2) val = 4;
+            if(type == 0) val = 9;
+            if(type == 1) val = 15;
+            if(type == 2) val = 12;
             break;    
     }
     for(unsigned int n = 0; n < piece.loc.size(); ++n){
@@ -1216,23 +1216,25 @@ void compile_armor(Game &GAME, TCODConsole *local){
     }
 
     // build tot protection values
+    GAME.player->armor_tot.clear();
     for(unsigned int n = 0; n < 16; ++n){
-        int protval = 0;
+        armorsection armortemp;
+        armortemp.B = 0;
         for(unsigned int l = 0; l < GAME.player->armor_worn.size(); ++l){
-            protval += prot_value(GAME.player->armor_worn[l], 0, n);
+            armortemp.B += prot_value(GAME.player->armor_worn[l], 0, n); // (armor, blunt/edge/point, location)
         }
-        local->print(setx+37+(3*n), sety+11, "%c%d%c", TCOD_COLCTRL_2, protval, TCOD_COLCTRL_STOP);
-        protval = 0;
+        local->print(setx+37+(3*n), sety+11, "%c%d%c", TCOD_COLCTRL_2, armortemp.B, TCOD_COLCTRL_STOP);
+        armortemp.E = 0;
         for(unsigned int l = 0; l < GAME.player->armor_worn.size(); ++l){
-            protval += prot_value(GAME.player->armor_worn[l], 1, n);    
+            armortemp.E += prot_value(GAME.player->armor_worn[l], 1, n);    
         }
-        local->print(setx+37+(3*n), sety+12, "%c%d%c", TCOD_COLCTRL_2, protval, TCOD_COLCTRL_STOP);
-        protval = 0;
+        local->print(setx+37+(3*n), sety+12, "%c%d%c", TCOD_COLCTRL_2, armortemp.E, TCOD_COLCTRL_STOP);
+        armortemp.P = 0;
         for(unsigned int l = 0; l < GAME.player->armor_worn.size(); ++l){
-            protval += prot_value(GAME.player->armor_worn[l], 2, n);    
+            armortemp.P += prot_value(GAME.player->armor_worn[l], 2, n);    
         }
-        local->print(setx+37+(3*n), sety+13, "%c%d%c", TCOD_COLCTRL_2, protval, TCOD_COLCTRL_STOP);
-        protval = 0;
+        local->print(setx+37+(3*n), sety+13, "%c%d%c", TCOD_COLCTRL_2, armortemp.P, TCOD_COLCTRL_STOP);
+        GAME.player->armor_tot.push_back(armortemp);
     }    
 
     local->print(setx+37, sety, "%cSK%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);

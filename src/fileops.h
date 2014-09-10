@@ -28,6 +28,8 @@ struct mob_types {
     int h; // temp hit points
     int combat_move; // total action points
     int speed; // for initiative
+    int STR;
+    int armor;
 
     int wpn_AC, wpn_DC, wpn_B, wpn_E, wpn_P, wpn_aspect, reach;
     int ML;

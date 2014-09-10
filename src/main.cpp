@@ -544,12 +544,15 @@ void place_objects(Rect room, lvl1 myenc, Game &GAME){
                     monster.combat_move_max = monster.combat_move;
                     monster.c_mode = false;
                     monster.speed = myenc.vmob_types[myenc.cave1[u].enc[i]].speed;
+                    monster.STR = myenc.vmob_types[myenc.cave1[u].enc[i]].STR;
                     monster.hit = false;
 
                     monster.facing = rng(0,3); // random facing
                     monster.initML = rng(35, 65);
 
                     monster.phase = 3;
+
+                    monster.overpower_l = 0;
 
                     monster.stats.wpn1.wpn_AC =     myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_AC;
                     monster.stats.wpn1.wpn_DC =     myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_DC;
@@ -563,6 +566,15 @@ void place_objects(Rect room, lvl1 myenc, Game &GAME){
                     monster.stats.wpn1.wp_E.second = 1;
                     monster.stats.wpn1.wp_P.first = myenc.vmob_types[myenc.cave1[u].enc[i]].wpn_P;
                     monster.stats.wpn1.wp_P.second = 2;
+
+                    monster.armor_tot.clear();
+                    for(unsigned int n = 0; n < 16; ++n){
+                        armorsection armortemp;
+                        armortemp.B = myenc.vmob_types[myenc.cave1[u].enc[i]].armor;
+                        armortemp.E = myenc.vmob_types[myenc.cave1[u].enc[i]].armor;
+                        armortemp.P = myenc.vmob_types[myenc.cave1[u].enc[i]].armor;
+                        monster.armor_tot.push_back(armortemp);
+                    } 
 
                     monster.stats.ML = myenc.vmob_types[myenc.cave1[u].enc[i]].ML;
 
@@ -1595,14 +1607,16 @@ void I_am_moused(Game &tgame){
                 //int in_x = x - i.x; // sets mouse origin to the panel
                 int in_y = y - i.y; 
                 if(!tgame.gstate.mode_move && !tgame.gstate.mode_attack){
-                    if(in_y == 2) prompt_selection = 1; 
-                    else if(in_y == 3) prompt_selection = 2;
-                    else if(in_y == 4) prompt_selection = 3;
+                    if(in_y == 3) prompt_selection = 1;
+                    else if(in_y == 2) prompt_selection = 4; // pass
+                    else if(in_y == 4) prompt_selection = 2;
+                    else if(in_y == 5) prompt_selection = 3;
                     else prompt_selection = 0;
                     if(mousez.lbutton_pressed){
-                        if(in_y == 2 && tgame.gstate.first) fetch = 1;
-                        else if(in_y == 3 && tgame.gstate.second) fetch = 2;
-                        else if(in_y == 4 && tgame.gstate.third) fetch = 3;
+                        if(in_y == 3 && tgame.gstate.first) fetch = 1;
+                        else if(in_y == 2 && tgame.gstate.second) fetch = 4; // pass
+                        else if(in_y == 4 && tgame.gstate.second) fetch = 2;
+                        else if(in_y == 5 && tgame.gstate.third) fetch = 3;
                     }else fetch = 0; 
                 } else if(tgame.gstate.mode_move){ // move mode
                     if(in_y == 2) prompt_selection = 1; 
@@ -1903,7 +1917,7 @@ void render_base(Game &tgame){
         TCODConsole::root->print(1, win_y-3, "Press 'q' to quit");
         
         TCODConsole::root->setAlignment(TCOD_RIGHT);
-        TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+5, "Press 'p' to punch walls");
+        TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+5, "Press 'z' to punch walls");
         TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+6, "Press 'r' to regenerate layout/revive player");
         TCODConsole::root->print(win_x-2, MAP_HEIGHT_AREA+8, "Press 'd' for DEBUG, Press 'w' to switch tile mode");
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::yellow,TCODColor::black);
@@ -2127,13 +2141,14 @@ void render_prompt(Game &GAME){
         int w = GAME.gstate.UI_hook[index].w;
         TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
         TCODConsole::root->setDefaultBackground(TCODColor::black);
-        for(int x = 0; x < w; ++x){ 
-            TCODConsole::root->putChar(x+loc_x, loc_y+6, '-', TCOD_BKGND_SET);
+        for(int x = 0; x < w; ++x){ // black & frame drawing
+            TCODConsole::root->putChar(x+loc_x, loc_y+7, '-', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+1, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+2, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+3, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+4, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+5, ' ', TCOD_BKGND_SET);
+            TCODConsole::root->putChar(x+loc_x, loc_y+6, ' ', TCOD_BKGND_SET);
         }
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->print(loc_x, loc_y, "Combat Prompt");
@@ -2142,32 +2157,41 @@ void render_prompt(Game &GAME){
         TCODConsole::root->setColorControl(TCOD_COLCTRL_3,colorbase,TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
         if(!GAME.gstate.mode_move && !GAME.gstate.mode_attack){
+            if(prompt_selection == 4 && GAME.gstate.fourth){
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::white);
+                TCODConsole::root->print(loc_x, loc_y+2, "%cP%c%cASS%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+            } else if(GAME.gstate.fourth){
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
+                TCODConsole::root->print(loc_x, loc_y+2, "%cP%c%cASS%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+            }
             if(prompt_selection == 1 && GAME.gstate.first){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::white);
-                TCODConsole::root->print(loc_x, loc_y+2, "%cH%c%cOLD%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                TCODConsole::root->print(loc_x, loc_y+3, "%cH%c%cOLD%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
             } else if(GAME.gstate.first){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
-                TCODConsole::root->print(loc_x, loc_y+2, "%cH%c%cOLD%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                TCODConsole::root->print(loc_x, loc_y+3, "%cH%c%cOLD%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
             }
             if(prompt_selection == 2 && GAME.gstate.second){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::black,TCODColor::white);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::white);
-                TCODConsole::root->print(loc_x, loc_y+3, "%cM%c%cOVE%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP);
+                TCODConsole::root->print(loc_x, loc_y+4, "%cM%c%cOVE%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP);
             } else if(GAME.gstate.second){  
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
-                TCODConsole::root->print(loc_x, loc_y+3, "%cM%c%cOVE%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP);
+                TCODConsole::root->print(loc_x, loc_y+4, "%cM%c%cOVE%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,TCOD_COLCTRL_STOP);
             }
             if(prompt_selection == 3 && GAME.gstate.third){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::black,TCODColor::white);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::white);
-                TCODConsole::root->print(loc_x, loc_y+4, "%cA%c%cTTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_3,TCOD_COLCTRL_STOP);
+                TCODConsole::root->print(loc_x, loc_y+5, "%cA%c%cTTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_3,TCOD_COLCTRL_STOP);
             } else if(GAME.gstate.third){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
-                TCODConsole::root->print(loc_x, loc_y+4, "%cA%c%cTTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_3,TCOD_COLCTRL_STOP);
+                TCODConsole::root->print(loc_x, loc_y+5, "%cA%c%cTTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_3,TCOD_COLCTRL_STOP);
             }    
             if(!GAME.gstate.third){
                 int phaseswitch = player.att_phase;
@@ -2190,19 +2214,23 @@ void render_prompt(Game &GAME){
                         break;
                 }    
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::darkGrey,TCODColor::black);
-                TCODConsole::root->print(loc_x+6, loc_y+4, ">Attack phase: %c%d%c",
+                TCODConsole::root->print(loc_x+6, loc_y+5, ">Attack phase: %c%d%c",
                         TCOD_COLCTRL_5, player.att_phase, TCOD_COLCTRL_STOP);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
-                TCODConsole::root->print(loc_x, loc_y+4, "%cATTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
+                TCODConsole::root->print(loc_x, loc_y+5, "%cATTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
             }    
             if(!GAME.gstate.second){ 
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
-                TCODConsole::root->print(loc_x, loc_y+3, "%cMOVE%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
+                TCODConsole::root->print(loc_x, loc_y+4, "%cMOVE%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
             }    
             if(!GAME.gstate.first){ 
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
-                TCODConsole::root->print(loc_x, loc_y+2, "%cHOLD%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
-            }  
+                TCODConsole::root->print(loc_x, loc_y+3, "%cHOLD%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
+            } 
+            if(!GAME.gstate.fourth){ 
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
+                TCODConsole::root->print(loc_x, loc_y+2, "%cPASS%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
+            }
         }else if(GAME.gstate.mode_move){
             TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::lightRed,TCODColor::black);
             TCODConsole::root->setColorControl(TCOD_COLCTRL_2,TCODColor::lightRed,TCODColor::lighterYellow);
@@ -3201,6 +3229,9 @@ int handle_keys(Object_player &duh, Game &tgame) {
 
     // COMBAT PROMPT
     if(!tgame.gstate.mode_move && !tgame.gstate.mode_attack){ 
+        if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'p' && wid_prompt_open){
+            if(tgame.gstate.fourth) fetch = 4;
+        }
         if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'h' && wid_prompt_open){
             if(tgame.gstate.first) fetch = 1;
         } 
@@ -3545,7 +3576,7 @@ int handle_keys(Object_player &duh, Game &tgame) {
 
     if (game_state == playing) {
 
-    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'p' ){
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'z' ){
         m_x = 0;
         m_y = 0;
         TCODConsole::root->clear();
@@ -3812,8 +3843,10 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     GAME.gstate.first = false;
     GAME.gstate.second = false;
     GAME.gstate.third = false;
+    GAME.gstate.fourth = true;
     GAME.gstate.mode_move = false;
     GAME.gstate.mode_attack = false;
+    GAME.gstate.mode_pass = false;
 
     if(phase < 9) GAME.gstate.first = true;
     if(player.phase <= phase+1) GAME.gstate.second = true;
@@ -3858,11 +3891,20 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
                     break;
                 }
             }    
-        }   
+        }  
+
+        if(action == 4){ // PASS
+            int wastestep = 0;
+            while(player.combat_move > 0 && wastestep < 4){
+                ++wastestep;
+                --player.combat_move;
+            } 
+            action = 1; // goes to "hold" to jump phase
+        }
 
         if(action == 2){ // MOVE
             GAME.gstate.mode_move = true;
-        }   
+        }  
 
         if(action == 3 && player.combat_move >= 4){ // ATTACK
             GAME.gstate.mode_attack = true;
@@ -3919,7 +3961,6 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         }
 
         // SIDEBAR UI
-
         r_panel->clear();
         TCODConsole::root->setAlignment(TCOD_RIGHT);
 
