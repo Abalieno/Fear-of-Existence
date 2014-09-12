@@ -92,6 +92,28 @@ struct msg_log_c { bool is_context; int ltype;};
 //static std::vector<msg_log> msg_log_list;
 //static std::vector<msg_log_c> msg_log_context;
 
+class Tile {
+
+public:
+
+    bool blocked;
+    bool block_sight;
+    int feature;
+    int bloodyt; // amount of blood on Tile
+    bool explored;
+
+    Tile() { blocked = false; block_sight = false; bloodyt = 0; }
+
+    Tile(int isblocked, int isblock_sight){
+        bloodyt = 0;
+        blocked = isblocked;
+        block_sight = isblock_sight;
+        if (blocked) block_sight = true;
+        explored = false;
+        feature = 0;
+    }
+};
+
 struct UIhook{
     int ID;
     int x;

@@ -11,6 +11,11 @@
 extern std::vector<msg_log> msg_log_list;
 extern std::vector<msg_log_c> msg_log_context;
 
+extern const int MAP_WIDTH;
+extern const int MAP_HEIGHT;
+
+extern std::vector<Tile> map_array;
+
 void Object_monster::draw(bool uh, Game &tgame) {
     //con->setDefaultForeground(color);
     
@@ -499,7 +504,92 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
             armortemp.P = monster.armor_tot[n].P;
             armor_used.push_back(armortemp);
         }
-    }   
+    } 
+
+    std::cout << "------------------------" << std::endl;
+
+    // facing
+    if(monster.x > player.x) {player.facing = 1; monster.facing = 3;}
+    if(monster.x < player.x) {player.facing = 3; monster.facing = 1;}
+    if(monster.y < player.y) {player.facing = 0; monster.facing = 2;}
+    if(monster.y > player.y) {player.facing = 2; monster.facing = 0;}
+
+    // close quarters
+    bool close_quarters = false; 
+    switch(player.facing){
+        case 0:
+            if( (map_array[player.y * MAP_WIDTH + player.x+1].blocked && map_array[player.y * MAP_WIDTH + player.x-1].blocked) ||
+                (map_array[(player.y-1) * MAP_WIDTH + player.x+1].blocked && map_array[(player.y-1) * MAP_WIDTH + player.x-1].blocked) ){
+                close_quarters = true;
+            }    
+            break;
+        case 1:
+            if( (map_array[player.y-1 * MAP_WIDTH + player.x].blocked && map_array[player.y+1 * MAP_WIDTH + player.x].blocked) ||
+                (map_array[player.y-1 * MAP_WIDTH + player.x+1].blocked && map_array[player.y+1 * MAP_WIDTH + player.x+1].blocked) ){
+                close_quarters = true;
+            }
+            break;
+        case 2:
+            if( (map_array[player.y * MAP_WIDTH + player.x+1].blocked && map_array[player.y * MAP_WIDTH + player.x-1].blocked) ||
+                (map_array[(player.y+1) * MAP_WIDTH + player.x+1].blocked && map_array[(player.y+1) * MAP_WIDTH + player.x-1].blocked) ){
+                close_quarters = true;
+            }
+            break;
+        case 3:
+            if( (map_array[(player.y-1) * MAP_WIDTH + player.x].blocked && map_array[(player.y+1) * MAP_WIDTH + player.x].blocked) ||
+                (map_array[(player.y-1) * MAP_WIDTH + player.x-1].blocked && map_array[(player.y+1) * MAP_WIDTH + player.x-1].blocked) ){
+                close_quarters = true;
+            }
+            break;
+    }  
+    if(close_quarters)
+        std::cout << "Close Quarters. " << player.facing << std::endl;
+    else std::cout << "Open Space. " << player.facing << std::endl;
+    // random weapon aspect
+    std::pair<int,int> aspect;
+    int rnd_asp = dice(1,6);
+    std::cout << "Weapon aspect roll: " << rnd_asp << std::endl;
+    std::sort(aspects.begin(), aspects.end(), pairCompare);
+    // blunt = 0, edge = 1, point = 2
+    std::cout << "Primary: " << aspects[0].first << "-" << txt_aspect(aspects[0].second) << 
+        " Secondary: " << aspects[1].first << "-" << txt_aspect(aspects[1].second) << " Tertiary: " << 
+        aspects[2].first << "-" << txt_aspect(aspects[2].second) << std::endl;
+    if(rnd_asp >= 4){ 
+        std::cout << "Using Primary." << std::endl;
+        aspect.first = aspects[0].first;
+        aspect.second = aspects[0].second;
+    }    
+    if(rnd_asp == 2 || rnd_asp == 3){
+        if(aspects[1].first == 0){ 
+            std::cout << "Using Primary." << std::endl;
+            aspect.first = aspects[0].first;
+            aspect.second = aspects[0].second;
+        }else{ 
+            std::cout << "Using Secondary." << std::endl;
+            aspect.first = aspects[1].first;
+            aspect.second = aspects[1].second;
+        }    
+    }  
+    if(rnd_asp == 1){
+        if(aspects[2].first == 0){
+            if(aspects[1].first == 0){ 
+                std::cout << "Using Primary." << std::endl;
+                aspect.first = aspects[0].first;
+                aspect.second = aspects[0].second;
+            }else{ 
+                std::cout << "Using Secondary." << std::endl;
+                aspect.first = aspects[1].first;
+                aspect.second = aspects[1].second;
+            }    
+        }else{ 
+            std::cout << "Using Tertiary." << std::endl; 
+            aspect.first = aspects[2].first;
+            aspect.second = aspects[2].second;
+        }    
+    }
+    if( (aspect.second == 0 || aspect.second == 1) && close_quarters ){
+        wpn_AC = 5 - wpn_AC;
+    }    
 
     // crit chances
     int a_crit = AML / 10;
@@ -512,12 +602,14 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
     int d_critF = (100 - raw_DML) / 20;
     if(d_critF < 1) d_critF = 1;
     std::cout << "Defense critF: " << d_critF << std::endl;
+    std::cout << "Raw AML: " << raw_AML << " DML: " << raw_DML << std::endl;
 
     // WEAPON COMPARISON TABLE
     if(wpn_AC > wpn_DC)
         AML += 5 * (wpn_AC - wpn_DC);
     if(wpn_DC > wpn_AC)
         DML += 5 * (wpn_DC - wpn_AC);
+    std::cout << "Weapon Class AML: " << AML << " DML: " << DML << std::endl;
 
     // REACH
     if(Areach > *Adistance){ 
@@ -532,6 +624,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
         AML -= 5 * (*Ddistance - Areach); // shorter attacking weapon is engaged out of its range
         std::cout << "Shorter attack weapon out of range: -" << 5 * (*Ddistance - Areach) << std::endl;
     }
+    std::cout << "Weapon Reach AML: " << AML << " DML: " << DML << std::endl;
 
     // for every attack the player defends from or does, a -10 penality is applied
     if(player.cflag_attacks >= 1){
@@ -658,51 +751,9 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
 
     int result = melee_res[a_success_level][d_success_level];
 
-    // random weapon aspect
-    std::pair<int,int> aspect;
     int location = 20; // if 20 = broken
     int dam_index;
     if(result >= 5 && result <= 7){
-        int rnd_asp = dice(1,6);
-        std::cout << "Weapon aspect roll: " << rnd_asp << std::endl;
-        std::sort(aspects.begin(), aspects.end(), pairCompare);
-        // blunt = 0, edge = 1, point = 2
-        std::cout << "Primary: " << aspects[0].first << "," << aspects[0].second << 
-            " Secondary: " << aspects[1].first << "," << aspects[1].second << " Tertiary: " << 
-            aspects[2].first << "," << aspects[2].second << std::endl;
-        if(rnd_asp >= 4){ 
-            std::cout << "Using Primary." << std::endl;
-            aspect.first = aspects[0].first;
-            aspect.second = aspects[0].second;
-        }    
-        if(rnd_asp == 2 || rnd_asp == 3){
-            if(aspects[1].first == 0){ 
-                std::cout << "Using Primary." << std::endl;
-                aspect.first = aspects[0].first;
-                aspect.second = aspects[0].second;
-            }else{ 
-                std::cout << "Using Secondary." << std::endl;
-                aspect.first = aspects[1].first;
-                aspect.second = aspects[1].second;
-            }    
-        }  
-        if(rnd_asp == 1){
-            if(aspects[2].first == 0){
-                if(aspects[1].first == 0){ 
-                    std::cout << "Using Primary." << std::endl;
-                    aspect.first = aspects[0].first;
-                    aspect.second = aspects[0].second;
-                }else{ 
-                    std::cout << "Using Secondary." << std::endl;
-                    aspect.first = aspects[1].first;
-                    aspect.second = aspects[1].second;
-                }    
-            }else{ 
-                std::cout << "Using Tertiary." << std::endl; 
-                aspect.first = aspects[2].first;
-                aspect.second = aspects[2].second;
-            }    
-        }  
         // location roll
         int locroll = dice(1,100);
         for (unsigned int n = 0; n < locator.size(); ++n){

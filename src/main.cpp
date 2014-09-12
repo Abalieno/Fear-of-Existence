@@ -39,6 +39,8 @@ int mapmode = 0; // changing map routine on regeneration
 
 bool revealdungeon = 0;
 
+extern const int MAP_WIDTH; // used for close_mode in liventities.c
+extern const int MAP_HEIGHT;
 const int MAP_WIDTH = 220;
 const int MAP_HEIGHT = 140;
 // 16map 55 35
@@ -196,27 +198,7 @@ void print_8x16(TCODConsole* &loc, int where_x, int where_y, const char *msg, TC
     //std::cout << "char 1: " << first << std::endl;
 }
 
-class Tile {
 
-public:
-
-    bool blocked;
-    bool block_sight;
-    int feature;
-    int bloodyt; // amount of blood on Tile
-    bool explored;
-
-    Tile() { blocked = false; block_sight = false; bloodyt = 0; }
-
-    Tile(int isblocked, int isblock_sight){
-        bloodyt = 0;
-        blocked = isblocked;
-        block_sight = isblock_sight;
-        if (blocked) block_sight = true;
-        explored = false;
-        feature = 0;
-    }
-};
 
 std::vector<Tile> map_array; // declared here because used in Object.moved
 
@@ -3659,7 +3641,7 @@ int handle_keys(Object_player &duh, Game &tgame) {
 
     if (eve == TCOD_EVENT_KEY_PRESS && keyr.vk == TCODK_UP ){
         --bloodycount;
-        --duh.bloody;  
+        --duh.bloody; 
         do player_move_attack(0, -1, tgame, player.overpower_l);
         while (player.overpower_l > 0);
         //std::cout << " Monster array: " << myvector.size() << std::endl;
