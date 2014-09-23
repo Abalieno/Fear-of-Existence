@@ -7,6 +7,7 @@
 #include "game.h"
 #include "rng.h"
 #include "liventities.h"
+//#include "colors.h"
 
 extern std::vector<msg_log> msg_log_list;
 extern std::vector<msg_log_c> msg_log_context;
@@ -15,6 +16,9 @@ extern const int MAP_WIDTH;
 extern const int MAP_HEIGHT;
 
 extern std::vector<Tile> map_array;
+
+TCODColor stdlogc_fuckyou(203, 203, 203); // standard message log
+TCODColor dicec_fuckyou(242, 216, 70); // dice
 
 void Object_monster::draw(bool uh, Game &tgame) {
     //con->setDefaultForeground(color);
@@ -708,7 +712,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
             TCOD_COLCTRL_1, DML, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
             TCOD_COLCTRL_4, d_d100, TCOD_COLCTRL_STOP);
     msgd.color1 = TCODColor::cyan;
-    msgd.color2 = TCODColor::yellow;
+    msgd.color2 = dicec_fuckyou;
     if(who) msgd.color5 = TCODColor::red;
     else msgd.color5 = TCODColor::lighterBlue;
     switch(a_success_level){

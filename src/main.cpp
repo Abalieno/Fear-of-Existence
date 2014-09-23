@@ -22,6 +22,8 @@
 #include "screens.h"
 
 #include "chargen.h"
+
+#include "colors.h"
 // #include <process.h> //used for threading?
 
 // used in liventities (extern) and here
@@ -113,6 +115,8 @@ TCODColor minimap_floor(94,104,166);
 
 TCODColor nullcolor(39,40,34);
 
+TCODColor stdgrey(203, 203, 203);
+
 TCODColor orc(0, 200, 0);
 TCODColor troll(0, 255, 0);
 TCODColor monsterdead(TCODColor::lightGrey);
@@ -171,6 +175,19 @@ void map_8x16_font(){
     }
 }
 
+void map_c64_font(){
+
+    for (int n = 0; n <= 100; n++){
+        int step = 0;
+        step = 2*n;
+        TCODConsole::mapAsciiCodeToFont(1301+step,3,0+step);
+        TCODConsole::mapAsciiCodeToFont(1301+(step+1),3,0+(step+1));
+        // second row
+        TCODConsole::mapAsciiCodeToFont(1601+step,4,0+step);
+        TCODConsole::mapAsciiCodeToFont(1601+(step+1),4,0+(step+1));
+    }
+}
+
 void print_8x16(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back){
 
     loc->setDefaultForeground(front);
@@ -198,7 +215,28 @@ void print_8x16(TCODConsole* &loc, int where_x, int where_y, const char *msg, TC
     //std::cout << "char 1: " << first << std::endl;
 }
 
+void print_c64(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back){
 
+    loc->setDefaultForeground(front);
+    loc->setDefaultBackground(back);
+    int msg_length = 0;
+    for (int i = 0; msg[i] != '\0'; i++){
+        msg_length = i;
+    }
+    
+    for (int n = 0; n <= msg_length; ++n){
+        int letter = 0;
+        letter = int(msg[n]);
+        int step = 0;
+        step = 2*(letter - 32);
+        // 936 + 65 = 1001
+        //step = step +2; 
+        loc->putChar((where_x + n)*2, where_y, 1301+step, TCOD_BKGND_SET);
+        loc->putChar((where_x + n)*2, where_y + 1, 1301+(step+1), TCOD_BKGND_SET);
+        loc->putChar((where_x + n)*2+1, where_y, 1601+step, TCOD_BKGND_SET);
+        loc->putChar((where_x + n)*2+1, where_y + 1, 1601+(step+1), TCOD_BKGND_SET);
+    }
+}
 
 std::vector<Tile> map_array; // declared here because used in Object.moved
 
@@ -1734,7 +1772,7 @@ void Message_Log(){
     panel->putChar(33, 1, 18, TCOD_BKGND_SET);
 
     if(msg_log_list.size() > 0){
-        whatpanel->setDefaultForeground(TCODColor::white);
+        whatpanel->setDefaultForeground(stdlogc);
         whatpanel->setBackgroundFlag(TCOD_BKGND_SET);
         whatpanel->print(panel_offset, 2, ">");
         /* 
@@ -4130,7 +4168,7 @@ int main() {
     //TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
     TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
     //TCODConsole::setCustomFont("sample_full_unicode.png",TCOD_FONT_LAYOUT_ASCII_INROW,32,2048);
-    TCODConsole::initRoot(win_x, win_y, "FoE", false, TCOD_RENDERER_SDL);
+    TCODConsole::initRoot(win_x, win_y, "FOE", false, TCOD_RENDERER_SDL);
     TCODSystem::setFps(LIMIT_FPS);
         
     myvector.push_back(&player);
@@ -4177,6 +4215,7 @@ int main() {
 
     map_8x16_font(); // DOS font for readable text, not used
     map_16x16_tile(); // mapping bigg tiles, in map16.cpp
+    map_c64_font();
 
     TCODConsole::mapAsciiCodeToFont(400,2,16);
     TCODConsole::mapAsciiCodeToFont(401,2,17);
@@ -4308,6 +4347,23 @@ int main() {
     vecstr.push_back(st1);
     vecstr.push_back(st2);
     vecstr.push_back(st3);
+
+    print_c64(TCODConsole::root, 5, 10, ">", TCODColor::lightGrey, TCODColor::black);
+    TCODConsole::flush();
+    int fade = 0;
+    int colfr = 0;
+    int colfg = 0;
+    int colfb = 0;
+    while(fade < 256){
+        TCODColor fadec(colfr, colfg, colfb);
+        print_c64(TCODConsole::root, 6, 10, "FEAR OF EXISTENCE.", fadec, TCODColor::black);
+        TCODConsole::checkForKeypress();
+        TCODConsole::flush();
+        colfr = colfr + 3;
+        colfg = colfg + 3;
+        colfb = colfb + 3;
+        fade = fade + 3;
+    }    
 
     int menu_index = 1;
 
@@ -4543,7 +4599,7 @@ int main() {
                             msg_log msg2;
                             sprintf(msg2.message, "%c!%cJoining the fray: %s.", 
                                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, monvector[i].name);
-                            msg2.color1 = TCODColor::yellow;
+                            msg2.color1 = dicec;
                             msg_log_list.push_back(msg2);
                             messed_initiative = true;
                         }
@@ -4559,7 +4615,7 @@ int main() {
                                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
                                     monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
                                     monvector[i].initiative);
-                        msg1.color1 = TCODColor::yellow;
+                        msg1.color1 = dicec;
                         msg_log_list.push_back(msg1);
                     }
                 }
@@ -4617,7 +4673,7 @@ int main() {
                 msg_log msg1;
                 sprintf(msg1.message, "Player initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d.",
                         *tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, player.initiative);
-                msg1.color1 = TCODColor::yellow;
+                msg1.color1 = dicec;
                 msg_log_list.push_back(msg1);
 
                 // SORTING INITIATIVE
