@@ -141,6 +141,12 @@ struct global_state{
     int offbig_x;
     int offbig_y;
 
+    int mapx; // mapx (mouse cursor)
+    int mapy;
+    int mx; // mousex (absolute)
+    int my;
+    bool modal; // flag for some function (like disable overlays while in ranged aiming)
+
     bool fov_recompute;
 
     TCODColor color_dark_ground;

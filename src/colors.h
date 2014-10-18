@@ -3,7 +3,7 @@
 
 #include "libtcod.hpp"
 
-TCODColor stdlogc(203, 203, 203); // standard message log
-TCODColor dicec(242, 216, 70); // dice
+const TCODColor stdlogc(203, 203, 203); // standard message log
+const TCODColor dicec(242, 216, 70); // dice
 
 #endif

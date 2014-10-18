@@ -1655,34 +1655,36 @@ void I_am_moused(Game &tgame){
         }
     }    
 
-    if (mapx == player.x && mapy == player.y && !found){ // look for player
-        found = true;
-        overlay(-1, mapx, mapy, x, y, tgame.gstate.bigg);
-    } else { // look for monsters
-        for (unsigned int n = 0; n<monvector.size(); ++n){
-            if( ((mapx == monvector[n].x && mapy == monvector[n].y && monvector[n].alive) 
-                    && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) && !found  ){
-                overlay(n, mapx, mapy, x, y, tgame.gstate.bigg); 
-                found = true;
-            }
-        }
-        if (!found){ // only if no moster alive found
-            for (unsigned int n = 0; n<monvector.size(); ++n) {
-                if( ((mapx == monvector[n].x && mapy == monvector[n].y && !(monvector[n].alive) ) 
-                        && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) && !found  ){
-                    whatis = &(monvector[n].name[0]);
-                    TCODConsole::root->setDefaultForeground(TCODColor::white);
-                    TCODConsole::root->setAlignment(TCOD_LEFT);
-                    col_obj = monvector[n].color;
-                    TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-                    TCODConsole::root->print(0, 71, "Mouse on [dead %c%s%c] at [%d.%d]",
-                        TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, mapx, mapy);
-                    TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+    if(!tgame.gstate.modal){ // do overlays only if non modal (ranged aiming)
+        if (mapx == player.x && mapy == player.y && !found){ // look for player
+            found = true;
+            overlay(-1, mapx, mapy, x, y, tgame.gstate.bigg);
+        } else { // look for monsters
+            for (unsigned int n = 0; n<monvector.size(); ++n){
+                if( ((mapx == monvector[n].x && mapy == monvector[n].y && monvector[n].alive) 
+                            && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) && !found  ){
+                    overlay(n, mapx, mapy, x, y, tgame.gstate.bigg); 
                     found = true;
                 }
-            }    
-        }        
-    }    
+            }
+            if (!found){ // only if no moster alive found
+                for (unsigned int n = 0; n<monvector.size(); ++n) {
+                    if( ((mapx == monvector[n].x && mapy == monvector[n].y && !(monvector[n].alive) ) 
+                                && tgame.gstate.fov_map->isInFov(monvector[n].x,monvector[n].y)) && !found  ){
+                        whatis = &(monvector[n].name[0]);
+                        TCODConsole::root->setDefaultForeground(TCODColor::white);
+                        TCODConsole::root->setAlignment(TCOD_LEFT);
+                        col_obj = monvector[n].color;
+                        TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
+                        TCODConsole::root->print(0, 71, "Mouse on [dead %c%s%c] at [%d.%d]",
+                                TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, mapx, mapy);
+                        TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+                        found = true;
+                    }
+                }    
+            }        
+        }   
+    }
     if (!found){
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->setAlignment(TCOD_LEFT);
@@ -1690,6 +1692,10 @@ void I_am_moused(Game &tgame){
         TCODConsole::root->print(0, 71, "MAP x,y [Nothing] at [%d.%d]", mapx, mapy);
         TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the screen as black
         found = false;
+        tgame.gstate.mapx = mapx;
+        tgame.gstate.mapy = mapy;
+        tgame.gstate.mx = x;
+        tgame.gstate.my = y;
     }        
 }
 
@@ -3226,6 +3232,44 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
 
 int alreadydead = 0;
 
+void ranged_target(Game &GAME){
+    GAME.gstate.modal = true; // disables overlays
+    bool range_td = false;
+    TCOD_mouse_t mouse;
+    TCOD_key_t key;
+    TCOD_event_t eve;
+    do{
+        render_all(GAME);
+        I_am_moused(GAME);
+        if(GAME.gstate.mapx != -1 && GAME.gstate.mapy != -1){
+            TCODLine::init(GAME.player->x,GAME.player->y,GAME.gstate.mapx,GAME.gstate.mapy);
+
+            int x = GAME.player->x;
+            int y = GAME.player->y;
+            while (!TCODLine::step(&x,&y)) {
+                int nonx = 0;
+                int nony = 0;
+                
+                if (!GAME.gstate.bigg){
+                    nonx = x - GAME.gstate.off_xx;
+                    nony = y - GAME.gstate.off_yy;
+                } else if (GAME.gstate.bigg){    
+                    nonx = ((x*2) - GAME.gstate.off_xx)-28;
+                    nony = ((y*2) - GAME.gstate.off_yy)-18;
+                }
+                if(!GAME.gstate.fov_map->isInFov(x,y)) break;
+                TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+                TCODConsole::root->putChar(nonx, nony, 178, TCOD_BKGND_SET);
+            } 
+        }
+        if(mouse.lbutton) range_td = true;
+        eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+        TCODConsole::flush(); // this updates the screen
+    } while ( (eve != TCOD_EVENT_KEY_PRESS || key.vk != TCODK_ESCAPE) && !range_td);
+    GAME.gstate.modal = false; // re-enables overlays
+    return;
+}    
+
 int handle_keys(Object_player &duh, Game &tgame) {
 
     bool mycase_p;
@@ -3270,6 +3314,10 @@ int handle_keys(Object_player &duh, Game &tgame) {
         if(LIMIT_FPS == 30) LIMIT_FPS = 3000;
         else LIMIT_FPS = 30;
         TCODSystem::setFps(LIMIT_FPS);
+    }   
+
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'l' ) {
+        ranged_target(tgame);
     }    
   
     if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'q' ) return quit;
@@ -4376,6 +4424,7 @@ int main() {
         if(menu_index == -1) return 0;
         else if(menu_index == 0) break;
         TCODConsole::root->clear();
+        print_c64(TCODConsole::root, 6, 10, "FEAR OF EXISTENCE.", TCODColor::white, TCODColor::black);
     } 
 
     // test custom
