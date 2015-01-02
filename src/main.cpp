@@ -797,14 +797,12 @@ void place_doors(Rect inroom){
 
     if(!inroom.special){
 
-    TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
-
     for (int i = inroom.y1-1; i <= inroom.y2+1; ++i){ // +1 so it looks to walls too
         for (int l = inroom.x1-1; l <= inroom.x2+1; ++l){
 
             Door door1(l, i, 0);
             
-            if(wtf->getInt(1, 10, 0) > 5){
+            if(rng(1, 10) > 5){
 
             if(!map_array[i * MAP_WIDTH + l].blocked){ // if cell is free
                 if(map_array[i * MAP_WIDTH + (l-1)].blocked && map_array[i * MAP_WIDTH + (l+1)].blocked){ // H walls
@@ -977,12 +975,12 @@ public :
 			//if ( miny > 1 ) miny--; 
             if (maxx == MAP_WIDTH-1 ) maxx--;
 			if (maxy == MAP_HEIGHT-1 ) maxy--; 
-            minx = TCODRandom::getInstance()->getInt(minx,maxx-ROOM_MIN_SIZE+1);
-			miny = TCODRandom::getInstance()->getInt(miny,maxy-ROOM_MIN_SIZE+1);
+            minx = rng(minx,maxx-ROOM_MIN_SIZE+1);
+			miny = rng(miny,maxy-ROOM_MIN_SIZE+1);
             if( (maxx - minx) > ROOM_MAX_SIZE ) maxx = minx + ROOM_MAX_SIZE;
             if( (maxy - miny) > ROOM_MAX_SIZE ) maxy = miny + ROOM_MAX_SIZE;
-			maxx = TCODRandom::getInstance()->getInt(minx+ROOM_MIN_SIZE-1,maxx);
-			maxy = TCODRandom::getInstance()->getInt(miny+ROOM_MIN_SIZE-1,maxy);
+			maxx = rng(minx+ROOM_MIN_SIZE-1,maxx);
+			maxy = rng(miny+ROOM_MIN_SIZE-1,maxy);
             // ratio
             if((maxx-minx)*3 < (maxy-miny)) maxy = miny+(maxx-minx)*3;
             if((maxy-miny)*3 < (maxx-minx)) maxx = minx+(maxy-miny)*3;
@@ -999,7 +997,7 @@ public :
 				}
 			}*/
             int round = 0;
-            round = TCODRandom::getInstance()->getInt( 0, 5, 0);
+            round = rng(0, 5);
             int radius = 0;
             radius = std::min(node->w, node->h);
             if (round == 5 && radius > 4){ 
@@ -1027,7 +1025,7 @@ public :
             //    }
             //}
         } else {
-//printf("lvl %d %dx%d %dx%d\n",node->level, node->x,node->y,node->w,node->h);
+            //printf("lvl %d %dx%d %dx%d\n",node->level, node->x,node->y,node->w,node->h);
 			// resize the node to fit its sons
 			TCODBsp *left=node->getLeft();
 			TCODBsp *right=node->getRight();
@@ -1040,9 +1038,9 @@ public :
 				// vertical corridor
 				if ( left->x+left->w -1 < right->x || right->x+right->w-1 < left->x ) {
 					// no overlapping zone. we need a Z shaped corridor
-					int x1=TCODRandom::getInstance()->getInt(left->x,left->x+left->w-1);
-					int x2=TCODRandom::getInstance()->getInt(right->x,right->x+right->w-1);
-					int y=TCODRandom::getInstance()->getInt(left->y+left->h,right->y);
+					int x1=rng(left->x,left->x+left->w-1);
+					int x2=rng(right->x,right->x+right->w-1);
+					int y=rng(left->y+left->h,right->y);
 					vline_up(x1,y-1);
 					hline(x1,y,x2);
 					vline_down(x2,y+1);
@@ -1050,7 +1048,7 @@ public :
 					// straight vertical corridor
 					int minx=MAX(left->x,right->x);
 					int maxx=MIN(left->x+left->w-1,right->x+right->w-1);
-					int x=TCODRandom::getInstance()->getInt(minx,maxx);
+					int x=rng(minx,maxx);
 					vline_down(x,right->y);
 					vline_up(x,right->y-1);
 				}
@@ -1058,9 +1056,9 @@ public :
 				// horizontal corridor
 				if ( left->y+left->h -1 < right->y || right->y+right->h-1 < left->y ) {
 					// no overlapping zone. we need a Z shaped corridor
-					int y1=TCODRandom::getInstance()->getInt(left->y,left->y+left->h-1);
-					int y2=TCODRandom::getInstance()->getInt(right->y,right->y+right->h-1);
-					int x=TCODRandom::getInstance()->getInt(left->x+left->w,right->x);
+					int y1=rng(left->y,left->y+left->h-1);
+					int y2=rng(right->y,right->y+right->h-1);
+					int x=rng(left->x+left->w,right->x);
 					hline_left(x-1,y1);
 					vline(x,y1,y2);
 					hline_right(x+1,y2);
@@ -1068,7 +1066,7 @@ public :
 					// straight horizontal corridor
 					int miny=MAX(left->y,right->y);
 					int maxy=MIN(left->y+left->h-1,right->y+right->h-1);
-					int y=TCODRandom::getInstance()->getInt(miny,maxy);
+					int y=rng(miny,maxy);
 					hline_left(right->x-1,y);
 					hline_right(right->x,y);
 				}
@@ -1090,9 +1088,11 @@ void make_map_BSP(Object_player &duh, Game &GAME){
         }
     } 
 
+    TCODRandom *randtcod = new TCODRandom(130);
     TCODBsp *myBSP = new TCODBsp(30,30, MAP_WIDTH-60, MAP_HEIGHT-60);
-    myBSP->splitRecursive(NULL,6,ROOM_MIN_SIZE+1,ROOM_MIN_SIZE+1,1.5f,1.5f);
+    myBSP->splitRecursive(randtcod,6,ROOM_MIN_SIZE+1,ROOM_MIN_SIZE+1,1.5f,1.5f);
     //myBSP->splitRecursive(NULL,17,3,2,1.5f,1.5f);
+    delete randtcod;
     
     myBSP->traverseInvertedLevelOrder(new MyCallback(),NULL);
 
@@ -1381,7 +1381,9 @@ void overlay(int who, int mapx, int mapy, int realx, int realy, bool bigg){
         facing = player.facing;
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->setAlignment(TCOD_LEFT);
-        TCODConsole::root->print(0, 71, "Mouse on [Player] at [%d.%d]", mapx, mapy);
+        TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::lighterYellow,TCODColor::black);
+        TCODConsole::root->print(0, 71, "Mouse on [Player] at [%c%d%c.%c%d%c]", 
+                TCOD_COLCTRL_3, mapx, TCOD_COLCTRL_STOP, TCOD_COLCTRL_3, mapy, TCOD_COLCTRL_STOP);
     } else { // all other monsters alive
         facing = monvector[who].facing;
         char *whatis;
@@ -1390,9 +1392,11 @@ void overlay(int who, int mapx, int mapy, int realx, int realy, bool bigg){
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->setAlignment(TCOD_LEFT);
         col_obj = monvector[who].color;
+        TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::lighterYellow,TCODColor::black);
         TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-        TCODConsole::root->print(0, 71, "Mouse on [%c%s%c] at [%d.%d]",
-                TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, mapx, mapy);
+        TCODConsole::root->print(0, 71, "Mouse on [%c%s%c] at [%c%d%c.%c%d%c]",
+                TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, 
+                TCOD_COLCTRL_3, mapx, TCOD_COLCTRL_STOP, TCOD_COLCTRL_3, mapy, TCOD_COLCTRL_STOP);
     }
     // highlight selection (not facing)
     if(!bigg){
@@ -1676,8 +1680,10 @@ void I_am_moused(Game &tgame){
                         TCODConsole::root->setAlignment(TCOD_LEFT);
                         col_obj = monvector[n].color;
                         TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
-                        TCODConsole::root->print(0, 71, "Mouse on [dead %c%s%c] at [%d.%d]",
-                                TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, mapx, mapy);
+                        TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::black);
+                        TCODConsole::root->print(0, 71, "Mouse on [dead %c%s%c] at [%c%d%c.%c%d%c]",
+                                TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, 
+                                TCOD_COLCTRL_2, mapx, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, mapy, TCOD_COLCTRL_STOP);
                         TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
                         found = true;
                     }
@@ -1688,8 +1694,11 @@ void I_am_moused(Game &tgame){
     if (!found){
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->setAlignment(TCOD_LEFT);
-        TCODConsole::root->print(0, 70, "Mouse on [Nothing] at [%d.%d]", x, y);
-        TCODConsole::root->print(0, 71, "MAP x,y [Nothing] at [%d.%d]", mapx, mapy);
+        TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::black);
+        TCODConsole::root->print(0, 70, "Mouse on [Nothing] at [%c%d%c.%c%d%c]", 
+                TCOD_COLCTRL_2, x, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, y, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(0, 71, "MAP x,y [Nothing] at [%c%d%c.%c%d%c]", 
+                TCOD_COLCTRL_2, mapx, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, mapy, TCOD_COLCTRL_STOP);
         TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the screen as black
         found = false;
         tgame.gstate.mapx = mapx;
@@ -1788,54 +1797,26 @@ void Message_Log(){
         */
         //int i = msg_log_list.size() + 1
         int a = 2;
-        int first = 1;
         int howmany = 0;
+        int bump = 0;
         howmany = (msg_log_list.size())- MSG_HEIGHT;
         //std::cout << "Quantity " << howmany << std::endl;
         if(howmany < 0) howmany = 0;
         for(int i = (msg_log_list.size()-1); i >= howmany ; i--){
-            if (first){
-                if (!msg_log_list[i].c1)
-                    TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,TCODColor::black);
-                else TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,msg_log_list[i].bcolor1);
-                if (!msg_log_list[i].c2)
-                    TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,TCODColor::black);
-                else TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,msg_log_list[i].bcolor2);
-                if (!msg_log_list[i].c3)
-                    TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,TCODColor::black);
-                else TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,msg_log_list[i].bcolor3);
-                if (!msg_log_list[i].c4)
-                    TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,TCODColor::black);
-                else TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,msg_log_list[i].bcolor4);
-                if (!msg_log_list[i].c5)
-                    TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,TCODColor::black);
-                else TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,msg_log_list[i].bcolor5);
-                whatpanel->print(panel_offset+1, a, msg_log_list[i].message,TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
-                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP,TCOD_COLCTRL_4,
-                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_5, TCOD_COLCTRL_STOP );
-                a++;
-                first = 0;
-            } else{
-            if (!msg_log_list[i].c1)
-                    TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,TCODColor::black);
-                else TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,msg_log_list[i].bcolor1);
-                if (!msg_log_list[i].c2)
-                    TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,TCODColor::black);
-                else TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,msg_log_list[i].bcolor2);
-                if (!msg_log_list[i].c3)
-                    TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,TCODColor::black);
-                else TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,msg_log_list[i].bcolor3);
-                if (!msg_log_list[i].c4)
-                    TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,TCODColor::black);
-                else TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,msg_log_list[i].bcolor4);
-                if (!msg_log_list[i].c5)
-                    TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,TCODColor::black);
-                else TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,msg_log_list[i].bcolor5);
-                whatpanel->print(panel_offset+1, a+1, msg_log_list[i].message,TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
-                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP,TCOD_COLCTRL_4,
-                    TCOD_COLCTRL_STOP,TCOD_COLCTRL_5, TCOD_COLCTRL_STOP );
-                a++;
-            }
+            TCODColor bck;
+            if (!msg_log_list[i].c1) bck = TCODColor::black; else bck = msg_log_list[i].bcolor1;
+            TCODConsole::setColorControl(TCOD_COLCTRL_1,msg_log_list[i].color1,bck);
+            if (!msg_log_list[i].c2) bck = TCODColor::black; else bck = msg_log_list[i].bcolor2;
+            TCODConsole::setColorControl(TCOD_COLCTRL_2,msg_log_list[i].color2,bck);
+            if (!msg_log_list[i].c3) bck = TCODColor::black; else bck = msg_log_list[i].bcolor3;
+            TCODConsole::setColorControl(TCOD_COLCTRL_3,msg_log_list[i].color3,bck);
+            if (!msg_log_list[i].c4) bck = TCODColor::black; else bck = msg_log_list[i].bcolor4;
+            TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,bck);
+            if (!msg_log_list[i].c5) bck = TCODColor::black; else bck = msg_log_list[i].bcolor5;
+            TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,bck);
+            whatpanel->print(panel_offset+1, a+bump, "%s", msg_log_list[i].message);
+            a++;
+            bump = 1;
         }
 
         // just draws frame (not on extended panel)
@@ -1851,17 +1832,6 @@ void Message_Log(){
         } 
         panel->print(32, 0, "%c", TCOD_CHAR_NW);
 
-        /*
-        panel->setDefaultForeground(TCODColor::grey);
-        panel->print(32, 0, "o");
-        panel->print(90, 0, "o");
-        panel->print(32, 16, "o");
-        panel->print(90, 16, "o");
-        for (int n = 1; n < (90-32); n++) panel->print((32+n), 0, "%c",TCOD_CHAR_HLINE);
-        for (int n = 1; n < (90-32); n++) panel->print((32+n), 16, "%c",TCOD_CHAR_HLINE);
-        for (int n = 1; n < (16); n++) panel->print(32, n, "%c",TCOD_CHAR_VLINE);
-        for (int n = 1; n < (16); n++) panel->print(90, n, "%c",TCOD_CHAR_VLINE);
-        */
     } else {
         whatpanel->print(panel_offset, 2, ">Message Log currently empty");
     }
@@ -3963,7 +3933,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
         if(action == 4){ // PASS
             int wastestep = 0;
-            while(player.combat_move > 0 && wastestep < 4){
+            while(player.combat_move > 0 && wastestep < 8){ // should be < 4 for just one phase skip
                 ++wastestep;
                 --player.combat_move;
             } 
@@ -4411,7 +4381,14 @@ int main() {
         colfg = colfg + 3;
         colfb = colfb + 3;
         fade = fade + 3;
+    } 
+
+    int cnt = 0;
+    for(int i = 0; i < 1000; i++){
+        int rnd = rng(1, 100);
+        if (rnd > 50) cnt++;
     }    
+    std::cout << "RND TEST: " << cnt << "/10000" << std::endl;
 
     int menu_index = 1;
 
@@ -4637,7 +4614,7 @@ int main() {
                         int roll = 0;
                         roll = rng(1, 20);
                         monvector[i].initiative = monvector[i].initML + (roll - 10);
-                        monvector[i].temp_init = monvector[i].initiative;
+                        monvector[i].temp_init = monvector[i].initiative; // temp_init keeps original roll
 
                         Monster tempm;
                         tempm.initiative = &monvector[i].initiative;
@@ -4685,6 +4662,7 @@ int main() {
                     if(messed_initiative) ; // temporary 
                     monvector[b].initiative = monvector[b].temp_init; // resets to original values
                 }
+                player.initiative = player.temp_init; // reset player initiative to original values too  
                 std::sort(monsters.begin(), monsters.end(), compare); // re-sort for new monsters
                 // sorting initiative after dead monsters removed
                 for (unsigned int i = 0; i<monsters.size(); ++i) {
@@ -4696,7 +4674,7 @@ int main() {
             for (unsigned int i = 0; i<monvector.size(); ++i){
                 GAME.gstate.fov_map_mons_path1->setProperties(monvector[i].x, monvector[i].y, 1, 1);
             }
-            
+             
             if (break_combat) {wid_combat_open = 0; 
                 r_panel->clear(); 
                 break;} // break combat mode if monsters all dead or out of FoV
@@ -4877,17 +4855,16 @@ int main() {
                         // if at destination OR stuck -> pick a random destination
                         if ( (monvector[i].pl_x == monvector[i].x && monvector[i].pl_y == monvector[i].y) ||
                             monvector[i].stuck){
-                            TCODRandom * wtf = TCODRandom::getInstance(); // initializer for random, no idea why
 
                             // randomly pick a destination that is valid on the map
                             int vagab_x = 0;
                             int vagab_y = 0;
                             bool retry = true;
                             while(retry){ 
-                                vagab_x = wtf->getInt(monvector[i].x - 30, monvector[i].x + 30, 0);
+                                vagab_x = rng(monvector[i].x - 30, monvector[i].x + 30);
                                 if (vagab_x < 0) vagab_x = 0;
                                 if (vagab_x > MAP_WIDTH) vagab_x = MAP_WIDTH;
-                                vagab_y = wtf->getInt(monvector[i].y - 30, monvector[i].y + 30, 0);
+                                vagab_y = rng(monvector[i].y - 30, monvector[i].y + 30);
                                 if (vagab_y < 0) vagab_y = 0;
                                 if (vagab_y > MAP_HEIGHT) vagab_y = MAP_HEIGHT;
                                 if(!map_array[(vagab_y) * MAP_WIDTH + (vagab_x)].blocked) retry = false;

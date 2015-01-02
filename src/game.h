@@ -81,11 +81,14 @@ const int t16_corpse = 506; // corpse
 };
 
 // bool used for background color presence
-struct msg_log { char message [94]; TCODColor color1; TCODColor color2; TCODColor color3; TCODColor color4; TCODColor
-    color5; TCODColor color6; TCODColor color7; TCODColor color8; TCODColor color9; TCODColor color10; bool c1;
-    bool c2; bool c3; bool c4; bool c5; bool c6; bool c7; bool c8; bool c9; bool c10;
+struct msg_log { 
+    char message [94]; 
+    TCODColor color1; TCODColor color2; TCODColor color3; TCODColor color4; TCODColor
+    color5; TCODColor color6; TCODColor color7; TCODColor color8; TCODColor color9; TCODColor color10; 
+    bool c1; bool c2; bool c3; bool c4; bool c5; bool c6; bool c7; bool c8; bool c9; bool c10;
     TCODColor bcolor1; TCODColor bcolor2; TCODColor bcolor3; TCODColor bcolor4; TCODColor bcolor5; TCODColor bcolor6;
-    TCODColor bcolor7; TCODColor bcolor8; TCODColor bcolor9; TCODColor bcolor10;};
+    TCODColor bcolor7; TCODColor bcolor8; TCODColor bcolor9; TCODColor bcolor10;
+};
 
 struct msg_log_c { bool is_context; int ltype;}; 
 

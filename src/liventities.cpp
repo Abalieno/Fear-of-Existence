@@ -832,7 +832,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
                 TCOD_COLCTRL_1, txt_atype(location), TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, txt_aspect(aspect.second), TCOD_COLCTRL_STOP,
                 TCOD_COLCTRL_1, txt_loc(finloc), TCOD_COLCTRL_STOP);
         msg_log_list.push_back(msgh);
-        sprintf(msgh.message, "  Damage done: %c%d%c. Index(%c%d%c) STR(%c%d%c) Weapon(%c%d%c) Armor Abs.(%c%d%c)", 
+        sprintf(msgh.message, "  Damage done: %c%d%c. Index(%c%d%c) + STR(%c%d%c) + Weapon(%c%d%c) - Armor Abs.(%c%d%c)", 
                 TCOD_COLCTRL_2, dam_text, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, txt_index, TCOD_COLCTRL_STOP, 
                 TCOD_COLCTRL_1, astrength, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, aspect.first, TCOD_COLCTRL_STOP, 
                 TCOD_COLCTRL_1, armor_prot, TCOD_COLCTRL_STOP);
