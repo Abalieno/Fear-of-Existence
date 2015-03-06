@@ -131,10 +131,11 @@ struct global_state{
     int bigg3;
     int mapmode;
 
-    bool first; // used to set player combat states
-    bool second;
-    bool third;
-    bool fourth;
+    bool first; // HOLD used to set player combat states
+    bool second; // MOVE
+    bool third; // ATTACK
+    bool fourth; // PASS
+    bool fire; // FIRE
     bool mode_move;
     bool mode_attack;
     bool mode_pass;

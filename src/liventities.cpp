@@ -451,7 +451,7 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
     std::vector<std::vector <preciseloc>> prec_loc;
     build_preciseloc(prec_loc);
 
-    if(who){ // if MONSTER
+    if(who){ // if MONSTER is attacking
         AML = monster.stats.ML; // basic skill
         wpn_AC = monster.stats.wpn1.wpn_AC;
         monsterS = &AML;
@@ -505,7 +505,9 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
             armortemp.P = monster.armor_tot[n].P;
             armor_used.push_back(armortemp);
         }
-    } 
+    }
+
+    //TCODConsole::waitForKeypress(true);
 
     std::cout << "------------------------" << std::endl;
 
@@ -590,7 +592,9 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
     }
     if( (aspect.second == 0 || aspect.second == 1) && close_quarters ){
         wpn_AC = 5 - wpn_AC;
-    }    
+    }   
+
+    //TCODConsole::waitForKeypress(true);
 
     // crit chances
     int a_crit = AML / 10;

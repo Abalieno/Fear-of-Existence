@@ -1778,13 +1778,17 @@ void Message_Log(){
         MSG_HEIGHT = 75; // 5 times the 15 standard
         whatpanel = panel_xtd;
         panel_offset = 0;
+        panel->setDefaultForeground(TCODColor::red);
+        panel->putChar(33, 1, 25, TCOD_BKGND_SET); // expand button
+        panel->setDefaultForeground(TCODColor::white);
     } else {
         MSG_HEIGHT = 15;
         whatpanel = panel;
         panel_offset = 34;
+        panel->setDefaultForeground(TCODColor::red);
+        panel->putChar(33, 1, 24, TCOD_BKGND_SET); // expand button
+        panel->setDefaultForeground(TCODColor::white);
     }    
-
-    panel->putChar(33, 1, 18, TCOD_BKGND_SET);
 
     if(msg_log_list.size() > 0){
         whatpanel->setDefaultForeground(stdlogc);
@@ -1818,24 +1822,15 @@ void Message_Log(){
             a++;
             bump = 1;
         }
-
-        // just draws frame (not on extended panel)
-        for (int n = 0; n < 7; ++n){
-            panel->setDefaultForeground(TCODColor::lighterGrey);
-            panel->setDefaultBackground(TCODColor::black);
-            panel->print(32, n+1, "%c", TCOD_CHAR_VLINE);
-        }
-        for (int n = 0; n < 20; ++n){
-            panel->setDefaultForeground(TCODColor::lighterGrey);
-            panel->setDefaultBackground(TCODColor::black);
-            panel->print(n+33, 0, "%c", TCOD_CHAR_HLINE);
-        } 
-        panel->print(32, 0, "%c", TCOD_CHAR_NW);
-
     } else {
         whatpanel->print(panel_offset, 2, ">Message Log currently empty");
     }
-
+    // just draws frame (not on extended panel)
+    for (int n = 0; n < 16; ++n){
+        panel->setDefaultForeground(TCODColor::lighterGrey);
+        panel->setDefaultBackground(TCODColor::black);
+        panel->print(33, n+2, "%c", TCOD_CHAR_VLINE);
+    }
 }
 
 void render_messagelog(){
@@ -3090,7 +3085,7 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
 
     unsigned int target = 0;
     bool is_it = false;
-   
+  
     // checks if monster is in next cell
     for (unsigned int i = 0; i<monvector.size(); ++i){ 
         if (monvector[i].x == x && monvector[i].y == y){
@@ -3208,7 +3203,17 @@ void ranged_target(Game &GAME){
     TCOD_mouse_t mouse;
     TCOD_key_t key;
     TCOD_event_t eve;
+    bool second = false;
+    uint32 millisecond = 0;
+    mouse.lbutton = 0; // trying to reset
+    int targetx = -1;
+    int targety = -1;
     do{
+        uint32 millicounter = TCODSystem::getElapsedMilli();
+        if(millicounter > millisecond){ 
+            millisecond = millicounter + 500;
+            second = !second;
+        }    
         render_all(GAME);
         I_am_moused(GAME);
         if(GAME.gstate.mapx != -1 && GAME.gstate.mapy != -1){
@@ -3216,9 +3221,9 @@ void ranged_target(Game &GAME){
 
             int x = GAME.player->x;
             int y = GAME.player->y;
+            int nonx = 0;
+            int nony = 0;
             while (!TCODLine::step(&x,&y)) {
-                int nonx = 0;
-                int nony = 0;
                 
                 if (!GAME.gstate.bigg){
                     nonx = x - GAME.gstate.off_xx;
@@ -3227,16 +3232,26 @@ void ranged_target(Game &GAME){
                     nonx = ((x*2) - GAME.gstate.off_xx)-28;
                     nony = ((y*2) - GAME.gstate.off_yy)-18;
                 }
-                if(!GAME.gstate.fov_map->isInFov(x,y)) break;
+                if( (GAME.gstate.fov_map->isInFov(x,y) || map_array[y * MAP_WIDTH + x].explored) 
+                        && map_array[y * MAP_WIDTH + x].blocked) break;
+                if(x == GAME.gstate.mapx && y == GAME.gstate.mapy) break; // origin
                 TCODConsole::root->setDefaultForeground(TCODColor::yellow);
                 TCODConsole::root->putChar(nonx, nony, 178, TCOD_BKGND_SET);
-            } 
+            }
+            if((x != GAME.player->x || y != GAME.player->y) && second){
+                TCODConsole::root->setDefaultForeground(TCODColor::red);
+                TCODConsole::root->putChar(nonx, nony, '*', TCOD_BKGND_SET);
+            }
+            targetx = nonx;
+            targety = nony;
         }
         if(mouse.lbutton) range_td = true;
+        //std::cout << "rangevar: " << range_td << " mouse: " << mouse.lbutton << std::endl;
         eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
         TCODConsole::flush(); // this updates the screen
-    } while ( (eve != TCOD_EVENT_KEY_PRESS || key.vk != TCODK_ESCAPE) && !range_td);
+    } while ( (eve != TCOD_EVENT_KEY_PRESS || (key.vk != TCODK_ESCAPE && key.c != 'e')) && !range_td );
     GAME.gstate.modal = false; // re-enables overlays
+    fetch = 1; // abort firing
     return;
 }    
 
@@ -3275,6 +3290,9 @@ int handle_keys(Object_player &duh, Game &tgame) {
         if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'a' && wid_prompt_open){
             if(tgame.gstate.third) fetch = 3;
         }
+        if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'f' && wid_prompt_open){
+            if(tgame.gstate.third) fetch = 5;
+        }
     }
     if (eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'e' && wid_prompt_open){
         if(tgame.gstate.mode_move || tgame.gstate.mode_attack) fetch = 1;
@@ -3286,10 +3304,6 @@ int handle_keys(Object_player &duh, Game &tgame) {
         TCODSystem::setFps(LIMIT_FPS);
     }   
 
-    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'l' ) {
-        ranged_target(tgame);
-    }    
-  
     if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'q' ) return quit;
 
     if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'x' ) return quit2; // quit combat
@@ -3878,10 +3892,10 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     GAME.gstate.fov_recompute = true;
     render_all(GAME);
 
-    GAME.gstate.first = false;
-    GAME.gstate.second = false;
-    GAME.gstate.third = false;
-    GAME.gstate.fourth = true;
+    GAME.gstate.first = false; // HOLD
+    GAME.gstate.second = false; // MOVE
+    GAME.gstate.third = false; // ATTACK 
+    GAME.gstate.fourth = true; // PASS
     GAME.gstate.mode_move = false;
     GAME.gstate.mode_attack = false;
     GAME.gstate.mode_pass = false;
@@ -3897,7 +3911,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
     // PLAYER BLOCK
     // PLAYER BLOCK
-    int action = 0; 
+    int action = 0; // option selected in combat prompt 
     int phasemove = 0; // used to count movements done during phase
     bool exitcycle = false;
     while (player.combat_move >= 1 && !exitcycle){
@@ -3906,9 +3920,9 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
         player_action = handle_keys(player, GAME);
 
-        if(fetch != 0){ 
-            action = fetch;
-            fetch = 0;
+        if(fetch != 0){  
+            action = fetch; // return combat prompt selection from handle_key
+            fetch = 0; // fetch is global
         }  
 
         if(action == 1){ // HOLD
@@ -3946,6 +3960,11 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
         if(action == 3 && player.combat_move >= 4){ // ATTACK
             GAME.gstate.mode_attack = true;
+        }
+
+        if(action == 5 && player.combat_move >= 4){ // FIRE
+            GAME.gstate.mode_attack = true;
+            ranged_target(GAME);
         }
 
         if (player_action == quit2){ // quit combat
@@ -4049,10 +4068,10 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     player.phase_attack = 0;
     GAME.gstate.fov_recompute = true;
     render_all(GAME);
-    TCODConsole::blit(widget_popup,0,0,35,1,TCODConsole::root, 40, 66);
+    //TCODConsole::blit(widget_popup,0,0,35,1,TCODConsole::root, 40, 66);
     TCODConsole::flush(); // this updates the screen
 
-    TCODConsole::waitForKeypress(true);
+    //TCODConsole::waitForKeypress(true);
     return 0;
 }  
 
@@ -4203,7 +4222,7 @@ int main() {
     // SETS MORE PLAYER ATTRIBUTES
     player.combat_move = 8; // movement points
     player.speed = 6;
-    // wrapon setup
+    // weapon setup
     player.stats.wpn1.wpn_AC = 3;
     player.stats.wpn1.wpn_DC = 2;
     player.stats.wpn1.wpn_B = 3;
@@ -4377,18 +4396,16 @@ int main() {
         print_c64(TCODConsole::root, 6, 10, "FEAR OF EXISTENCE.", fadec, TCODColor::black);
         TCODConsole::checkForKeypress();
         TCODConsole::flush();
-        colfr = colfr + 3;
-        colfg = colfg + 3;
-        colfb = colfb + 3;
-        fade = fade + 3;
+        colfr = colfr + 5;
+        colfg = colfg + 5;
+        colfb = colfb + 5;
+        fade = fade + 5;
     } 
 
-    int cnt = 0;
-    for(int i = 0; i < 1000; i++){
-        int rnd = rng(1, 100);
-        if (rnd > 50) cnt++;
-    }    
-    std::cout << "RND TEST: " << cnt << "/10000" << std::endl;
+    std::vector<int> buckets( 100 );
+    for( int i = 0; i < 100000; ++i ) { ++buckets.at(rng(0,99 ) ); }
+    for( int i = 0; i < 100; ++i ) { std::cout << buckets[ i ] << "\t"; }
+        
 
     int menu_index = 1;
 
@@ -4410,6 +4427,14 @@ int main() {
         player.skill.lswdDML = 85;
         player.stats.hp = 120;
         player.stats.max_hp = 120;
+        GAME.player->skill.initML = 80;
+        for(unsigned int n = 0; n < 16; ++n){ // fixes crash for non generated char
+            armorsection armortemp;
+            armortemp.B = 5;
+            armortemp.E = 6;
+            armortemp.P = 3;
+            GAME.player->armor_tot.push_back(armortemp);
+        }
     }    
 
     TCODConsole::root->clear();

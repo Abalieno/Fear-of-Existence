@@ -1,4 +1,4 @@
-LIBTCODDIR=D:/foe/libtcod-svn
+LIBTCODDIR=Y:/BACKUP/D/foe/libtcod-svn
 SRCDIR=./src
 INCDIR=$(LIBTCODDIR)/include
 LIBDIR=$(LIBTCODDIR)/lib 
