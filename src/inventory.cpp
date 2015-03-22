@@ -14,5 +14,7 @@ int Generic_object::posx(){
 
 int Generic_object::posy(){
     return y;
-}    
+}  
+
+    
 

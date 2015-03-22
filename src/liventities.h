@@ -94,6 +94,11 @@ class Skill {
         int lswdAB;
         int lswdDB;
 
+        int bowSB;
+        int bowML;
+
+        int rangedAML;
+
         int mobiSB;
         int mobiML;
         int uarmSB;
@@ -274,6 +279,9 @@ public: // public should be moved down, but I keep it here for debug messages
     Fighter stats;
     Skill skill;
 
+    bool rangeweapon; // to switch combat mode
+    int eRangedDW; // Ranged weapon Draw Weight
+
     int combat_move;
     int combat_move_max;
     int move_counter; // how many steps moved in the turn
@@ -343,7 +351,7 @@ public:
 
 bool is_overpower(int askill, int aroll, int dskill, int droll);
 
-
+int switchweapon(Game &GAME, bool mode);
 
 
 #endif

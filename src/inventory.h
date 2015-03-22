@@ -1,6 +1,7 @@
 #ifndef _INVENTORY_H_
 #define _INVENTORY_H_
 
+
 class Generic_object {
 public:
     char name[60];
@@ -19,8 +20,7 @@ private:
     int y;
     
 
-};    
-
+}; 
 
 
 #endif

@@ -153,7 +153,7 @@ int wid_help = 0;
 int wid_rpanel_open = 0;
 bool wid_prompt_open = false; // player combat prompt panel
 int prompt_selection = 0; // which option is selected
-int fetch = 0; // returns confirmed selection
+int fetch = 0; // returns player command during combat
 
 /*
 TCODMap * fov_map_mons = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
@@ -1450,7 +1450,7 @@ void overlay(int who, int mapx, int mapy, int realx, int realy, bool bigg){
 }    
 
 void I_am_moused(Game &tgame){
-    
+   
     mousez = TCODMouse::getStatus();
     int x = mousez.cx;
     int y = mousez.cy;
@@ -1516,6 +1516,10 @@ void I_am_moused(Game &tgame){
     if(wid_top_open){
         if(mousez.lbutton && y == 0 && (x >= 92 && x <= 94)) {
             wid_help = 1;
+        }
+        if(mousez.lbutton_pressed && (y == 0 && x == 27) ) { // set ranged mode or melee
+            fetch = switchweapon(tgame, combat_mode); // in inventory.h 
+            release_button = 0;
         }
         if(mousez.lbutton && x == 4 && y == 0) {
             if(tgame.gstate.mapmode != 1){
@@ -2095,9 +2099,14 @@ void render_top(Game &tgame){
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::lighterYellow);
         widget_top->print(24, 0, "%cCi%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+
+        if(tgame.player->rangeweapon) TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+        else TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);    
+        widget_top->print(27, 0, "%cR%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         
         // fps count
         int fpscount = TCODSystem::getFps();
+        TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
         //TCODConsole::root->print(100, 0, "FPS: %d", fpscount);
         widget_top->print(100, 0, "%cFPS: %d%c", TCOD_COLCTRL_1, fpscount, TCOD_COLCTRL_STOP);
         widget_top->print(92, 0, "%c>?<%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
@@ -3206,8 +3215,12 @@ void ranged_target(Game &GAME){
     bool second = false;
     uint32 millisecond = 0;
     mouse.lbutton = 0; // trying to reset
+
     int targetx = -1;
     int targety = -1;
+    int stepdistance = 0; // distance
+    int rangepenalty = 0;
+
     do{
         uint32 millicounter = TCODSystem::getElapsedMilli();
         if(millicounter > millisecond){ 
@@ -3223,6 +3236,7 @@ void ranged_target(Game &GAME){
             int y = GAME.player->y;
             int nonx = 0;
             int nony = 0;
+            stepdistance = 0; // reset distance on redraw
             while (!TCODLine::step(&x,&y)) {
                 
                 if (!GAME.gstate.bigg){
@@ -3232,6 +3246,7 @@ void ranged_target(Game &GAME){
                     nonx = ((x*2) - GAME.gstate.off_xx)-28;
                     nony = ((y*2) - GAME.gstate.off_yy)-18;
                 }
+                ++stepdistance;
                 if( (GAME.gstate.fov_map->isInFov(x,y) || map_array[y * MAP_WIDTH + x].explored) 
                         && map_array[y * MAP_WIDTH + x].blocked) break;
                 if(x == GAME.gstate.mapx && y == GAME.gstate.mapy) break; // origin
@@ -3242,6 +3257,17 @@ void ranged_target(Game &GAME){
                 TCODConsole::root->setDefaultForeground(TCODColor::red);
                 TCODConsole::root->putChar(nonx, nony, '*', TCOD_BKGND_SET);
             }
+            if(stepdistance <= 5) rangepenalty = 0;
+            else if(stepdistance > 5 && stepdistance <= 10) rangepenalty = 5;
+            else if(stepdistance > 10 && stepdistance <= 20) rangepenalty = 10;
+            else if(stepdistance > 20 && stepdistance <= 35) rangepenalty = 20;
+            else if(stepdistance > 35 && stepdistance <= 70) rangepenalty = 35;  
+            if(stepdistance <= 70 && stepdistance > 0){ 
+                if((GAME.player->skill.rangedAML - rangepenalty) > 0)
+                        TCODConsole::root->setDefaultForeground(TCODColor::lightGreen);
+                else TCODConsole::root->setDefaultForeground(TCODColor::red);  
+                TCODConsole::root->print(nonx+2, nony, "%d%%", GAME.player->skill.rangedAML - rangepenalty);  
+            }    
             targetx = nonx;
             targety = nony;
         }
@@ -3252,6 +3278,9 @@ void ranged_target(Game &GAME){
     } while ( (eve != TCOD_EVENT_KEY_PRESS || (key.vk != TCODK_ESCAPE && key.c != 'e')) && !range_td );
     GAME.gstate.modal = false; // re-enables overlays
     fetch = 1; // abort firing
+    std::cout << "distance: " << stepdistance << std::endl;
+
+    TCODLine::init(GAME.player->x,GAME.player->y,GAME.gstate.mapx,GAME.gstate.mapy);
     return;
 }    
 
@@ -3888,6 +3917,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     bool in_sight = false;
     GAME.gstate.con->clear();
     TCODConsole::root->clear();
+    fetch = 0; // resets fetch to avoid skipping turn when swapping weapon (fetch assigned in mouse function)
 
     GAME.gstate.fov_recompute = true;
     render_all(GAME);
@@ -3920,7 +3950,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
         player_action = handle_keys(player, GAME);
 
-        if(fetch != 0){  
+        if(fetch != 0){ // fetch is global in main 
             action = fetch; // return combat prompt selection from handle_key
             fetch = 0; // fetch is global
         }  
@@ -3960,11 +3990,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
         if(action == 3 && player.combat_move >= 4){ // ATTACK
             GAME.gstate.mode_attack = true;
-        }
-
-        if(action == 5 && player.combat_move >= 4){ // FIRE
-            GAME.gstate.mode_attack = true;
-            ranged_target(GAME);
+            if(GAME.player->rangeweapon) ranged_target(GAME);
         }
 
         if (player_action == quit2){ // quit combat
@@ -4052,7 +4078,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
             Message_Log();
         }
         render_all(GAME);
-        I_am_moused(GAME);
+        I_am_moused(GAME); 
         TCODConsole::flush(); // this updates the screen
     }
     // PLAYER BLOCK
@@ -4070,7 +4096,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     render_all(GAME);
     //TCODConsole::blit(widget_popup,0,0,35,1,TCODConsole::root, 40, 66);
     TCODConsole::flush(); // this updates the screen
-
+    
     //TCODConsole::waitForKeypress(true);
     return 0;
 }  
@@ -4237,9 +4263,14 @@ int main() {
     player.stats.wpn1.wpn_aspect = 2;
     player.stats.wpn1.reach = 4;
 
+    player.skill.rangedAML = 65;
+
     player.stats.ML = 60;
     player.phase = 2; // 1veryfast 2fast 3average 4slow 5veryslow 
     player.att_phase = 3; // boardsword is average
+
+    player.rangeweapon = 0; // set melee as default
+    player.eRangedDW = 80; // Ranged Weapon default draw weight
 
     build_armor(GAME);
 
@@ -4428,6 +4459,7 @@ int main() {
         player.stats.hp = 120;
         player.stats.max_hp = 120;
         GAME.player->skill.initML = 80;
+        player.skill.bowML = 50;
         for(unsigned int n = 0; n < 16; ++n){ // fixes crash for non generated char
             armorsection armortemp;
             armortemp.B = 5;
@@ -4723,9 +4755,11 @@ int main() {
                 monsters.push_back(tempm);
 
                 msg_log msg1;
-                sprintf(msg1.message, "Player initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                sprintf(msg1.message, "%c>%c%c>%cPlayer initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                        TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                         *tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, player.initiative);
                 msg1.color1 = dicec;
+                msg1.color2 = TCODColor::lighterBlue;
                 msg_log_list.push_back(msg1);
 
                 // SORTING INITIATIVE
@@ -4777,7 +4811,7 @@ int main() {
             TCODConsole::blit(widget_popup,0,0,36,3,TCODConsole::root, 40, 65);
             TCODConsole::flush(); // this updates the screen
 
-            TCODConsole::waitForKeypress(true); // to start combat
+            TCODSystem::waitForEvent(TCOD_EVENT_KEY_PRESS,0,0,true);
 
             mon_list.clear(); // mouse lookup
 

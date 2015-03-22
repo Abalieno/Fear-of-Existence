@@ -9,6 +9,8 @@
 #include "liventities.h"
 #include "colors.h"
 
+#include "debug.h"
+
 extern std::vector<msg_log> msg_log_list;
 extern std::vector<msg_log_c> msg_log_context;
 
@@ -907,4 +909,59 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
 
 void move_obj(int x, int y, std::vector<Generic_object> &wrd_inv){
     //drop_to(x, y);
-}    
+}
+
+int switchweapon(Game &GAME, bool mode){
+    
+    msg_log msgd;
+    int sindex = GAME.player->skill.bowML / 10;
+    debugmsg("Bow skill index: %d", sindex);
+    int formula = (GAME.player->STR + sindex) * 5;
+    debugmsg("Usable Draw Weight: %d", formula);
+    bool is_ok = false;
+    if(formula >= GAME.player->eRangedDW) is_ok = true;
+
+    if(GAME.player->combat_move < 4){ 
+        GAME.player->rangeweapon = false;
+        sprintf(msgd.message, "Not enough movement points to swap weapons.");
+        msg_log_list.push_back(msgd);
+        return 0;
+    }    
+
+    if(!GAME.player->rangeweapon){ // only if trying to equip a bow 
+        msgd.color1 = dicec;
+        sprintf(msgd.message, "Draw Weight = (STR + Bow Skill Index) * 5 / (%c%d%c+%c%d%c)*5 = %c%d%c", 
+                TCOD_COLCTRL_1, GAME.player->STR, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, sindex, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, formula, TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgd); 
+    }
+
+    if(GAME.player->rangeweapon){ // switch back to melee, always possible 
+        GAME.player->rangeweapon = false;
+        sprintf(msgd.message, "Sword equipped. Melee mode active.");
+        msg_log_list.push_back(msgd);
+        GAME.player->combat_move -= 4;
+        if(mode) return 1;
+        else return 0;
+    } else if (is_ok){ 
+        GAME.player->rangeweapon = true;
+        msgd.color1 = dicec;
+        msgd.color2 = TCODColor::lightGreen;
+        sprintf(msgd.message, "Bow equipped. Draw Weight needed: %c%d%c Have: %c%d%c", TCOD_COLCTRL_1, GAME.player->eRangedDW, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_2, formula, TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgd);
+        GAME.player->combat_move -= 4;
+        if(mode) return 1;
+        else return 0;
+    } else { 
+        debugmsg("Can't equip bow.  Needed: %d Have: %d", GAME.player->eRangedDW, formula);
+        msgd.color1 = dicec;
+        msgd.color2 = TCODColor::red;
+        sprintf(msgd.message, "Can't equip bow. Needed: %c%d%c Have: %c%d%c", TCOD_COLCTRL_1, GAME.player->eRangedDW, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_2, formula, TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgd);
+        return 0;
+    } 
+    return 0;
+}
