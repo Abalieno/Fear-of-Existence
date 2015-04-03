@@ -281,9 +281,15 @@ public: // public should be moved down, but I keep it here for debug messages
 
     bool rangeweapon; // to switch combat mode
     int eRangedDW; // Ranged weapon Draw Weight
+    
+    bool forcedswap; // burn turns ahead to swap weapons 
 
-    int combat_move;
-    int combat_move_max;
+    int combat_move; // obsolete -> AP
+    int combat_move_max; // obsolete -> APm
+    int AP; // Action Points
+    int APm; // Max Action Points
+    int APburn; // AP to burn into next turn, when action is in progress
+
     int move_counter; // how many steps moved in the turn
     int speed;
     int initiative;
@@ -353,5 +359,6 @@ bool is_overpower(int askill, int aroll, int dskill, int droll);
 
 int switchweapon(Game &GAME, bool mode);
 
+void switchweapon_ex(Game &GAME);
 
 #endif

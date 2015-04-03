@@ -912,7 +912,16 @@ void move_obj(int x, int y, std::vector<Generic_object> &wrd_inv){
 }
 
 int switchweapon(Game &GAME, bool mode){
-    
+
+    // AP usage to swap equipment, based on Agility
+    int action = 8;
+    if (GAME.player->AGI >= 12 && GAME.player->AGI <= 14) action -= 1;
+    else if (GAME.player->AGI == 15 || GAME.player->AGI == 16) action -= 2;
+    else if (GAME.player->AGI == 17) action -= 3;
+    else if (GAME.player->AGI == 18) action -= 4;
+    else if (GAME.player->AGI > 18) action -= 4 + (GAME.player->AGI - 18);
+    if(action <= 0) action = 1;
+
     msg_log msgd;
     int sindex = GAME.player->skill.bowML / 10;
     debugmsg("Bow skill index: %d", sindex);
@@ -921,38 +930,29 @@ int switchweapon(Game &GAME, bool mode){
     bool is_ok = false;
     if(formula >= GAME.player->eRangedDW) is_ok = true;
 
-    if(GAME.player->combat_move < 4){ 
-        GAME.player->rangeweapon = false;
-        sprintf(msgd.message, "Not enough movement points to swap weapons.");
+    if(GAME.player->AP < action && !GAME.player->forcedswap){ 
+        //GAME.player->rangeweapon = false;
+        sprintf(msgd.message, "Not enough movement points to swap weapons. Press again to force.");
         msg_log_list.push_back(msgd);
+        GAME.player->forcedswap = true;
         return 0;
     }    
 
-    if(!GAME.player->rangeweapon){ // only if trying to equip a bow 
-        msgd.color1 = dicec;
-        sprintf(msgd.message, "Draw Weight = (STR + Bow Skill Index) * 5 / (%c%d%c+%c%d%c)*5 = %c%d%c", 
-                TCOD_COLCTRL_1, GAME.player->STR, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_1, sindex, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_1, formula, TCOD_COLCTRL_STOP);
-        msg_log_list.push_back(msgd); 
-    }
-
     if(GAME.player->rangeweapon){ // switch back to melee, always possible 
-        GAME.player->rangeweapon = false;
-        sprintf(msgd.message, "Sword equipped. Melee mode active.");
+        sprintf(msgd.message, "Player weapon switch in progress.");
         msg_log_list.push_back(msgd);
-        GAME.player->combat_move -= 4;
-        if(mode) return 1;
+        GAME.player->APburn = action;
+        //GAME.player->AP -= action;
+        GAME.player->forcedswap = false;
+        if(mode) return 6;
         else return 0;
-    } else if (is_ok){ 
-        GAME.player->rangeweapon = true;
-        msgd.color1 = dicec;
-        msgd.color2 = TCODColor::lightGreen;
-        sprintf(msgd.message, "Bow equipped. Draw Weight needed: %c%d%c Have: %c%d%c", TCOD_COLCTRL_1, GAME.player->eRangedDW, TCOD_COLCTRL_STOP,
-                TCOD_COLCTRL_2, formula, TCOD_COLCTRL_STOP);
+    } else if (is_ok){
+        sprintf(msgd.message, "Player weapon switch in progress.");
         msg_log_list.push_back(msgd);
-        GAME.player->combat_move -= 4;
-        if(mode) return 1;
+        GAME.player->APburn = action;
+        //GAME.player->AP -= action;
+        GAME.player->forcedswap = false;
+        if(mode) return 6;
         else return 0;
     } else { 
         debugmsg("Can't equip bow.  Needed: %d Have: %d", GAME.player->eRangedDW, formula);
@@ -961,7 +961,41 @@ int switchweapon(Game &GAME, bool mode){
         sprintf(msgd.message, "Can't equip bow. Needed: %c%d%c Have: %c%d%c", TCOD_COLCTRL_1, GAME.player->eRangedDW, TCOD_COLCTRL_STOP,
                 TCOD_COLCTRL_2, formula, TCOD_COLCTRL_STOP);
         msg_log_list.push_back(msgd);
+        msgd.color1 = dicec;
+        sprintf(msgd.message, "  Draw Weight = (STR + Bow Skill Index) * 5 / (%c%d%c+%c%d%c)*5 = %c%d%c", 
+                TCOD_COLCTRL_1, GAME.player->STR, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, sindex, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, formula, TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgd);
+        GAME.player->forcedswap = false;
         return 0;
     } 
     return 0;
 }
+
+void switchweapon_ex(Game &GAME){
+    msg_log msgd;
+    int sindex = GAME.player->skill.bowML / 10;
+    int formula = (GAME.player->STR + sindex) * 5;
+    if(GAME.player->rangeweapon){ // switch back to melee, always possible 
+        GAME.player->rangeweapon = false;
+        sprintf(msgd.message, "Sword equipped. Melee mode active.");
+        msg_log_list.push_back(msgd);
+        return;
+    } else { 
+        GAME.player->rangeweapon = true;
+        msgd.color1 = dicec;
+        msgd.color2 = TCODColor::lightGreen;
+        sprintf(msgd.message, "Bow equipped. Draw Weight needed: %c%d%c Have: %c%d%c", TCOD_COLCTRL_1, GAME.player->eRangedDW, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_2, formula, TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgd);
+        msgd.color1 = dicec;
+        sprintf(msgd.message, "  Draw Weight = (STR + Bow Skill Index) * 5 / (%c%d%c+%c%d%c)*5 = %c%d%c", 
+                TCOD_COLCTRL_1, GAME.player->STR, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, sindex, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_1, formula, TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgd);
+        return;
+    }
+    return;
+}    

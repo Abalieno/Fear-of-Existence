@@ -1741,40 +1741,45 @@ void render_bar(int x, int y, int total_width, const char *name,
 void render_bar_s2(int x, int y, int total_width, const char *name, 
         int value, int maximum, TCODColor bar_color, TCODColor back_color, TCODColor label){
 
-    int bar_width = int(float(value) / maximum * total_width);
-
     panel->setDefaultForeground(back_color);
 
-    //panel->print(x, y, "====================");
-    for (int h = 0; h < total_width; h++){ 
-            panel->putChar((x+h), y, 205);
-    }
+    // |==.==.==.==.==.==.==.==| 25
+    // 1 4 7 10
 
-    
-    panel->rect(x, y, total_width, 1, false,TCOD_BKGND_SET);
-
-    //std::cout << "BAR " << bar_width << std::endl;
-    //std::cout << "value " << value << std::endl;
-    //std::cout << "maximum " << maximum << std::endl;
-    //std::cout << "total_width " << total_width << std::endl;
-    panel->setDefaultForeground(bar_color);
-    if (bar_width > 0){ 
-        for (int g = 0; g < bar_width; g++){ 
-            panel->putChar((x+g), y, 205);
+    panel->setDefaultForeground(TCODColor::lighterGrey);
+    panel->putChar(x, y, '[');
+    int tempmaximum = maximum;
+    int index = 0;
+    int ivalue = maximum - value;
+    for(unsigned int drop = tempmaximum; drop > 0; --drop){
+        if(ivalue){
+            panel->setDefaultForeground(TCODColor::lightRed);
+            panel->putChar(x+index+1, y, '*');
+            --ivalue;
+        } else {    
+            panel->setDefaultForeground(TCODColor::lighterGreen);
+            panel->putChar(x+index+1, y, '=');
         }
-    }
- 
-    panel->setDefaultForeground(TCODColor::white);
-    panel->setAlignment(TCOD_LEFT);
-    TCODConsole::setColorControl(TCOD_COLCTRL_1, label,TCODColor::black);
-    panel->print((x + total_width +1), y, "%s[%c%d%c/%d]",name ,TCOD_COLCTRL_1, value,TCOD_COLCTRL_STOP, maximum);
-    panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
+        panel->setDefaultForeground(TCODColor::lighterGrey);
+        panel->putChar(x+index+2, y, '.');
+        index += 2;
+    } 
+    panel->setDefaultForeground(TCODColor::lighterGrey);
+    panel->putChar(x+index, y, ']');
 
+    panel->setDefaultForeground(TCODColor::lighterGrey);
+    TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::white, TCODColor::black);
+    panel->setAlignment(TCOD_LEFT);
+    if(value <= 0) TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lightRed,TCODColor::black);
+    else TCODConsole::setColorControl(TCOD_COLCTRL_1, label,TCODColor::black);
+    panel->print(13, y-1, "AP: %c%d%c/%c%d%c", TCOD_COLCTRL_1, value, TCOD_COLCTRL_STOP, 
+            TCOD_COLCTRL_2, maximum, TCOD_COLCTRL_STOP);
+    panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
 }
 
-
-
 void Message_Log(){
+
+    panel->setAlignment(TCOD_LEFT);
 
     int panel_offset = 0;
     TCODConsole *whatpanel;
@@ -1797,7 +1802,7 @@ void Message_Log(){
     if(msg_log_list.size() > 0){
         whatpanel->setDefaultForeground(stdlogc);
         whatpanel->setBackgroundFlag(TCOD_BKGND_SET);
-        whatpanel->print(panel_offset, 2, ">");
+        //whatpanel->print(panel_offset, 2, ">");
         /* 
         while(msg_log_list.size() > 80){
             msg_log_list.erase(msg_log_list.begin(),msg_log_list.begin()+1);
@@ -1850,13 +1855,18 @@ void render_messagelog(){
             panel->print(win_x-3, (win_y - MAP_HEIGHT_AREA)-3, "%c[%c%c^%c%c]%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP,
                     TCOD_COLCTRL_4, TCOD_COLCTRL_STOP, TCOD_COLCTRL_5, TCOD_COLCTRL_STOP);
             panel->setAlignment(TCOD_LEFT);
-            render_bar(1, 1, BAR_WIDTH, "HP", player.stats.hp, player.stats.max_hp,
-            TCODColor::lightRed, TCODColor::darkerRed);
+            //render_bar(1, 1, BAR_WIDTH, "HP", player.stats.hp, player.stats.max_hp, TCODColor::lightRed, TCODColor::darkerRed);
+            if(player.stats.hp <= 5) TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::lightRed,TCODColor::black);
+            else TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
+            panel->setDefaultForeground(TCODColor::lighterGrey);
+            TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::white, TCODColor::black);
+            panel->print(1, 1, "HP: %c%d%c/%c%d%c", TCOD_COLCTRL_1, player.stats.hp, TCOD_COLCTRL_STOP, 
+                    TCOD_COLCTRL_2, player.stats.max_hp, TCOD_COLCTRL_STOP);        
             TCODColor mov_bar;
-            if (player.combat_move < 4)
+            if (player.AP < 4)
                 mov_bar = TCODColor::red;
-                else mov_bar = TCODColor::white;
-            render_bar_s2(1, 2, BAR_WIDTH, "Mov", player.combat_move, 8,
+            else mov_bar = TCODColor::white;
+            render_bar_s2(1, 2, BAR_WIDTH, "Mov", player.AP, player.APm,
                 TCODColor::lightPurple, TCODColor::darkerPurple, mov_bar);
             TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT_AREA+2);
             if(MSG_MODE_XTD) TCODConsole::blit(panel_xtd,0,0,0,0,TCODConsole::root,34,(MAP_HEIGHT_AREA+2)-60);
@@ -1908,7 +1918,6 @@ void render_help(){
 void render_base(Game &tgame){
     TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::root->setDefaultForeground(TCODColor::white);
-        TCODConsole::root->print(1, MAP_HEIGHT_AREA+3, "Use arrows to move");
         TCODConsole::root->print(1, win_y-3, "Press 'q' to quit");
         
         TCODConsole::root->setAlignment(TCOD_RIGHT);
@@ -2214,7 +2223,8 @@ void render_prompt(Game &GAME){
                         break;
                 }    
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::darkGrey,TCODColor::black);
-                TCODConsole::root->print(loc_x+6, loc_y+5, ">Attack phase: %c%d%c",
+                if(GAME.player->AP < 4) TCODConsole::root->print(loc_x+6, loc_y+5, ">Not enough AP");
+                else TCODConsole::root->print(loc_x+6, loc_y+5, ">Attack phase: %c%d%c",
                         TCOD_COLCTRL_5, player.att_phase, TCOD_COLCTRL_STOP);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
                 TCODConsole::root->print(loc_x, loc_y+5, "%cATTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
@@ -3105,13 +3115,13 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
         }
     }
 
-    if(is_it && monvector[target].alive && overpowering) player.combat_move += 4; // gives movement points to add attacks
-    if(is_it && monvector[target].alive && player.combat_move >= 4 && tgame.gstate.mode_attack && player.phase_attack == 0){
+    if(is_it && monvector[target].alive && overpowering) player.AP += 4; // gives movement points to add attacks
+    if(is_it && monvector[target].alive && player.AP >= 4 && tgame.gstate.mode_attack && player.phase_attack == 0){
 
         player.stats.attack(player, monvector[target], 0, player.overpower_l);
         ++player.phase_attack;
 
-        if(!tgame.gstate.no_combat)player.combat_move -= 4; // decrease combat movement only if in combat mode
+        if(!tgame.gstate.no_combat)player.AP -= 4; // decrease combat movement only if in combat mode
         if (monvector[target].stats.hp < 1){
                 //monvector.erase (target); 
                 --killall;
@@ -3646,7 +3656,7 @@ int handle_keys(Object_player &duh, Game &tgame) {
         player.stats.hp = player.stats.max_hp;
         player.selfchar = '@';
         game_state = playing;
-        player.combat_move = 8;
+        player.AP = player.APm;
         set_black(tgame);
         alreadydead = 0;
         //    fov_recompute = true;
@@ -3932,9 +3942,10 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
     if(phase < 9) GAME.gstate.first = true;
     if(player.phase <= phase+1) GAME.gstate.second = true;
-    if(player.att_phase <= phase+1 && player.combat_move >= 4) GAME.gstate.third = true;
 
-    if (player.combat_move > 0){
+    if(player.att_phase <= phase+1 && player.AP >= 4) GAME.gstate.third = true;
+
+    if (player.AP > 0){
         UI_hook(GAME, 4); // hooks the prompt
         wid_prompt_open = true;
     }   
@@ -3944,16 +3955,16 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     int action = 0; // option selected in combat prompt 
     int phasemove = 0; // used to count movements done during phase
     bool exitcycle = false;
-    while (player.combat_move >= 1 && !exitcycle){
+    while (player.AP >= 1 && !exitcycle){ 
 
         bool didmove = false; // flag if player moved in this loop
 
         player_action = handle_keys(player, GAME);
 
-        if(fetch != 0){ // fetch is global in main 
+        if(fetch != 0){ // fetch is global in main, only assigned when key is pressed 
             action = fetch; // return combat prompt selection from handle_key
             fetch = 0; // fetch is global
-        }  
+        } 
 
         if(action == 1){ // HOLD
             for(unsigned int n = 0; n<AllPhases[phase].size(); ++n){ // cycle this phase
@@ -3961,7 +3972,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
                     //AllPhases[phase].erase(AllPhases[phase].begin()+n); // no need, i stays in history
                     Unit tempunit;
                     tempunit.mon_index = 666; // player flag
-                    if(phase == 9) {player.combat_move = 0; break;} // if exausted move steps but phases maxed
+                    if(phase == 9) {player.AP = 0; break;} // if exausted move steps but phases maxed
                     AllPhases[phase+1].push_back(tempunit);
                     int init_ln = 2;
                     mon_list.clear(); // mouse lookup
@@ -3973,13 +3984,27 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
                     break;
                 }
             }    
-        }  
+        } 
+
+        if(player.APburn > 0){ // after HOLD, since HOLD is called after four of APburn
+            ++phasemove;
+            --player.APburn;
+            --player.AP;
+            if(player.APburn == 0){ // execute armor swap
+                switchweapon_ex(GAME);
+            }    
+            if(phasemove == 4){ // skipping phase
+                msg_log msgd;
+                sprintf(msgd.message, "Player skipping combat phase. Action in progress.");
+                msg_log_list.push_back(msgd);
+            }    
+        }
 
         if(action == 4){ // PASS
             int wastestep = 0;
-            while(player.combat_move > 0 && wastestep < 8){ // should be < 4 for just one phase skip
+            while(player.AP > 0 && wastestep < 8){ // should be < 4 for just one phase skip
                 ++wastestep;
-                --player.combat_move;
+                --player.AP;
             } 
             action = 1; // goes to "hold" to jump phase
         }
@@ -3988,7 +4013,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
             GAME.gstate.mode_move = true;
         }  
 
-        if(action == 3 && player.combat_move >= 4){ // ATTACK
+        if(action == 3 && player.AP >= 4){ // ATTACK
             GAME.gstate.mode_attack = true;
             if(GAME.player->rangeweapon) ranged_target(GAME);
         }
@@ -4003,10 +4028,10 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
             return 666;
         } // exits program
       
-        if ((m_x != 0 || m_y != 0 || combat_null) && player.combat_move > 0 && action == 2 && phasemove < 4){
+        if ((m_x != 0 || m_y != 0 || combat_null) && player.AP > 0 && action == 2 && phasemove < 4){
             player.move(m_x, m_y, monvector);
             ++phasemove;
-            --player.combat_move;
+            --player.AP;
             GAME.gstate.fov_recompute = true;
             didmove = true;
             combat_null = false; // reset waiting action
@@ -4068,10 +4093,10 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         render_bar(1, 1, BAR_WIDTH, "HP", player.stats.hp, player.stats.max_hp,
                 TCODColor::lightRed, TCODColor::darkerRed);
         TCODColor mov_bar;
-        if (player.combat_move < 4)
+        if (player.AP < 4)
             mov_bar = TCODColor::red;
         else mov_bar = TCODColor::white;
-        render_bar_s2(1, 2, BAR_WIDTH, "Mov", player.combat_move, 8,
+        render_bar_s2(1, 2, BAR_WIDTH, "Mov", player.AP, player.APm,
                 TCODColor::lightPurple, TCODColor::darkerPurple, mov_bar);
 
         if(msg_log_list.size() > 0){
@@ -4096,6 +4121,8 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     render_all(GAME);
     //TCODConsole::blit(widget_popup,0,0,35,1,TCODConsole::root, 40, 66);
     TCODConsole::flush(); // this updates the screen
+
+    GAME.player->forcedswap = false; // used when forcing swap weapon
     
     //TCODConsole::waitForKeypress(true);
     return 0;
@@ -4233,6 +4260,7 @@ int main() {
     //TCODConsole::setCustomFont("sample_full_unicode.png",TCOD_FONT_LAYOUT_ASCII_INROW,32,2048);
     TCODConsole::initRoot(win_x, win_y, "FOE", false, TCOD_RENDERER_SDL);
     TCODSystem::setFps(LIMIT_FPS);
+
         
     myvector.push_back(&player);
    
@@ -4271,6 +4299,11 @@ int main() {
 
     player.rangeweapon = 0; // set melee as default
     player.eRangedDW = 80; // Ranged Weapon default draw weight
+
+    player.forcedswap = false; // used to burn AP on weapon swap
+    player.APm = 8; // new movement points
+    player.AP = player.APm; // movement points
+    player.APburn = 0; // used APs
 
     build_armor(GAME);
 
@@ -4436,7 +4469,7 @@ int main() {
     std::vector<int> buckets( 100 );
     for( int i = 0; i < 100000; ++i ) { ++buckets.at(rng(0,99 ) ); }
     for( int i = 0; i < 100; ++i ) { std::cout << buckets[ i ] << "\t"; }
-        
+
 
     int menu_index = 1;
 
@@ -4590,6 +4623,11 @@ int main() {
             player.move_counter = 0; // resets number of movements during turn
 
             if (alreadydead) break;
+
+            msg_log msg2;
+            sprintf(msg2.message, "%cROUND START%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            msg2.color1 = TCODColor::magenta;
+            msg_log_list.push_back(msg2);
          
             GAME.gstate.con->clear();
             TCODConsole::root->clear(); 
@@ -4680,7 +4718,7 @@ int main() {
 
                         if(turn > 1){
                             msg_log msg2;
-                            sprintf(msg2.message, "%c!%cJoining the fray: %s.", 
+                            sprintf(msg2.message, "%c!%cJoining the fray: %s", 
                                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, monvector[i].name);
                             msg2.color1 = dicec;
                             msg_log_list.push_back(msg2);
@@ -4689,12 +4727,12 @@ int main() {
 
                         msg_log msg1;
                         if(monvector[i].in_sight)
-                            sprintf(msg1.message, "%c>%c%s initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                            sprintf(msg1.message, "%c>%c%s initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d",
                                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
                                     monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
                                     monvector[i].initiative); 
                         else 
-                            sprintf(msg1.message, "%c>***%c%s initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                            sprintf(msg1.message, "%c>***%c%s initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d",
                                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
                                     monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
                                     monvector[i].initiative);
@@ -4755,7 +4793,7 @@ int main() {
                 monsters.push_back(tempm);
 
                 msg_log msg1;
-                sprintf(msg1.message, "%c>%c%c>%cPlayer initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d.",
+                sprintf(msg1.message, "%c>%c%c>%cPlayer initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d",
                         TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                         *tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, player.initiative);
                 msg1.color1 = dicec;
@@ -4847,22 +4885,29 @@ int main() {
                 } else ++turnseq; 
             }    
             std::cout << "END COMBAT ROUND" << std::endl << std::endl;
-            msg_log msg2;
-            sprintf(msg2.message, "%cROUND END%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-            msg2.color1 = TCODColor::magenta;
-            msg_log_list.push_back(msg2);
             ++turn; // number of turns, starting at 1
             mon_list.clear(); // mouse lookup
+
             // end turn, so resets movement points
-            player.combat_move = 8; // resets player's movement points
+            if(player.AP > 0){ 
+                player.AP = player.APm;
+                player.APburn = 0;
+            } else {
+                //player.APburn = abs(player.AP);
+                //player.AP += player.APm; // resets player's movement points  
+                std::cout << "APburned: " << player.APburn << std::endl;
+            } 
+            player.AP = player.APm;
+
             for(unsigned int b = 0; b<monvector.size(); ++b){
                 if(monvector[b].color == orc) monvector[b].combat_move = 6;
                 else monvector[b].combat_move = 10;
             }
+
         } // while combat_move
 
         } else { // no combat
-            player.combat_move = 8; // for attack when debug disables combat
+            player.AP = player.APm; // for attack when debug disables combat
         } // reset list if combat didn't happen
 
 
@@ -4881,7 +4926,7 @@ int main() {
         } // deactivates combat mode for all monsters, so they are properly re-flagged on next loop 
         
         player_action = handle_keys(player, GAME);
-
+        bool moved = false;
 
         if (player_action == quit) break; // break main while loop to exit program
 
@@ -4989,12 +5034,13 @@ int main() {
                 monvector[i].in_sight = false;
             } // resets monster flag at the end of loop
 
-        
+       
         if (player.stats.hp < 1 && !alreadydead ){
             player_death(GAME);
             alreadydead = 1;
         } else {
             player.move(m_x, m_y, monvector);
+            if( ( m_x != 0) || (m_y != 0) ) moved = true;
             GAME.gstate.fov_recompute = true;
         } // this updates the player movement after the monster turn
 
@@ -5007,8 +5053,15 @@ int main() {
             if (monvector[i].alive){
                 if(monvector[i].combat_move < monvector[i].combat_move_max) ++monvector[i].combat_move;
             }    
-        }    
-        if(player.combat_move < 8) ++player.combat_move; 
+        } 
+        
+        while(player.APburn > 0) {
+            --player.AP; 
+            --player.APburn;
+            if(player.APburn == 0) switchweapon_ex(GAME);
+        }
+        if((player.AP < player.APm) && moved) ++player.AP; // one point for every move 
+        if(moved) player.forcedswap = false;
 
     } // main while cycle END
     return 0;

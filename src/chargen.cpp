@@ -711,6 +711,22 @@ void gen_rollskill(Game &GAME){
     GAME.player->skill.bowML = GAME.player->skill.bowSB * 2;
 }
 
+void gen_othervalues(Game &GAME){
+    //calculating Action Points
+    int points = 8;
+    if(GAME.player->AGI <= 2) points -= 4;
+    else if (GAME.player->AGI == 3 || GAME.player->AGI == 4) points -= 3;
+    else if (GAME.player->AGI == 5 || GAME.player->AGI == 6) points -= 2;
+    else if (GAME.player->AGI == 7 || GAME.player->AGI == 8) points -= 1;
+    else if (GAME.player->AGI >= 12 && GAME.player->AGI <= 14) points += 1;
+    else if (GAME.player->AGI == 15 || GAME.player->AGI == 16) points += 2;
+    else if (GAME.player->AGI == 17) points += 3;
+    else if (GAME.player->AGI == 18) points += 4;
+    else if (GAME.player->AGI > 18) points += 4 + (GAME.player->AGI - 18);
+    GAME.player->APm = points;
+    GAME.player->AP = GAME.player->APm;
+}    
+
 void draw_frame(const char *title1, const char *title2){
     for (int n = 0; n < win_y; ++n){
         TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
@@ -1443,17 +1459,21 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
     local->print(combatpr_x+2, combatpr_y+6, "INITIATIVE");
     local->print(combatpr_x+2, combatpr_y+7, "MOVE");
     local->print(combatpr_x+2, combatpr_y+8, "ENCUMBRANCE PEN.");
+
+    local->print(combatpr_x+2, combatpr_y+10, "Action Points (AP)");
     local->setAlignment(TCOD_RIGHT);
-    local->print(combatpr_x+21, combatpr_y+2, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.condML, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+21, combatpr_y+3, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.dodgML, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+22, combatpr_y+2, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.condML, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+22, combatpr_y+3, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.dodgML, TCOD_COLCTRL_STOP);
     GAME.player->Load = total_weight(GAME);
     if(GAME.player->END < 1) GAME.player->END = 1;
-    local->print(combatpr_x+21, combatpr_y+4, "%c%d%c", TCOD_COLCTRL_2, int(GAME.player->Load) / GAME.player->END, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+21, combatpr_y+5, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END / 6, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+21, combatpr_y+6, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.initML, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+21, combatpr_y+7, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.mobiML / 5, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+22, combatpr_y+4, "%c%d%c", TCOD_COLCTRL_2, int(GAME.player->Load) / GAME.player->END, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+22, combatpr_y+5, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END / 6, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+22, combatpr_y+6, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.initML, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+22, combatpr_y+7, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.mobiML / 5, TCOD_COLCTRL_STOP);
     enc_pen(GAME);
-    local->print(combatpr_x+21, combatpr_y+8, "%c%d%c", TCOD_COLCTRL_2, GAME.player->enc_pen, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+22, combatpr_y+8, "%c%d%c", TCOD_COLCTRL_2, GAME.player->enc_pen, TCOD_COLCTRL_STOP);
+
+    local->print(combatpr_x+22, combatpr_y+10, "%c%d%c", TCOD_COLCTRL_2, GAME.player->APm, TCOD_COLCTRL_STOP);
     combatpr_x = 32;
     local->setAlignment(TCOD_LEFT);
     local->print(combatpr_x, combatpr_y, "%cWEAPON%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -1593,6 +1613,7 @@ int chargen(Game &GAME){
         }
         override:
         gen_rollskill(GAME);
+        gen_othervalues(GAME);
         GAME.player->skill.lswdAB = calc_bonuses(GAME, GAME.player->STR, GAME.player->STR, GAME.player->DEX);
         GAME.player->skill.lswdDB = calc_bonuses(GAME, GAME.player->DEX, GAME.player->DEX, GAME.player->AGI);
         TCODConsole::root->clear();

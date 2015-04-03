@@ -161,6 +161,8 @@ struct global_state{
     bool no_combat; // disable combat mode
     bool debug; // shows all monsters on map, when set
 
+    int combatphase; // storing which phase it is
+
     TCODMap * fov_map;
 
     // hardcoded sizes 
