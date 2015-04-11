@@ -944,6 +944,8 @@ int switchweapon(Game &GAME, bool mode){
         GAME.player->APburn = action;
         //GAME.player->AP -= action;
         GAME.player->forcedswap = false;
+        GAME.player->rangeaim = 0; // resets aim phase
+        GAME.player->aim = 0; // resets aim
         if(mode) return 6;
         else return 0;
     } else if (is_ok){
@@ -952,6 +954,8 @@ int switchweapon(Game &GAME, bool mode){
         GAME.player->APburn = action;
         //GAME.player->AP -= action;
         GAME.player->forcedswap = false;
+        GAME.player->rangeaim = 0; // resets aim phase
+        GAME.player->aim = 0; // resets aim
         if(mode) return 6;
         else return 0;
     } else { 
@@ -998,4 +1002,112 @@ void switchweapon_ex(Game &GAME){
         return;
     }
     return;
+}   
+
+bool is_threat(Game &GAME, const std::vector<Object_monster> &monvector){
+    // checks if monster is in nearby cells
+    for (unsigned int i = 0; i<monvector.size(); ++i){ 
+        if (monvector[i].x == GAME.player->x && monvector[i].y == GAME.player->y-1)
+            if (monvector[i].alive == true) return true;
+        if (monvector[i].x == GAME.player->x && monvector[i].y == GAME.player->y+1)
+            if (monvector[i].alive == true) return true;
+        if (monvector[i].x == GAME.player->x-1 && monvector[i].y == GAME.player->y)
+            if (monvector[i].alive == true) return true;
+        if (monvector[i].x == GAME.player->x+1 && monvector[i].y == GAME.player->y)
+            if (monvector[i].alive == true) return true;
+    }
+    return false;
 }    
+
+int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &monsters){
+    msg_log msgd;
+    bool nothreat = false;
+    nothreat = !is_threat(GAME, monsters); 
+    int cost = 2; // cost in AP for the aim action
+    if(GAME.player->rangeaim == 0 && !nothreat){
+        sprintf(msgd.message, "Cannot nock arror, monster too close.");
+        msg_log_list.push_back(msgd);
+        return 0;
+    }    
+    if(GAME.player->rangeaim == 0 && nothreat){ // NOCK
+        if(GAME.player->AGI >= 16) cost -= 1; 
+        if(GAME.player->AP >= cost && (phasemove + cost) <= 4){
+            phasemove += cost;
+            GAME.player->AP -= cost;
+            GAME.player->rangeaim += 1;
+            sprintf(msgd.message, "%c>%cPlayer nocking arrow.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            msgd.color1 = TCODColor::lighterBlue;
+            msg_log_list.push_back(msgd);
+            if(GAME.player->DEX >= 18){ // no costs, so drawing too 
+                GAME.player->rangeaim += 1;
+                sprintf(msgd.message, "%c>%cplayer drawing.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                msgd.color1 = TCODColor::lighterBlue;
+                msg_log_list.push_back(msgd);
+            } 
+            return 0;
+        } else if(GAME.player->AP < cost){
+            sprintf(msgd.message, "Not enough Action Points for the action.");
+            msg_log_list.push_back(msgd);
+            return 0;
+        } else {
+            sprintf(msgd.message, "Not enough APs, this phase."); // replace with action in progress
+            msg_log_list.push_back(msgd);
+            return 0;
+        }    
+    }   
+    if(GAME.player->rangeaim == 1){ // DRAW
+        if(GAME.player->DEX == 18){
+            GAME.player->rangeaim += 1;
+            sprintf(msgd.message, "%c>%cplayer drawing.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            msgd.color1 = TCODColor::lighterBlue;
+            msg_log_list.push_back(msgd);  
+            return 0;
+        } else if(GAME.player->DEX >= 15) cost -= 1;
+        if(GAME.player->AP >= cost && (phasemove + cost) <= 4){
+            phasemove += cost;
+            GAME.player->AP -= cost;
+            GAME.player->rangeaim += 1;
+            sprintf(msgd.message, "%c>%cPlayer drawing.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            msgd.color1 = TCODColor::lighterBlue;
+            msg_log_list.push_back(msgd);
+            return 0;
+        } else if(GAME.player->AP < cost){
+            sprintf(msgd.message, "Not enough Action Points for the action.");
+            msg_log_list.push_back(msgd);
+            return 0;
+        } else {
+            sprintf(msgd.message, "Not enough APs, this phase."); // replace with action in progress
+            msg_log_list.push_back(msgd);
+            return 0;
+        }   
+    } 
+    if(GAME.player->rangeaim >= 2){ // AIM
+        if(GAME.player->AP == 0){
+            sprintf(msgd.message, "Not enough Action Points for the action.");
+            msg_log_list.push_back(msgd);
+            return 0;
+        } else if(phasemove >= 4){
+            sprintf(msgd.message, "Not enough APs, this phase."); // shouldn't happen
+            msg_log_list.push_back(msgd);
+            return 0;
+        }  
+        --GAME.player->AP;
+        ++phasemove;
+        GAME.player->rangeaim += 1;
+        switch(GAME.player->rangeaim - 2){
+            case 1:
+                GAME.player->aim += GAME.player->DEX;
+                GAME.player->aim += GAME.player->DEX;
+                break;
+            case 2:
+                GAME.player->aim += GAME.player->DEX;
+                break;
+        }    
+        if((GAME.player->rangeaim - 2) >= 3) GAME.player->aim += GAME.player->DEX / 2;
+        if(GAME.player->aim > GAME.player->skill.bowML) GAME.player->aim = GAME.player->skill.bowML; // max aim
+        sprintf(msgd.message, "%c>%cPlayer taking aim (%d).", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, GAME.player->rangeaim - 2);
+        msgd.color1 = TCODColor::lighterBlue;
+        msg_log_list.push_back(msgd);
+    }    
+    return 0;
+}

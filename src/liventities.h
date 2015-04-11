@@ -289,6 +289,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int AP; // Action Points
     int APm; // Max Action Points
     int APburn; // AP to burn into next turn, when action is in progress
+    int rangeaim; // range status (0none, 1 nock, 2 draw, 3 aim)
+    int aim; // % of current aim
 
     int move_counter; // how many steps moved in the turn
     int speed;
@@ -360,5 +362,9 @@ bool is_overpower(int askill, int aroll, int dskill, int droll);
 int switchweapon(Game &GAME, bool mode);
 
 void switchweapon_ex(Game &GAME);
+
+bool is_threat(Game &GAME, const std::vector<Object_monster> &monvector);
+
+int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &monsters);
 
 #endif
