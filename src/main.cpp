@@ -3990,10 +3990,10 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     if(phase < 9) GAME.gstate.first = true; // cannot hold at last phase
     if(player.phase <= phase+1) GAME.gstate.second = true;
 
-    if (player.AP > 0){
+    if (player.AP > 0 && !wid_prompt_open){
         UI_hook(GAME, 4); // hooks the prompt
         wid_prompt_open = true;
-    }   
+    }  
 
     // PLAYER BLOCK
     // PLAYER BLOCK
@@ -4008,6 +4008,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
         if(player.att_phase > phase+1) GAME.gstate.third = false; // weapon speed, cannot attack
         else if(player.phaseAP >= player.attAP) GAME.gstate.third = true; // enough AP this phase, can attack
+        else GAME.gstate.third = false; // retrigger false is phaseAP were modified
 
         if(player.phase_attack) phasemove = 4; // if attack happened, phase is spent (might break overpower?)
 
@@ -4040,18 +4041,25 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
             }    
         } 
 
-        if(player.APburn > 0){ // after HOLD, since HOLD is called after four of APburn
+        // needs exitcycle since HOLD executed by assinging that bool, then looping
+        if(player.APburn > 0 && !exitcycle){ // after HOLD, since HOLD is called after four of APburn
             ++phasemove;
             --player.APburn;
             --player.AP;
+
+            // reassigning to update the values going in the AP bar UI
+            player.phaseAP = 4 - phasemove;
+            if(player.phaseAP > player.AP) player.phaseAP = player.AP; // phase AP can't exceed pool left
+
             if(player.APburn == 0){ // execute armor swap
                 switchweapon_ex(GAME);
-            }    
+            }  
             if(phasemove == 4){ // skipping phase
                 msg_log msgd;
                 sprintf(msgd.message, "Player skipping combat phase. Action in progress.");
                 msg_log_list.push_back(msgd);
-            }    
+            }
+            std::cout << "phasemove: " << phasemove << " " << player.APburn << std::endl;
         }
 
         if(action == 5){ // AIMING
