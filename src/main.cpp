@@ -1743,26 +1743,26 @@ void render_bar(int x, int y, int total_width, const char *name,
 }
 
 void render_bar_s2(int x, int y, int total_width, const char *name, 
-        int value, int maximum, TCODColor bar_color, TCODColor back_color, TCODColor label){
+        int value, int maximum, int phase, TCODColor bar_color, TCODColor back_color, TCODColor label){
 
     panel->setDefaultForeground(back_color);
-
-    // |==.==.==.==.==.==.==.==| 25
-    // 1 4 7 10
 
     panel->setDefaultForeground(TCODColor::lighterGrey);
     panel->putChar(x, y, '[');
     int tempmaximum = maximum;
     int index = 0;
     int ivalue = maximum - value;
+    int temphase = phase; // used for print lower down
     for(unsigned int drop = tempmaximum; drop > 0; --drop){
         if(ivalue){
             panel->setDefaultForeground(TCODColor::lightRed);
             panel->putChar(x+index+1, y, '*');
             --ivalue;
-        } else {    
+        } else { 
             panel->setDefaultForeground(TCODColor::lighterGreen);
+            if(phase == 0) panel->setDefaultForeground(TCODColor::lighterYellow);
             panel->putChar(x+index+1, y, '=');
+            if(phase > 0) --phase;
         }
         panel->setDefaultForeground(TCODColor::lighterGrey);
         panel->putChar(x+index+2, y, '.');
@@ -1770,6 +1770,8 @@ void render_bar_s2(int x, int y, int total_width, const char *name,
     } 
     panel->setDefaultForeground(TCODColor::lighterGrey);
     panel->putChar(x+index, y, ']');
+    panel->setDefaultForeground(TCODColor::lighterGreen);
+    panel->print(x+index+2, y, "%d", temphase);
 
     panel->setDefaultForeground(TCODColor::lighterGrey);
     TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::white, TCODColor::black);
@@ -1870,8 +1872,8 @@ void render_messagelog(){
             if (player.AP < 4)
                 mov_bar = TCODColor::red;
             else mov_bar = TCODColor::white;
-            render_bar_s2(1, 2, BAR_WIDTH, "Mov", player.AP, player.APm,
-                TCODColor::lightPurple, TCODColor::darkerPurple, mov_bar);
+            render_bar_s2(1, 2, BAR_WIDTH, "Mov", player.AP, player.APm, player.phaseAP,
+                    TCODColor::lightPurple, TCODColor::darkerPurple, mov_bar);
             TCODConsole::blit(panel,0,0,0,0,TCODConsole::root,0,MAP_HEIGHT_AREA+2);
             if(MSG_MODE_XTD) TCODConsole::blit(panel_xtd,0,0,0,0,TCODConsole::root,34,(MAP_HEIGHT_AREA+2)-60);
         } else {
@@ -2206,7 +2208,10 @@ void render_prompt(Game &GAME){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
                 TCODConsole::root->print(loc_x, loc_y+5, "%cA%c%cTTACK%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_3,TCOD_COLCTRL_STOP);
-            } 
+            }
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::lighterGrey,TCODColor::black);
+            TCODConsole::root->print(loc_x+6, loc_y+5, "%c> (%d AP)%c", TCOD_COLCTRL_3, GAME.player->attAP, 
+                    TCOD_COLCTRL_STOP);
             if(prompt_selection == 5 && GAME.player->rangeweapon){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::white);
@@ -2220,10 +2225,12 @@ void render_prompt(Game &GAME){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::lighterGrey,TCODColor::black);
                 switch(GAME.player->rangeaim){
                     case 0:
-                        TCODConsole::root->print(loc_x+3, loc_y+6, "%c> Not ready.%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
+                        TCODConsole::root->print(loc_x+3, loc_y+6, "%c> Not ready.%c", 
+                                TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
                         break;
                     case 1:
-                        TCODConsole::root->print(loc_x+3, loc_y+6, "%c> Arrow nocked.%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
+                        TCODConsole::root->print(loc_x+3, loc_y+6, "%c> Arrow nocked.%c", 
+                                TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
                         break;
                     case 2:
                         TCODConsole::root->print(loc_x+3, loc_y+6, "%c> Drawing.%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
@@ -2256,7 +2263,8 @@ void render_prompt(Game &GAME){
                         break;
                 }    
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::darkGrey,TCODColor::black);
-                if(GAME.player->AP < 4) TCODConsole::root->print(loc_x+6, loc_y+5, "> Not enough AP");
+                if(GAME.player->phaseAP < GAME.player->attAP) 
+                    TCODConsole::root->print(loc_x+6, loc_y+5, "> Not enough AP (%d)", GAME.player->attAP);
                 else TCODConsole::root->print(loc_x+6, loc_y+5, "> Attack phase: %c%d%c",
                         TCOD_COLCTRL_5, player.att_phase, TCOD_COLCTRL_STOP);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
@@ -3153,10 +3161,11 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
     }
 
     if(is_it && monvector[target].alive && overpowering) player.AP += 4; // gives movement points to add attacks
-    if(is_it && monvector[target].alive && player.AP >= 4 && tgame.gstate.mode_attack && player.phase_attack == 0){
+    if( (is_it && monvector[target].alive && player.AP >= 4 && tgame.gstate.mode_attack && player.phase_attack == 0) ||
+        (is_it && monvector[target].alive && player.AP >= 4 && tgame.gstate.mode_attack && overpowering) ){
 
         player.stats.attack(player, monvector[target], 0, player.overpower_l);
-        ++player.phase_attack;
+        ++player.phase_attack; // used to stop attacking again after 1st
 
         if(!tgame.gstate.no_combat)player.AP -= 4; // decrease combat movement only if in combat mode
         if (monvector[target].stats.hp < 1){
@@ -3978,10 +3987,8 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     GAME.gstate.mode_attack = false;
     GAME.gstate.mode_pass = false;
 
-    if(phase < 9) GAME.gstate.first = true;
+    if(phase < 9) GAME.gstate.first = true; // cannot hold at last phase
     if(player.phase <= phase+1) GAME.gstate.second = true;
-
-    if(player.att_phase <= phase+1 && player.AP >= 4) GAME.gstate.third = true;
 
     if (player.AP > 0){
         UI_hook(GAME, 4); // hooks the prompt
@@ -3993,7 +4000,16 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     int action = 0; // option selected in combat prompt 
     int phasemove = 0; // used to count movements done during phase
     bool exitcycle = false;
-    while (player.AP >= 1 && !exitcycle){ 
+    while (player.AP >= 1 && !exitcycle){
+
+        // phaseAP = points left in phase
+        player.phaseAP = 4 - phasemove;
+        if(player.phaseAP > player.AP) player.phaseAP = player.AP; // phase AP can't exceed pool left
+
+        if(player.att_phase > phase+1) GAME.gstate.third = false; // weapon speed, cannot attack
+        else if(player.phaseAP >= player.attAP) GAME.gstate.third = true; // enough AP this phase, can attack
+
+        if(player.phase_attack) phasemove = 4; // if attack happened, phase is spent (might break overpower?)
 
         bool didmove = false; // flag if player moved in this loop
 
@@ -4054,16 +4070,18 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
             GAME.gstate.mode_move = true;
         }  
 
-        if(action == 3 && player.AP >= 4){ // ATTACK
-            if(GAME.player->aim == 0){
+        if(action == 3 && GAME.gstate.third){ // ATTACK
+            if(!GAME.player->rangeweapon) GAME.gstate.mode_attack = true; // if melee
+            else if(GAME.player->aim == 0){ // if ranged and aim is 0
                 msg_log msgd;
                 sprintf(msgd.message, "Cannot fire bow, not enough aim.");
                 msg_log_list.push_back(msgd);
+                action = 0;
             } else { 
                 GAME.gstate.mode_attack = true;
                 ranged_target(GAME);
+                action = 0;
             }
-            action = 0;
         }
 
         if (player_action == quit2){ // quit combat
@@ -4088,7 +4106,9 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
                 GAME.player->aim = 0; // resets aim if moved
             }    
         } else didmove = false; // player action
-        if(phasemove == 4) action = 1; // half movement exhausted, execute HOLD
+
+        // trying to handle combat/overpower without skipping phase automatically
+        if(phasemove == 4 && !GAME.gstate.mode_attack) action = 1; // half movement exhausted, execute HOLD
 
         if(didmove){
             // add monster blocks 
@@ -4141,15 +4161,6 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
         // COMBAT UI
         panel->clear();
-        panel->setAlignment(TCOD_LEFT);
-        render_bar(1, 1, BAR_WIDTH, "HP", player.stats.hp, player.stats.max_hp,
-                TCODColor::lightRed, TCODColor::darkerRed);
-        TCODColor mov_bar;
-        if (player.AP < 4)
-            mov_bar = TCODColor::red;
-        else mov_bar = TCODColor::white;
-        render_bar_s2(1, 2, BAR_WIDTH, "Mov", player.AP, player.APm,
-                TCODColor::lightPurple, TCODColor::darkerPurple, mov_bar);
 
         if(msg_log_list.size() > 0){
             Message_Log();
@@ -4164,19 +4175,13 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     UI_unhook(GAME, 4); // unhooks the prompt
     wid_prompt_open = false;
 
-    widget_popup->clear();
-    widget_popup->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
-    widget_popup->print(0, 0, "%cpress any key to END Player's phase%c",
-            TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
-    player.phase_attack = 0;
+    player.phase_attack = 0; // used in player_move_attack to stop consequent attacks
     GAME.gstate.fov_recompute = true;
     render_all(GAME);
-    //TCODConsole::blit(widget_popup,0,0,35,1,TCODConsole::root, 40, 66);
     TCODConsole::flush(); // this updates the screen
 
     GAME.player->forcedswap = false; // used when forcing swap weapon
     
-    //TCODConsole::waitForKeypress(true);
     return 0;
 }  
 
@@ -4355,9 +4360,11 @@ int main() {
     player.forcedswap = false; // used to burn AP on weapon swap
     player.APm = 8; // new movement points
     player.AP = player.APm; // movement points
+    player.phaseAP = 0;
     player.APburn = 0; // used APs
     player.rangeaim = 0; // the aim phase
     player.aim = 0; // reset aim %
+    player.attAP = 4;
 
     build_armor(GAME);
 
@@ -4826,9 +4833,10 @@ int main() {
                 GAME.gstate.fov_map_mons_path1->setProperties(monvector[i].x, monvector[i].y, 1, 1);
             }
              
-            if (break_combat) {wid_combat_open = 0; 
+            if (break_combat) {
                 r_panel->clear(); 
-                break;} // break combat mode if monsters all dead or out of FoV
+                break;
+            } // break combat mode if monsters all dead or out of FoV
 
             GAME.gstate.con->clear();
             r_panel->clear();
@@ -5120,6 +5128,7 @@ int main() {
         if(moved) player.forcedswap = false;
         player.rangeaim = 0; // reset aim status
         player.aim = 0; // reset aim %
+        player.phaseAP = 0;
 
     } // main while cycle END
     return 0;

@@ -288,6 +288,8 @@ public: // public should be moved down, but I keep it here for debug messages
     int combat_move_max; // obsolete -> APm
     int AP; // Action Points
     int APm; // Max Action Points
+    int phaseAP; // AP left this phase
+    int attAP; // APs needed for one attack
     int APburn; // AP to burn into next turn, when action is in progress
     int rangeaim; // range status (0none, 1 nock, 2 draw, 3 aim)
     int aim; // % of current aim

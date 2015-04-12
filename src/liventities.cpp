@@ -932,7 +932,7 @@ int switchweapon(Game &GAME, bool mode){
 
     if(GAME.player->AP < action && !GAME.player->forcedswap){ 
         //GAME.player->rangeweapon = false;
-        sprintf(msgd.message, "Not enough movement points to swap weapons. Press again to force.");
+        sprintf(msgd.message, "Not enough movement points to swap weapons (need %d). Press again to force.", action);
         msg_log_list.push_back(msgd);
         GAME.player->forcedswap = true;
         return 0;
@@ -983,11 +983,17 @@ void switchweapon_ex(Game &GAME){
     int formula = (GAME.player->STR + sindex) * 5;
     if(GAME.player->rangeweapon){ // switch back to melee, always possible 
         GAME.player->rangeweapon = false;
+        GAME.player->att_phase = 3; // average phase weapon
+        GAME.player->attAP = 4;
         sprintf(msgd.message, "Sword equipped. Melee mode active.");
         msg_log_list.push_back(msgd);
         return;
     } else { 
         GAME.player->rangeweapon = true;
+        GAME.player->att_phase = 3; // average phase weapon
+        GAME.player->attAP = 2;
+        if(GAME.player->DEX >= 10 && GAME.player->DEX < 20) GAME.player->attAP = 1;
+        if(GAME.player->DEX >= 20) GAME.player->attAP = 0;
         msgd.color1 = dicec;
         msgd.color2 = TCODColor::lightGreen;
         sprintf(msgd.message, "Bow equipped. Draw Weight needed: %c%d%c Have: %c%d%c", TCOD_COLCTRL_1, GAME.player->eRangedDW, TCOD_COLCTRL_STOP,
