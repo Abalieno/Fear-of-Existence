@@ -3310,20 +3310,22 @@ bool ranged_target(Game &GAME){
                 TCODConsole::root->setDefaultForeground(TCODColor::yellow);
                 TCODConsole::root->putChar(nonx, nony, 178, TCOD_BKGND_SET);
             }
-            if((x != GAME.player->x || y != GAME.player->y) && second){
+            if((x != GAME.player->x || y != GAME.player->y) && second){ // blinking *
                 TCODConsole::root->setDefaultForeground(TCODColor::red);
                 TCODConsole::root->putChar(nonx, nony, '*', TCOD_BKGND_SET);
             }
-            if(stepdistance <= 5) rangepenalty = 0;
-            else if(stepdistance > 5 && stepdistance <= 10) rangepenalty = 5;
-            else if(stepdistance > 10 && stepdistance <= 20) rangepenalty = 10;
-            else if(stepdistance > 20 && stepdistance <= 35) rangepenalty = 20;
-            else if(stepdistance > 35 && stepdistance <= 70) rangepenalty = 35;  
-            if(stepdistance <= 70 && stepdistance > 0){ 
-                if((GAME.player->skill.rangedAML - rangepenalty) > 0)
+            stepdistance = (int)sqrt(pow(x-GAME.player->x,2)+pow(y-GAME.player->y,2));
+            if(stepdistance <= GAME.player->rangedD1) rangepenalty = 10;
+            else if(stepdistance > GAME.player->rangedD1 && stepdistance <= GAME.player->rangedD2) rangepenalty = 5;
+            else if(stepdistance > GAME.player->rangedD2 && stepdistance <= GAME.player->rangedD3) rangepenalty = 0;
+            else if(stepdistance > GAME.player->rangedD3 && stepdistance <= GAME.player->rangedD4) rangepenalty = -20;
+            else if(stepdistance > GAME.player->rangedD4 && stepdistance <= GAME.player->rangedD5) rangepenalty = -40; 
+            else if(stepdistance > GAME.player->rangedD5 && stepdistance <= GAME.player->rangedD6) rangepenalty = -80;
+            if(stepdistance <= GAME.player->rangedD6 && stepdistance > 0){ 
+                if((GAME.player->skill.bowML + rangepenalty) > 0)
                         TCODConsole::root->setDefaultForeground(TCODColor::lightGreen);
                 else TCODConsole::root->setDefaultForeground(TCODColor::red);  
-                TCODConsole::root->print(nonx+2, nony, "%d%%", GAME.player->skill.rangedAML - rangepenalty);  
+                TCODConsole::root->print(nonx+2, nony, "%d%%", GAME.player->skill.bowML + rangepenalty);  
             }    
             targetx = nonx;
             targety = nony;
@@ -4364,6 +4366,12 @@ int main() {
 
     player.rangeweapon = 0; // set melee as default
     player.eRangedDW = 80; // Ranged Weapon default draw weight
+    player.rangedD1 = 5; // weapon Close range in cells
+    player.rangedD2 = 15; // weapon Very Short range in cells
+    player.rangedD3 = 25; // weapon Short range in cells
+    player.rangedD4 = 50; // weapon Medium range in cells
+    player.rangedD5 = 100; // weapon Long range in cells
+    player.rangedD6 = 200; // weapon Extreme range in cells
 
     player.forcedswap = false; // used to burn AP on weapon swap
     player.APm = 8; // new movement points

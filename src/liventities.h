@@ -281,6 +281,12 @@ public: // public should be moved down, but I keep it here for debug messages
 
     bool rangeweapon; // to switch combat mode
     int eRangedDW; // Ranged weapon Draw Weight
+    int rangedD1; // bow Close range
+    int rangedD2; // bow Very Short range
+    int rangedD3; // bow Short range
+    int rangedD4; // bow Medium range
+    int rangedD5; // bow Long range
+    int rangedD6; // bow Extreme range
     
     bool forcedswap; // burn turns ahead to swap weapons 
 
