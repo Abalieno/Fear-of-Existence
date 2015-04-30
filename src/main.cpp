@@ -1631,6 +1631,10 @@ void I_am_moused(Game &tgame){
                 }    
             } else if(i.ID == 0 && (x == 24 && y == 0) && mousez.lbutton){
                 char_sheet(tgame); // screens.cpp
+            } else if(i.ID == 3){
+                if(y == 12 && (x >= 44 && x <= 53) ){
+                    if(mousez.lbutton_pressed) tgame.gstate.MLfilter101 = !tgame.gstate.MLfilter101;
+                }    
             } else if(i.ID == 4){ // combat prompt
                 //int in_x = x - i.x; // sets mouse origin to the panel
                 int in_y = y - i.y; 
@@ -1783,7 +1787,7 @@ void render_bar_s2(int x, int y, int total_width, const char *name,
     panel->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
 }
 
-void Message_Log(){
+void Message_Log(Game &GAME){
 
     panel->setAlignment(TCOD_LEFT);
 
@@ -1793,6 +1797,21 @@ void Message_Log(){
         MSG_HEIGHT = 75; // 5 times the 15 standard
         whatpanel = panel_xtd;
         panel_offset = 0;
+
+        whatpanel->setBackgroundFlag(TCOD_BKGND_SET);
+        whatpanel->setDefaultForeground(TCODColor::lightGrey);
+        whatpanel->print(0, 0, "Filters:");
+        if(GAME.gstate.MLfilter101){
+            whatpanel->setDefaultForeground(TCODColor::black);
+            whatpanel->setDefaultBackground(TCODColor::lightYellow);
+        } else {
+            whatpanel->setDefaultForeground(TCODColor::lightYellow);
+            whatpanel->setDefaultBackground(TCODColor::black);
+        }
+        whatpanel->print(10, 0, "Initiative");
+        whatpanel->setDefaultForeground(TCODColor::white);
+        whatpanel->setDefaultBackground(TCODColor::black);
+
         panel->setDefaultForeground(TCODColor::red);
         panel->putChar(33, 1, 25, TCOD_BKGND_SET); // expand button
         panel->setDefaultForeground(TCODColor::white);
@@ -1817,7 +1836,7 @@ void Message_Log(){
         //int i = msg_log_list.size() + 1
         int a = 2;
         int howmany = 0;
-        int bump = 0;
+        int bump = 0; // add blank line past first message
         howmany = (msg_log_list.size())- MSG_HEIGHT;
         //std::cout << "Quantity " << howmany << std::endl;
         if(howmany < 0) howmany = 0;
@@ -1833,9 +1852,13 @@ void Message_Log(){
             TCODConsole::setColorControl(TCOD_COLCTRL_4,msg_log_list[i].color4,bck);
             if (!msg_log_list[i].c5) bck = TCODColor::black; else bck = msg_log_list[i].bcolor5;
             TCODConsole::setColorControl(TCOD_COLCTRL_5,msg_log_list[i].color5,bck);
-            whatpanel->print(panel_offset+1, a+bump, "%s", msg_log_list[i].message);
-            a++;
-            bump = 1;
+            if(msg_log_list[i].filter == 101 && !GAME.gstate.MLfilter101){ // initiative
+                --howmany; // add line availability, since it was skipped
+            } else {
+                whatpanel->print(panel_offset+1, a+bump, "%s", msg_log_list[i].message);
+                a++;
+                bump = 1;
+            }    
         }
     } else {
         whatpanel->print(panel_offset, 2, ">Message Log currently empty");
@@ -1848,11 +1871,11 @@ void Message_Log(){
     }
 }
 
-void render_messagelog(){
+void render_messagelog(Game &GAME){
     if(wid_combat_open){
             panel->clear();
             panel_xtd->clear();
-            Message_Log();
+            Message_Log(GAME);
             panel->setDefaultForeground(TCODColor::white);
             //panel->print(win_x-1, (win_y - MAP_HEIGHT_AREA)-4, "^");
             //panel->print(win_x-1, (win_y - MAP_HEIGHT_AREA)-3, "%c", TCOD_CHAR_SE);
@@ -2999,7 +3022,7 @@ void render_all (Game &tgame){
     render_top(tgame);
 
     if(!combat_mode && !wid_combat_open) render_base(tgame);
-    render_messagelog();
+    render_messagelog(tgame);
     render_rpanel();
     render_minimaps(tgame);
 
@@ -3303,7 +3326,6 @@ bool ranged_target(Game &GAME){
                     nonx = ((x*2) - GAME.gstate.off_xx)-28;
                     nony = ((y*2) - GAME.gstate.off_yy)-18;
                 }
-                ++stepdistance;
                 if( (GAME.gstate.fov_map->isInFov(x,y) || map_array[y * MAP_WIDTH + x].explored) 
                         && map_array[y * MAP_WIDTH + x].blocked) break;
                 if(x == GAME.gstate.mapx && y == GAME.gstate.mapy) break; // origin
@@ -3321,11 +3343,28 @@ bool ranged_target(Game &GAME){
             else if(stepdistance > GAME.player->rangedD3 && stepdistance <= GAME.player->rangedD4) rangepenalty = -20;
             else if(stepdistance > GAME.player->rangedD4 && stepdistance <= GAME.player->rangedD5) rangepenalty = -40; 
             else if(stepdistance > GAME.player->rangedD5 && stepdistance <= GAME.player->rangedD6) rangepenalty = -80;
-            if(stepdistance <= GAME.player->rangedD6 && stepdistance > 0){ 
+            // previous two ifs should be disabled, due to dungeon ceiling
+            if(stepdistance <= GAME.player->rangedD4 && stepdistance > 0){ 
                 if((GAME.player->skill.bowML + rangepenalty) > 0)
                         TCODConsole::root->setDefaultForeground(TCODColor::lightGreen);
                 else TCODConsole::root->setDefaultForeground(TCODColor::red);  
-                TCODConsole::root->print(nonx+2, nony, "%d%%", GAME.player->skill.bowML + rangepenalty);  
+                TCODConsole::root->print(nonx+2, nony, "%d%%", GAME.player->skill.bowML + rangepenalty); 
+                TCODConsole::root->setDefaultForeground(TCODColor::white);
+                int stepx = 0; int stepy = 0;
+                if( (y-GAME.player->y) >= 0 ){stepx = GAME.player->x - 4; stepy = GAME.player->y - 2;}
+                else {stepx = GAME.player->x - 4; stepy = GAME.player->y + 2;}
+                if (!GAME.gstate.bigg){
+                    stepx = stepx - GAME.gstate.off_xx;
+                    stepy = stepy - GAME.gstate.off_yy;
+                } else if (GAME.gstate.bigg){    
+                    stepx = ((stepx*2) - GAME.gstate.off_xx)-28;
+                    stepy = ((stepy*2) - GAME.gstate.off_yy)-18;
+                }
+                TCODConsole::root->print(stepx, stepy, "Dist: %d", stepdistance); // distance UI
+            }  
+            if(stepdistance > GAME.player->rangedD4){ // into 5-6 distance phases, so ceiling
+                TCODConsole::root->setDefaultForeground(TCODColor::red);
+                TCODConsole::root->print(nonx+2, nony, "Ceiling!");
             }    
             targetx = nonx;
             targety = nony;
@@ -4173,7 +4212,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         panel->clear();
 
         if(msg_log_list.size() > 0){
-            Message_Log();
+            Message_Log(GAME);
         }
         render_all(GAME);
         I_am_moused(GAME); 
@@ -4318,6 +4357,8 @@ int main() {
     UI_register(GAME, 2, 0, 72, 127, 18); // combat bottom
     UI_register(GAME, 3, 34, 12, 93, 78); // extended message log
     UI_register(GAME, 4, 1, 78, 12, 7); // player combat prompt
+    //UI_register(GAME, 101, 34, 12, 93, 0); // message log filter bar (extended)
+    GAME.gstate.MLfilter101 = true; // initiative messages enabled
 
     GAME.gstate.mapmode = 1;
 
@@ -4816,6 +4857,7 @@ int main() {
                                     monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
                                     monvector[i].initiative);
                         msg1.color1 = dicec;
+                        msg1.filter = 101; // initiative filter
                         msg_log_list.push_back(msg1);
                     }
                 }
@@ -4878,6 +4920,7 @@ int main() {
                         *tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, player.initiative);
                 msg1.color1 = dicec;
                 msg1.color2 = TCODColor::lighterBlue;
+                msg1.filter = 101; // initiative filter
                 msg_log_list.push_back(msg1);
 
                 // SORTING INITIATIVE

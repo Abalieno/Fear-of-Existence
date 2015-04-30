@@ -82,7 +82,9 @@ const int t16_corpse = 506; // corpse
 
 // bool used for background color presence
 struct msg_log { 
-    char message [94]; 
+    char message [94];
+    int filter; // used for filtering messages
+    // 101 = initiative
     TCODColor color1; TCODColor color2; TCODColor color3; TCODColor color4; TCODColor
     color5; TCODColor color6; TCODColor color7; TCODColor color8; TCODColor color9; TCODColor color10; 
     bool c1; bool c2; bool c3; bool c4; bool c5; bool c6; bool c7; bool c8; bool c9; bool c10;
@@ -150,6 +152,8 @@ struct global_state{
     int mx; // mousex (absolute)
     int my;
     bool modal; // flag for some function (like disable overlays while in ranged aiming)
+
+    bool MLfilter101; // initiative Message Log filter
 
     bool fov_recompute;
 
