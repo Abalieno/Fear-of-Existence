@@ -4744,8 +4744,12 @@ int main() {
 
             if (alreadydead) break;
 
+            // INITIATIVE PURGE
+            monsters.clear(); 
+
             msg_log msg2;
             sprintf(msg2.message, "%cROUND START%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            msg2.filter = 100; // FULL filter
             msg2.color1 = TCODColor::magenta;
             msg_log_list.push_back(msg2);
          
@@ -4756,7 +4760,6 @@ int main() {
             TCODConsole::flush(); // this updates the screen
                 
             bool break_combat = true;
-            bool messed_initiative = false;
 
             // updates monster map so that pathing includes monsters position
             for (unsigned int i = 0; i<monvector.size(); ++i){
@@ -4825,7 +4828,9 @@ int main() {
                     }    
 
                     // calculate initiative only once, or whenever a monster joins combat
-                    if(turn == 1 || monvector[i].initiative == -1){
+                    if(1){
+                        bool wasincombat = false;
+                        if(monvector[i].initiative != -1) wasincombat = true; // alredy joined
                         int roll = 0;
                         roll = rng(1, 20);
                         monvector[i].initiative = monvector[i].initML + (roll - 10);
@@ -4836,13 +4841,13 @@ int main() {
                         tempm.speed = &monvector[i].initML;
                         monsters.push_back(tempm); // pushed to initiative vector
 
-                        if(turn > 1){
+                        if(turn > 1 && !wasincombat){
                             msg_log msg2;
                             sprintf(msg2.message, "%c!%cJoining the fray: %s", 
                                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, monvector[i].name);
                             msg2.color1 = dicec;
+                            msg2.filter = 102; // general filter
                             msg_log_list.push_back(msg2);
-                            messed_initiative = true;
                         }
 
                         msg_log msg1;
@@ -4863,6 +4868,7 @@ int main() {
                 }
             }
 
+            // shoouldn't happen, the check for monster alive already happens above
             if(turn > 1){
                 for(unsigned int b = 0; b<monvector.size(); ++b){ // cycle all monsters
                     for(unsigned int i = 0; i<monsters.size(); ++i){ // cycle initiative
@@ -4875,15 +4881,18 @@ int main() {
                             }    
                         }
                     }
-                    if(messed_initiative) ; // temporary 
-                    monvector[b].initiative = monvector[b].temp_init; // resets to original values
+                    //monvector[b].initiative = monvector[b].temp_init; // resets to original values
                 }
+                // if this part executes then initiative values are replaced
+                // so when the thing is re-sorted in the player block, it resorts the wrong values
+                /*
                 player.initiative = player.temp_init; // reset player initiative to original values too  
                 std::sort(monsters.begin(), monsters.end(), compare); // re-sort for new monsters
                 // sorting initiative after dead monsters removed
                 for (unsigned int i = 0; i<monsters.size(); ++i) {
                     *(monsters[i].initiative) = i+1;
                 }
+                */
             }
 
             // clear monster positions before they move
@@ -4901,7 +4910,7 @@ int main() {
             TCODConsole::root->clear();
 
             // roll initiative once (player)
-            if(turn == 1){
+            if(1){
                 player.distance = player.stats.wpn1.reach; // initial reach
                 player.phase_attack = 0;
                 int myroll = 0;
@@ -4927,6 +4936,7 @@ int main() {
                 std::sort(monsters.begin(), monsters.end(), compare);
                 for (unsigned int i = 0; i<monsters.size(); ++i) {
                     *(monsters[i].initiative) = i+1;
+                    std::cout << "Init: " << *(monsters[i].initiative) << " " << std::endl;
                 }
             }
 
