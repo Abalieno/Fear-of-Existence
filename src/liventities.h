@@ -297,8 +297,11 @@ public: // public should be moved down, but I keep it here for debug messages
     int phaseAP; // AP left this phase
     int attAP; // APs needed for one attack
     int APburn; // AP to burn into next turn, when action is in progress
-    int rangeaim; // range status (0none, 1 nock, 2 draw, 3 aim)
+    int rangeaim; // range status (0 none, 1 nock, 2 draw, 3 aim)
     int aim; // % of current aim
+    int ranged_target; // 666 no target, -1 point blank, 0+ monster index number
+    int tlocx; // ranged targeting x
+    int tlocy; // ranged targeting y
 
     int move_counter; // how many steps moved in the turn
     int speed;

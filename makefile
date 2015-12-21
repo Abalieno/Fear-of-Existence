@@ -1,13 +1,14 @@
-LIBTCODDIR=Y:/BACKUP/D/foe/libtcod-svn
+LIBTCODDIR=D:/foe/libtcod-svn
 SRCDIR=./src
 INCDIR=$(LIBTCODDIR)/include
 LIBDIR=$(LIBTCODDIR)/lib 
 TEMP=./obj
 
 # I. loads .h in the directory
-CFLAGS=-I$(INCDIR) -I$(SRCDIR) -Wall -std=c++11 
+CFLAGS=-I$(INCDIR) -I$(SRCDIR) -Wall -std=c++11  
 CC=gcc
 CPP=g++
+# wall of errors in the linker were due to using gcc instead of g++
 UPX=$(LIBTCODDIR)/dependencies/upx/win/upx.exe
 .SUFFIXES: .o .h .c .hpp .cpp
 
@@ -21,7 +22,7 @@ CPP_OBJS=$(TEMP)/main.o $(TEMP)/fileops.o $(TEMP)/map16.o $(TEMP)/rng.o $(TEMP)/
 all : main  
 
 main : $(CPP_OBJS) 
-	$(CPP) $(CPP_OBJS) -o $@ -L${LIBDIR} -ltcod-mingw -static
+	$(CPP) $(CPP_OBJS) -o $@ -L${LIBDIR} -ltcod-mingw -static 
 	$(UPX) main.exe
 clean :
 	rm -f obj/*.o *.exe

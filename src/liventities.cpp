@@ -164,7 +164,7 @@ bool BasicMonster::take_turn(Object_monster &monster, Object_player &player, int
     if ( (monster.distance_to(p_x, p_y) >= 1.1) || (monster.chasing && !myfov)){
 
         if (tgame.gstate.no_combat || monster.combat_move >= 1){ // move up to and including player pos 
-            if(monster.step < 4){ // max in a phase
+            if(monster.step < 4 || !tgame.gstate.iscombat){ // max in a phase || out of combat movement
                 monster.move_towards(p_x, p_y);
                 if(!tgame.gstate.no_combat){
                     monster.combat_move -= 1;
@@ -948,7 +948,7 @@ int switchweapon(Game &GAME, bool mode){
         GAME.player->aim = 0; // resets aim
         if(mode) return 6;
         else return 0;
-    } else if (is_ok){
+    } else if (is_ok){ // if melee to ranged, and check passed, do the switch
         sprintf(msgd.message, "Player weapon switch in progress.");
         msg_log_list.push_back(msgd);
         GAME.player->APburn = action;
@@ -958,7 +958,7 @@ int switchweapon(Game &GAME, bool mode){
         GAME.player->aim = 0; // resets aim
         if(mode) return 6;
         else return 0;
-    } else { 
+    } else { // if melee to ranged, but check not passed
         debugmsg("Can't equip bow.  Needed: %d Have: %d", GAME.player->eRangedDW, formula);
         msgd.color1 = dicec;
         msgd.color2 = TCODColor::red;
@@ -1041,12 +1041,12 @@ int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &mo
             phasemove += cost;
             GAME.player->AP -= cost;
             GAME.player->rangeaim += 1;
-            sprintf(msgd.message, "%c>%cPlayer nocking arrow.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            sprintf(msgd.message, "%c>%cPlayer nocking arrow (%dAP)", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, cost);
             msgd.color1 = TCODColor::lighterBlue;
             msg_log_list.push_back(msgd);
             if(GAME.player->DEX >= 18){ // no costs, so drawing too 
                 GAME.player->rangeaim += 1;
-                sprintf(msgd.message, "%c>%cplayer drawing.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                sprintf(msgd.message, "%c>%cplayer drawing (0AP)", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                 msgd.color1 = TCODColor::lighterBlue;
                 msg_log_list.push_back(msgd);
             } 
@@ -1064,7 +1064,7 @@ int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &mo
     if(GAME.player->rangeaim == 1){ // DRAW
         if(GAME.player->DEX == 18){
             GAME.player->rangeaim += 1;
-            sprintf(msgd.message, "%c>%cplayer drawing.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            sprintf(msgd.message, "%c>%cplayer drawing (0AP)", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
             msgd.color1 = TCODColor::lighterBlue;
             msg_log_list.push_back(msgd);  
             return 0;
@@ -1073,7 +1073,7 @@ int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &mo
             phasemove += cost;
             GAME.player->AP -= cost;
             GAME.player->rangeaim += 1;
-            sprintf(msgd.message, "%c>%cPlayer drawing.", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            sprintf(msgd.message, "%c>%cPlayer drawing (%dAP)", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, cost);
             msgd.color1 = TCODColor::lighterBlue;
             msg_log_list.push_back(msgd);
             return 0;
@@ -1100,20 +1100,42 @@ int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &mo
         --GAME.player->AP;
         ++phasemove;
         GAME.player->rangeaim += 1;
+        char formula[6];
+        int aimwas = GAME.player->aim;
         switch(GAME.player->rangeaim - 2){
             case 1:
                 GAME.player->aim += GAME.player->DEX;
                 GAME.player->aim += GAME.player->DEX;
+                strcpy(formula, "DEX * 2");
                 break;
             case 2:
                 GAME.player->aim += GAME.player->DEX;
+                strcpy(formula, "DEX");
                 break;
         }    
-        if((GAME.player->rangeaim - 2) >= 3) GAME.player->aim += GAME.player->DEX / 2;
-        if(GAME.player->aim > GAME.player->skill.bowML) GAME.player->aim = GAME.player->skill.bowML; // max aim
-        sprintf(msgd.message, "%c>%cPlayer taking aim (%d).", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, GAME.player->rangeaim - 2);
+        if((GAME.player->rangeaim - 2) >= 3) { GAME.player->aim += GAME.player->DEX / 2; strcpy(formula, "DEX / 2"); }
+        if(GAME.player->aim > GAME.player->skill.bowML){ 
+            GAME.player->aim = GAME.player->skill.bowML; // max aim
+            sprintf(msgd.message, "%c>%cPlayer reached maximum accuracy. aim(%d) %c%d%%%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
+                    GAME.player->rangeaim - 2, TCOD_COLCTRL_2, GAME.player->aim, TCOD_COLCTRL_STOP);
+        } else {    
+            sprintf(msgd.message, "%c>%cPlayer taking aim(%d) Aim step: (%s) = %d%% -> %c%d%%%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
+                    GAME.player->rangeaim - 2, formula, aimwas, TCOD_COLCTRL_2, GAME.player->aim, TCOD_COLCTRL_STOP);
+        }    
         msgd.color1 = TCODColor::lighterBlue;
+        msgd.color2 = TCODColor::lighterGreen;
         msg_log_list.push_back(msgd);
+
+        if(GAME.player->ranged_target == -1){
+            sprintf(msgd.message, "  Player targeting point-blank. x(%d) y(%d)", GAME.player->tlocx, GAME.player->tlocy); 
+            msg_log_list.push_back(msgd);
+        } else {
+            char st_tar[20];
+            strcpy(st_tar, monsters[GAME.player->ranged_target].name);
+            sprintf(msgd.message, "  Player targeting %s. x(%d) y(%d)", st_tar, 
+                    monsters[GAME.player->ranged_target].x, monsters[GAME.player->ranged_target].y); 
+            msg_log_list.push_back(msgd);
+        }
     }    
     return 0;
 }

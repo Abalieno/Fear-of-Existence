@@ -712,7 +712,7 @@ void gen_rollskill(Game &GAME){
 }
 
 void gen_othervalues(Game &GAME){
-    //calculating Action Points
+    //calculating Action Points, APm
     int points = 8;
     if(GAME.player->AGI <= 2) points -= 4;
     else if (GAME.player->AGI == 3 || GAME.player->AGI == 4) points -= 3;

@@ -1372,7 +1372,19 @@ void givemescreenxy(int &x, int &y, Game &tgame){
         x = (x - tgame.gstate.off_xx - 28)*2;
         y = (y - tgame.gstate.off_yy - 18)*2;
     }
-}    
+}   
+
+void givememapxy(int &x, int &y, Game &tgame){
+    if (!tgame.gstate.bigg){
+        x = x + tgame.gstate.off_xx;
+        y = y + tgame.gstate.off_yy;
+        if(x >= MAP_WIDTH || y >= MAP_HEIGHT) x = -1, y = -1; // off map bounds
+    } else if (tgame.gstate.bigg){  
+        x = ((x/2) + tgame.gstate.off_xx)+28;
+        y = ((y/2) + tgame.gstate.off_yy)+18;
+        if(x >= MAP_WIDTH || y >= MAP_HEIGHT) x = -1, y = -1; // off map bounds
+    }
+}
 
 // mapx, mapy used to print text
 void overlay(int who, int mapx, int mapy, int realx, int realy, bool bigg){
@@ -1639,11 +1651,12 @@ void I_am_moused(Game &tgame){
                 //int in_x = x - i.x; // sets mouse origin to the panel
                 int in_y = y - i.y; 
                 if(!tgame.gstate.mode_move && !tgame.gstate.mode_attack){
-                    if(in_y == 3) prompt_selection = 1;
+                    if(in_y == 3) prompt_selection = 1; // to send event to draw menu function
                     else if(in_y == 2) prompt_selection = 4; // pass
                     else if(in_y == 4) prompt_selection = 2;
                     else if(in_y == 5) prompt_selection = 3;
                     else if(in_y == 6) prompt_selection = 5; // aim
+                    else if(in_y == 7) prompt_selection = 6; // switch target
                     else prompt_selection = 0;
                     if(mousez.lbutton_pressed){
                         if(in_y == 3 && tgame.gstate.first) fetch = 1;
@@ -1652,7 +1665,8 @@ void I_am_moused(Game &tgame){
                         else if(in_y == 5 && tgame.gstate.third) fetch = 3;
                         else if(in_y == 6 && tgame.player->rangeweapon){ // aim
                             if(tgame.player->aim != tgame.player->skill.bowML) fetch = 5; // only if not filled
-                        }    
+                        } else if(in_y == 7 && tgame.player->rangeweapon && 
+                                tgame.player->ranged_target != 666 && tgame.player->rangeaim >= 2 ) fetch = 6;    
                     }else fetch = 0; 
                 } else if(tgame.gstate.mode_move){ // move mode
                     if(in_y == 2) prompt_selection = 1; 
@@ -1775,7 +1789,7 @@ void render_bar_s2(int x, int y, int total_width, const char *name,
     panel->setDefaultForeground(TCODColor::lighterGrey);
     panel->putChar(x+index, y, ']');
     panel->setDefaultForeground(TCODColor::lighterGreen);
-    panel->print(x+index+2, y, "%d", temphase);
+    panel->print(x, y+1, "Phase: %d", temphase);
 
     panel->setDefaultForeground(TCODColor::lighterGrey);
     TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::white, TCODColor::black);
@@ -2130,7 +2144,7 @@ void render_top(Game &tgame){
         //widget_2->setBackgroundFlag(TCOD_BKGND_SET);
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
         TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::red,TCODColor::black);
-        widget_top->print(10, 0, "%cIn Sight%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        widget_top->print(10, 0, "%cOn Sight%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
 
         // player widget
         widget_top->print(22, 0, "%c@-%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -2180,7 +2194,8 @@ void render_prompt(Game &GAME){
         TCODConsole::root->setDefaultForeground(TCODColor::lighterGrey);
         TCODConsole::root->setDefaultBackground(TCODColor::black);
         for(int x = 0; x < w; ++x){ // black & frame drawing
-            TCODConsole::root->putChar(x+loc_x, loc_y+8, '-', TCOD_BKGND_SET);
+            TCODConsole::root->putChar(x+loc_x, loc_y+9, '-', TCOD_BKGND_SET);
+            TCODConsole::root->putChar(x+loc_x, loc_y+8, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+1, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+2, ' ', TCOD_BKGND_SET);
             TCODConsole::root->putChar(x+loc_x, loc_y+3, ' ', TCOD_BKGND_SET);
@@ -2235,35 +2250,96 @@ void render_prompt(Game &GAME){
             TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::lighterGrey,TCODColor::black);
             TCODConsole::root->print(loc_x+6, loc_y+5, "%c> (%d AP)%c", TCOD_COLCTRL_3, GAME.player->attAP, 
                     TCOD_COLCTRL_STOP);
+
+            int ranged_offx = 0;
+
             if(prompt_selection == 5 && GAME.player->rangeweapon){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::white);
-                TCODConsole::root->print(loc_x, loc_y+6, "%cA%c%cIM%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                switch(GAME.player->rangeaim){
+                    case 0:
+                        TCODConsole::root->print(loc_x, loc_y+6, "%cN%c%cOCK%c",
+                                TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                        ranged_offx = 5;
+                        break;
+                    case 1:
+                        TCODConsole::root->print(loc_x, loc_y+6, "%cD%c%cRAW%c",
+                                TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                        ranged_offx = 5;
+                        break; 
+                    case 2:
+                        TCODConsole::root->print(loc_x, loc_y+6, "%cT%c%cARGET%c",
+                                TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                        ranged_offx = 7;
+                        break;    
+                } 
+                if(GAME.player->rangeaim >= 3){
+                    TCODConsole::root->print(loc_x, loc_y+6, "%cA%c%cIM%c",
+                                TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                    ranged_offx = 4;
+                }
             } else if(GAME.player->rangeweapon){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
-                TCODConsole::root->print(loc_x, loc_y+6, "%cA%c%cIM%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                switch(GAME.player->rangeaim){
+                    case 0:
+                        TCODConsole::root->print(loc_x, loc_y+6, "%cN%c%cOCK%c",
+                                TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                        ranged_offx = 5;
+                        break;
+                    case 1:
+                        TCODConsole::root->print(loc_x, loc_y+6, "%cD%c%cRAW%c",
+                                TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                        ranged_offx = 5;
+                        break;
+                    case 2:
+                        TCODConsole::root->print(loc_x, loc_y+6, "%cT%c%cARGET%c",
+                                TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                        ranged_offx = 7;
+                        break;    
+                }
+                if(GAME.player->rangeaim >= 3){
+                    TCODConsole::root->print(loc_x, loc_y+6, "%cA%c%cIM%c",
+                            TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+                    ranged_offx = 4;
+                }  
             }
             if(GAME.player->rangeweapon){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_3,TCODColor::lighterGrey,TCODColor::black);
                 switch(GAME.player->rangeaim){
                     case 0:
-                        TCODConsole::root->print(loc_x+3, loc_y+6, "%c> Not ready.%c", 
+                        TCODConsole::root->print(ranged_offx, loc_y+6, "%c> Bow ready%c", 
                                 TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
                         break;
                     case 1:
-                        TCODConsole::root->print(loc_x+3, loc_y+6, "%c> Arrow nocked.%c", 
+                        TCODConsole::root->print(ranged_offx, loc_y+6, "%c> Arrow nocked%c", 
                                 TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
                         break;
                     case 2:
-                        TCODConsole::root->print(loc_x+3, loc_y+6, "%c> Drawing.%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
+                        TCODConsole::root->print(ranged_offx, loc_y+6, "%c> Drawing%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
                         break;
                 } 
                 if(GAME.player->rangeaim >= 3){
                     TCODConsole::root->setColorControl(TCOD_COLCTRL_5,TCODColor::lighterGreen,TCODColor::black);
-                    TCODConsole::root->print(loc_x+3, loc_y+6, "%c> Aiming(%d): %c%d%%%c%c", TCOD_COLCTRL_3, GAME.player->rangeaim-2,
+                    if(GAME.player->aim >= GAME.player->skill.bowML)
+                        TCODConsole::root->print(ranged_offx, loc_y+6, "%c> Max aim(%d): %c%d%%%c%c", TCOD_COLCTRL_3, GAME.player->rangeaim-2,
+                            TCOD_COLCTRL_5, GAME.player->aim, TCOD_COLCTRL_STOP, TCOD_COLCTRL_STOP);
+                    else TCODConsole::root->print(ranged_offx, loc_y+6, "%c> Aiming(%d): %c%d%%%c%c", TCOD_COLCTRL_3, GAME.player->rangeaim-2,
                             TCOD_COLCTRL_5, GAME.player->aim, TCOD_COLCTRL_STOP, TCOD_COLCTRL_STOP);
                 }    
+            }   
+            if(prompt_selection == 6 && GAME.player->rangeweapon && 
+                    GAME.player->ranged_target != 666 && GAME.player->rangeaim >= 2){
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::black,TCODColor::white);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::white);
+                TCODConsole::root->print(loc_x, loc_y+7, "%cN%c%cEW TARGET%c",
+                                TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
+            } else if(GAME.player->rangeweapon &&
+                    GAME.player->ranged_target != 666 && GAME.player->rangeaim >= 2){
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,colorbase,TCODColor::black);
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_4,colorbase,TCODColor::red);
+                TCODConsole::root->print(loc_x, loc_y+7, "%cN%c%cEW TARGET%c",
+                                TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
             }    
             if(!GAME.gstate.third){
                 int phaseswitch = player.att_phase;
@@ -2305,7 +2381,7 @@ void render_prompt(Game &GAME){
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
                 TCODConsole::root->print(loc_x, loc_y+2, "%cPASS%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
             }
-            if(GAME.player->aim >= GAME.player->skill.bowML){ 
+            if(GAME.player->aim >= GAME.player->skill.bowML){ // can't improve aim, max reached 
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
                 TCODConsole::root->print(loc_x, loc_y+6, "%cAIM%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
             }
@@ -2327,7 +2403,15 @@ void render_prompt(Game &GAME){
             }    
             TCODConsole::root->print(loc_x, loc_y+2, "%cE%c%cND ATTACK%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-        }    
+            if(GAME.gstate.combat_aiming){ 
+                TCODConsole::root->setColorControl(TCOD_COLCTRL_1,TCODColor::lighterGrey,TCODColor::black);
+                TCODConsole::root->print(loc_x, loc_y+3, "%cESC or Right Mouse Button%c", 
+                        TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+                TCODConsole::root->print(loc_x, loc_y+4, "%cto cancel%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP); 
+            }    
+        }  
+        TCODConsole::root->print(loc_x, loc_y+10, "aimP(%d) target(%d)",
+                GAME.player->rangeaim, GAME.player->ranged_target);
     }    
 }    
 
@@ -3300,6 +3384,7 @@ bool ranged_target(Game &GAME){
     int targety = -1;
     int stepdistance = 0; // distance
     int rangepenalty = 0;
+    GAME.gstate.combat_aiming = true; // state to draw the correct command prompt
 
     do{
         uint32 millicounter = TCODSystem::getElapsedMilli();
@@ -3369,14 +3454,38 @@ bool ranged_target(Game &GAME){
             targetx = nonx;
             targety = nony;
         }
-        if(mouse.lbutton) range_td = true;
+        if(mouse.lbutton || (eve == TCOD_EVENT_KEY_PRESS && key.vk == TCODK_ENTER)) range_td = true;
         //std::cout << "rangevar: " << range_td << " mouse: " << mouse.lbutton << std::endl;
         eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
         TCODConsole::flush(); // this updates the screen
-    } while ( (eve != TCOD_EVENT_KEY_PRESS || (key.vk != TCODK_ESCAPE && key.c != 'e')) && !range_td );
+    } while ( (eve != TCOD_EVENT_KEY_PRESS || 
+                (key.vk != TCODK_ESCAPE && key.c != 'e')) && !range_td && !mouse.rbutton);
+
+    GAME.gstate.combat_aiming = false;
     GAME.gstate.modal = false; // re-enables overlays
-    fetch = 1; // abort firing
     std::cout << "distance: " << stepdistance << std::endl;
+
+    msg_log msgd;
+    if(!range_td){ // if aborted targeting 
+        fetch = 1; // abort firing
+        msgd.color1 = TCODColor::lighterBlue;
+        sprintf(msgd.message, "%c>%cPlayer is looking for targets.",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        msg_log_list.push_back(msgd);
+    }    
+    else{ // if vaild target
+        GAME.player->tlocx = targetx;
+        GAME.player->tlocy = targety;
+        std::cout << "targetx: " << GAME.player->tlocx << " targety: " << GAME.player->tlocy << std::endl;
+        givememapxy(GAME.player->tlocx, GAME.player->tlocy, GAME);
+        std::cout << "targetx: " << GAME.player->tlocx << " targety: " << GAME.player->tlocy << std::endl;
+        GAME.player->ranged_target = -1; // point blank default
+        // checks if a monster is the target
+        for (unsigned int i = 0; i<monvector.size(); ++i){ 
+            if (monvector[i].x == GAME.player->tlocx && monvector[i].y == GAME.player->tlocy){
+                GAME.player->ranged_target = i; // target is the monster index 
+            }
+        }
+    }    
 
     TCODLine::init(GAME.player->x,GAME.player->y,GAME.gstate.mapx,GAME.gstate.mapy);
     return true;
@@ -3882,7 +3991,8 @@ int handle_keys(Object_player &duh, Game &tgame) {
     else {
         m_x = 0;
         m_y = 0;
-        return no_turn;
+        if(player.AP != player.APm) return 0; // make monster execute while player is frozen
+        else return no_turn;
     }
     
     
@@ -4104,9 +4214,31 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         }
 
         if(action == 5){ // AIMING
-            player_aim(GAME, phasemove, monvector);
+            if(GAME.player->rangeaim < 2 || GAME.player->ranged_target != 666) // if not yet targeting or if already acquired target
+                player_aim(GAME, phasemove, monvector);
+            else{
+                GAME.gstate.mode_attack = true;
+                ranged_target(GAME); // acquire target
+                if(GAME.player->ranged_target != 666) // if was aborted, skip
+                    player_aim(GAME, phasemove, monvector);
+                    fetch = 1; // abort firing
+            }    
             action = 0;
-        }    
+        }   
+
+        if(action == 6){ // NEW TARGET AIMING
+            if(GAME.player->rangeaim > 2 && GAME.player->ranged_target != 666){ // if not yet targeting or if already acquired target
+                GAME.player->ranged_target = 666; // reset target
+                GAME.player->rangeaim = 2; // reset phase to drawing
+                GAME.player->aim = 0; // resets aim
+                GAME.gstate.mode_attack = true;
+                ranged_target(GAME); // acquire target
+                if(GAME.player->ranged_target != 666) // if was aborted, skip
+                    player_aim(GAME, phasemove, monvector);
+                    fetch = 1; // abort firing
+            }    
+            action = 0;
+        }
 
         if(action == 4){ // PASS
             while(player.AP > 0){
@@ -4136,6 +4268,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         if (player_action == quit2){ // quit combat
             Sleep(100);
             combat_mode = false;
+            GAME.gstate.iscombat = false;
             r_panel->clear();
             return 10;
         } // exits combat? 
@@ -4153,6 +4286,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
             if(GAME.player->rangeweapon && GAME.player->rangeaim >= 1){ 
                 GAME.player->rangeaim = 1; // resets aim phase if moved
                 GAME.player->aim = 0; // resets aim if moved
+                GAME.player->ranged_target = 666; // resets target lock
             }    
         } else didmove = false; // player action
 
@@ -4366,7 +4500,7 @@ int main() {
     //TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
     TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
     //TCODConsole::setCustomFont("sample_full_unicode.png",TCOD_FONT_LAYOUT_ASCII_INROW,32,2048);
-    TCODConsole::initRoot(win_x, win_y, "FOE", false, TCOD_RENDERER_SDL);
+    TCODConsole::initRoot(win_x, win_y, "FoE", false, TCOD_RENDERER_SDL);
     TCODSystem::setFps(LIMIT_FPS);
 
         
@@ -4422,6 +4556,7 @@ int main() {
     player.rangeaim = 0; // the aim phase
     player.aim = 0; // reset aim %
     player.attAP = 4;
+    player.ranged_target = 666;
 
     build_armor(GAME);
 
@@ -4524,6 +4659,7 @@ int main() {
     color_light_ground = TCODColor::grey;
     
     TCODColor tempcol1 = TCODColor::lightGrey;
+
     
     TCODConsole::root->clear();
     print_8x16(TCODConsole::root, 10, 5, "In eternity, where there is no time,", tempcol1, TCODColor::black);
@@ -4568,26 +4704,30 @@ int main() {
     vecstr.push_back(st3);
 
     print_c64(TCODConsole::root, 5, 10, ">", TCODColor::lightGrey, TCODColor::black);
+    eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
     TCODConsole::flush();
+    eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
     int fade = 0;
     int colfr = 0;
     int colfg = 0;
     int colfb = 0;
-    while(fade < 256){
+    while(fade < 256 &&  (eve != TCOD_EVENT_KEY_PRESS && eve != TCOD_EVENT_MOUSE_RELEASE) ){
         TCODColor fadec(colfr, colfg, colfb);
         print_c64(TCODConsole::root, 6, 10, "FEAR OF EXISTENCE.", fadec, TCODColor::black);
-        TCODConsole::checkForKeypress();
         TCODConsole::flush();
+        eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
         colfr = colfr + 5;
         colfg = colfg + 5;
         colfb = colfb + 5;
         fade = fade + 5;
-    } 
+    }
+    print_c64(TCODConsole::root, 6, 10, "FEAR OF EXISTENCE.", TCODColor::white, TCODColor::black);
 
+    /*
     std::vector<int> buckets( 100 );
     for( int i = 0; i < 100000; ++i ) { ++buckets.at(rng(0,99 ) ); }
     for( int i = 0; i < 100; ++i ) { std::cout << buckets[ i ] << "\t"; }
-
+    */
 
     int menu_index = 1;
 
@@ -4605,12 +4745,19 @@ int main() {
 
     // test custom
     if(menu_index == 2){
+        // defaults for quick play
         player.skill.lswdAML = 90;
         player.skill.lswdDML = 85;
         player.stats.hp = 120;
         player.stats.max_hp = 120;
         GAME.player->skill.initML = 80;
         player.skill.bowML = 50;
+
+        player.STR = 15;
+        player.AGI = 6;
+        GAME.player->APm = 12;
+        GAME.player->AP = 12;
+
         for(unsigned int n = 0; n < 16; ++n){ // fixes crash for non generated char
             armorsection armortemp;
             armortemp.B = 5;
@@ -4695,7 +4842,8 @@ int main() {
         
         bool in_sight;
 
-        combat_mode = false; 
+        combat_mode = false;
+        GAME.gstate.iscombat = false;
 
         if (!GAME.gstate.no_combat){ // debug flag
 
@@ -4703,6 +4851,7 @@ int main() {
                 in_sight = GAME.gstate.fov_map->isInFov(monvector[i].x,monvector[i].y);
                 if(in_sight && monvector[i].alive == true){ 
                     combat_mode = true; // trigger combat mode, if monster is sighted
+                    GAME.gstate.iscombat = true; // stre flag into GAME object when in combat loop
                     player.rangeaim = 0; // reset aim status
                     player.aim = 0; // reset aim %
 
@@ -4936,7 +5085,6 @@ int main() {
                 std::sort(monsters.begin(), monsters.end(), compare);
                 for (unsigned int i = 0; i<monsters.size(); ++i) {
                     *(monsters[i].initiative) = i+1;
-                    std::cout << "Init: " << *(monsters[i].initiative) << " " << std::endl;
                 }
             }
 
@@ -5093,6 +5241,7 @@ int main() {
                         if ( (monvector[i].pl_x == monvector[i].x && monvector[i].pl_y == monvector[i].y) ||
                             monvector[i].stuck){
 
+
                             // randomly pick a destination that is valid on the map
                             int vagab_x = 0;
                             int vagab_y = 0;
@@ -5187,16 +5336,18 @@ int main() {
                 if(monvector[i].combat_move < monvector[i].combat_move_max) ++monvector[i].combat_move;
             }    
         } 
-        
+
         while(player.APburn > 0) {
             --player.AP; 
             --player.APburn;
             if(player.APburn == 0) switchweapon_ex(GAME);
         }
-        if((player.AP < player.APm) && moved) ++player.AP; // one point for every move 
+
+        if(player.AP < player.APm) ++player.AP; // one point for every move 
         if(moved) player.forcedswap = false;
         player.rangeaim = 0; // reset aim status
         player.aim = 0; // reset aim %
+        player.ranged_target = 666; // reset target
         player.phaseAP = 0;
 
     } // main while cycle END

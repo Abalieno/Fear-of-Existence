@@ -74,7 +74,7 @@ void buildframe(int totx, int toty, std::shared_ptr<TCODConsole> menu){
     menu->setDefaultBackground(TCODColor::black);
     for(int x = 0; x < totx; ++x) menu->putChar(x, 0, '=', TCOD_BKGND_SET);
     for(int x = 0; x < totx; ++x) menu->putChar(x, toty-1, '-', TCOD_BKGND_SET);
-}   
+}
 
 int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack, bool type){
     int what_menu = 0; // constant-based for keys

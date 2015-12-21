@@ -136,6 +136,8 @@ struct global_state{
     int bigg3;
     int mapmode;
 
+    bool iscombat; // flag if in combat loop
+
     bool first; // HOLD used to set player combat states
     bool second; // MOVE
     bool third; // ATTACK
@@ -144,6 +146,8 @@ struct global_state{
     bool mode_move;
     bool mode_attack;
     bool mode_pass;
+
+    bool combat_aiming; // flagged for aiming UI
 
     int off_xx; // offsets to blit during attacks
     int off_yy;
