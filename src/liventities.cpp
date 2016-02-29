@@ -1023,7 +1023,23 @@ bool is_threat(Game &GAME, const std::vector<Object_monster> &monvector){
             if (monvector[i].alive == true) return true;
     }
     return false;
-}    
+}   
+
+bool fire_target(Game &GAME, int &phasemove){
+    msg_log msgd;
+    if(GAME.player->AP == 0){
+        sprintf(msgd.message, "Not enough Action Points for the action.");
+        msg_log_list.push_back(msgd);
+        return 0;
+    } else if(phasemove >= 4){ // shouldn't happen
+        sprintf(msgd.message, "Not enough APs, this phase."); 
+        msg_log_list.push_back(msgd);
+        return 0;
+    }
+    --GAME.player->AP;
+    ++phasemove;
+    return 0;
+}
 
 int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &monsters){
     msg_log msgd;
@@ -1040,12 +1056,12 @@ int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &mo
         if(GAME.player->AP >= cost && (phasemove + cost) <= 4){
             phasemove += cost;
             GAME.player->AP -= cost;
-            GAME.player->rangeaim += 1;
+            GAME.player->rangeaim += 1; // nocking (1)
             sprintf(msgd.message, "%c>%cPlayer nocking arrow (%dAP)", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, cost);
             msgd.color1 = TCODColor::lighterBlue;
             msg_log_list.push_back(msgd);
             if(GAME.player->DEX >= 18){ // no costs, so drawing too 
-                GAME.player->rangeaim += 1;
+                GAME.player->rangeaim += 1; // drawing (2)
                 sprintf(msgd.message, "%c>%cplayer drawing (0AP)", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                 msgd.color1 = TCODColor::lighterBlue;
                 msg_log_list.push_back(msgd);
@@ -1092,17 +1108,17 @@ int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &mo
             sprintf(msgd.message, "Not enough Action Points for the action.");
             msg_log_list.push_back(msgd);
             return 0;
-        } else if(phasemove >= 4){
-            sprintf(msgd.message, "Not enough APs, this phase."); // shouldn't happen
+        } else if(phasemove >= 4){ // shouldn't happen
+            sprintf(msgd.message, "Not enough APs, this phase."); 
             msg_log_list.push_back(msgd);
             return 0;
         }  
         --GAME.player->AP;
         ++phasemove;
         GAME.player->rangeaim += 1;
-        char formula[6];
+        char formula[8];
         int aimwas = GAME.player->aim;
-        switch(GAME.player->rangeaim - 2){
+        switch(GAME.player->rangeaim - 2){ // calculating aim steps
             case 1:
                 GAME.player->aim += GAME.player->DEX;
                 GAME.player->aim += GAME.player->DEX;
@@ -1114,28 +1130,31 @@ int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &mo
                 break;
         }    
         if((GAME.player->rangeaim - 2) >= 3) { GAME.player->aim += GAME.player->DEX / 2; strcpy(formula, "DEX / 2"); }
-        if(GAME.player->aim > GAME.player->skill.bowML){ 
-            GAME.player->aim = GAME.player->skill.bowML; // max aim
-            sprintf(msgd.message, "%c>%cPlayer reached maximum accuracy. aim(%d) %c%d%%%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
-                    GAME.player->rangeaim - 2, TCOD_COLCTRL_2, GAME.player->aim, TCOD_COLCTRL_STOP);
-        } else {    
-            sprintf(msgd.message, "%c>%cPlayer taking aim(%d) Aim step: (%s) = %d%% -> %c%d%%%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
-                    GAME.player->rangeaim - 2, formula, aimwas, TCOD_COLCTRL_2, GAME.player->aim, TCOD_COLCTRL_STOP);
-        }    
-        msgd.color1 = TCODColor::lighterBlue;
-        msgd.color2 = TCODColor::lighterGreen;
-        msg_log_list.push_back(msgd);
 
         if(GAME.player->ranged_target == -1){
-            sprintf(msgd.message, "  Player targeting point-blank. x(%d) y(%d)", GAME.player->tlocx, GAME.player->tlocy); 
+            sprintf(msgd.message, "%c>%cPlayer targeting point-blank. x(%d) y(%d)", 
+                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, GAME.player->tlocx, GAME.player->tlocy); 
+            msgd.color1 = TCODColor::lighterBlue;
             msg_log_list.push_back(msgd);
         } else {
             char st_tar[20];
             strcpy(st_tar, monsters[GAME.player->ranged_target].name);
-            sprintf(msgd.message, "  Player targeting %s. x(%d) y(%d)", st_tar, 
+            sprintf(msgd.message, "%c>%cPlayer targeting %s. x(%d) y(%d)", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, st_tar,
                     monsters[GAME.player->ranged_target].x, monsters[GAME.player->ranged_target].y); 
+            msgd.color1 = TCODColor::lighterBlue;
             msg_log_list.push_back(msgd);
         }
+
+        if(GAME.player->aim > GAME.player->skill.bowML){ 
+            GAME.player->aim = GAME.player->skill.bowML; // max aim
+            sprintf(msgd.message, "  Player reached maximum accuracy. aim(%d) %c%d%%%c", 
+                    GAME.player->rangeaim - 2, TCOD_COLCTRL_1, GAME.player->aim, TCOD_COLCTRL_STOP);
+        } else {    
+            sprintf(msgd.message, "  Player taking aim(%d) Aim step: (%s) = %d%% -> %c%d%%%c",  
+                    GAME.player->rangeaim - 2, formula, aimwas, TCOD_COLCTRL_1, GAME.player->aim, TCOD_COLCTRL_STOP);
+        }    
+        msgd.color1 = TCODColor::lighterGreen;
+        msg_log_list.push_back(msgd);
     }    
     return 0;
 }

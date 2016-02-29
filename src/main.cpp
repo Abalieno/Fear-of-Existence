@@ -51,6 +51,7 @@ const int MAP_WIDTH_AREA = 110;
 const int MAP_HEIGHT_AREA = 70;
 // visible area
 
+// HD = 960 540
 int   win_x   = (MAP_WIDTH_AREA) + 15 +3; // window width in cells 128 1024
 int   win_y   = (MAP_HEIGHT_AREA)+ 18 +3; // window height in cells 91 728
 int   LIMIT_FPS = 30;
@@ -3242,9 +3243,10 @@ bool combat_null = false; // set if waiting instead of moving, in combat
 
 void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
 
-    int x = player.x + dx;
+    int x = player.x + dx; // coordinates of the movement cell
     int y = player.y + dy;
 
+    // this block just updates facing in the 4 directions
     if (dy != 0){
         if (dy == -1) player.facing = 0;
         else player.facing = 2;
@@ -3262,7 +3264,7 @@ void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
         if (monvector[i].x == x && monvector[i].y == y){
             if (monvector[i].alive == true){
                 target = i;
-                is_it = true;
+                is_it = true; // used to enable attack block below
             }
         }
     }
@@ -3453,8 +3455,8 @@ bool ranged_target(Game &GAME){
             }    
             targetx = nonx;
             targety = nony;
+            if(mouse.lbutton || (eve == TCOD_EVENT_KEY_PRESS && key.vk == TCODK_ENTER)) range_td = true;
         }
-        if(mouse.lbutton || (eve == TCOD_EVENT_KEY_PRESS && key.vk == TCODK_ENTER)) range_td = true;
         //std::cout << "rangevar: " << range_td << " mouse: " << mouse.lbutton << std::endl;
         eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
         TCODConsole::flush(); // this updates the screen
@@ -4214,28 +4216,28 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         }
 
         if(action == 5){ // AIMING
-            if(GAME.player->rangeaim < 2 || GAME.player->ranged_target != 666) // if not yet targeting or if already acquired target
+            if(GAME.player->rangeaim < 2 || GAME.player->ranged_target != 666) // nock, draw, or improve aim 
                 player_aim(GAME, phasemove, monvector);
-            else{
-                GAME.gstate.mode_attack = true;
-                ranged_target(GAME); // acquire target
-                if(GAME.player->ranged_target != 666) // if was aborted, skip
-                    player_aim(GAME, phasemove, monvector);
-                    fetch = 1; // abort firing
+            else{ // need to acquire target
+                GAME.gstate.mode_attack = true; // for aim menu UI, right?
+                ranged_target(GAME); // acquire target function
+                if(GAME.player->ranged_target != 666) // do only if now target exists 
+                    player_aim(GAME, phasemove, monvector); // messages + takes 1 aim automatically
+                    fetch = 1; // end phase
             }    
             action = 0;
         }   
 
         if(action == 6){ // NEW TARGET AIMING
-            if(GAME.player->rangeaim > 2 && GAME.player->ranged_target != 666){ // if not yet targeting or if already acquired target
+            if(GAME.player->rangeaim > 2 && GAME.player->ranged_target != 666){ // if further phase and already targerting
                 GAME.player->ranged_target = 666; // reset target
-                GAME.player->rangeaim = 2; // reset phase to drawing
+                GAME.player->rangeaim = 2; // reset phase back to drawing
                 GAME.player->aim = 0; // resets aim
                 GAME.gstate.mode_attack = true;
                 ranged_target(GAME); // acquire target
-                if(GAME.player->ranged_target != 666) // if was aborted, skip
-                    player_aim(GAME, phasemove, monvector);
-                    fetch = 1; // abort firing
+                if(GAME.player->ranged_target != 666) // do only if now target exists
+                    player_aim(GAME, phasemove, monvector); // messages + takes 1 aim automatically
+                    fetch = 1; // end phase
             }    
             action = 0;
         }
@@ -4259,8 +4261,8 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
                 msg_log_list.push_back(msgd);
                 action = 0;
             } else { 
-                GAME.gstate.mode_attack = true;
-                ranged_target(GAME);
+                //GAME.gstate.mode_attack = true;
+                fire_target(GAME, phasemove);
                 action = 0;
             }
         }
@@ -4275,7 +4277,8 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         if (player_action == quit || TCODConsole::isWindowClosed()){
             return 666;
         } // exits program
-      
+     
+        // moves only after MOVE command is selected
         if ((m_x != 0 || m_y != 0 || combat_null) && player.AP > 0 && action == 2 && phasemove < 4){
             player.move(m_x, m_y, monvector);
             ++phasemove;
@@ -4499,6 +4502,7 @@ int main() {
     //TCODConsole::setCustomFont("arial10x10.png",TCOD_FONT_LAYOUT_TCOD | TCOD_FONT_TYPE_GREYSCALE);
     //TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
     TCODConsole::setCustomFont("terminal.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
+    //TCODConsole::setCustomFont("terminal2.png",TCOD_FONT_LAYOUT_ASCII_INCOL,16,256);
     //TCODConsole::setCustomFont("sample_full_unicode.png",TCOD_FONT_LAYOUT_ASCII_INROW,32,2048);
     TCODConsole::initRoot(win_x, win_y, "FoE", false, TCOD_RENDERER_SDL);
     TCODSystem::setFps(LIMIT_FPS);
