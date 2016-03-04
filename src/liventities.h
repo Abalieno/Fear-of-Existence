@@ -376,7 +376,7 @@ void switchweapon_ex(Game &GAME);
 
 bool is_threat(Game &GAME, const std::vector<Object_monster> &monvector);
 
-bool fire_target(Game &GAME, int &phasemove);
+bool fire_target(Game &GAME, int &phasemove, std::vector<Object_monster> &monsters);
 
 int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &monsters);
 

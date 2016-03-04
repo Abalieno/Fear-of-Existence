@@ -1025,8 +1025,9 @@ bool is_threat(Game &GAME, const std::vector<Object_monster> &monvector){
     return false;
 }   
 
-bool fire_target(Game &GAME, int &phasemove){
+bool fire_target(Game &GAME, int &phasemove, std::vector<Object_monster> &monsters){
     msg_log msgd;
+
     if(GAME.player->AP == 0){
         sprintf(msgd.message, "Not enough Action Points for the action.");
         msg_log_list.push_back(msgd);
@@ -1036,8 +1037,21 @@ bool fire_target(Game &GAME, int &phasemove){
         msg_log_list.push_back(msgd);
         return 0;
     }
-    --GAME.player->AP;
-    ++phasemove;
+    if(GAME.player->ranged_target == -2){ // shouldn't happen
+        sprintf(msgd.message, "No valid target."); 
+        msg_log_list.push_back(msgd);
+        return 0;
+    }  
+    if(GAME.player->ranged_target >= 0){ // if targeting a monster
+        if(!monsters[GAME.player->ranged_target].alive){ // if target has been killed
+            GAME.player->ranged_target = -1; // convert to point blank
+        } 
+    }
+
+    GAME.player->AP -= GAME.player->attAP;
+    phasemove += GAME.player->attAP;
+    GAME.player->aim = 0; // resets aim
+    GAME.player->rangeaim = 0; // resets rangephase, but not unlock target
     return 0;
 }
 
@@ -1131,6 +1145,8 @@ int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &mo
         }    
         if((GAME.player->rangeaim - 2) >= 3) { GAME.player->aim += GAME.player->DEX / 2; strcpy(formula, "DEX / 2"); }
 
+        if(GAME.player->ranged_target >= 0 && !monsters[GAME.player->ranged_target].alive)
+            GAME.player->ranged_target == -1; // if monster died, revert to point blank
         if(GAME.player->ranged_target == -1){
             sprintf(msgd.message, "%c>%cPlayer targeting point-blank. x(%d) y(%d)", 
                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, GAME.player->tlocx, GAME.player->tlocy); 
