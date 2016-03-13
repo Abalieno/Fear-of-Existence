@@ -302,6 +302,9 @@ public: // public should be moved down, but I keep it here for debug messages
     int ranged_target; // 666 no target, -1 point blank, 0+ monster index number
     int tlocx; // ranged targeting x
     int tlocy; // ranged targeting y
+    bool deflected; // used for animation on arrow miss
+    int deflx; // deflected target
+    int defly;
 
     int move_counter; // how many steps moved in the turn
     int speed;
@@ -376,7 +379,7 @@ void switchweapon_ex(Game &GAME);
 
 bool is_threat(Game &GAME, const std::vector<Object_monster> &monvector);
 
-bool fire_target(Game &GAME, int &phasemove, std::vector<Object_monster> &monsters);
+bool fire_target(Game &GAME, int &phasemove, std::vector<Object_monster> &monsters, int &whohit);
 
 int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &monsters);
 

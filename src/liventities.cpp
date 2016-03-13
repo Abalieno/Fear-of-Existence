@@ -19,6 +19,8 @@ extern const int MAP_HEIGHT;
 
 extern std::vector<Tile> map_array;
 
+extern int monster_this(int x, int y, const std::vector<Object_monster> &monvector);
+
 void Object_monster::draw(bool uh, Game &tgame) {
     //con->setDefaultForeground(color);
     
@@ -600,7 +602,9 @@ void Fighter::attack(Object_player &player, Object_monster &monster, bool who, i
 
     // crit chances
     int a_crit = AML / 10;
+    if(a_crit < 1) a_crit = 1;
     int d_crit = DML / 10;
+    if(d_crit < 1) d_crit = 1;
     int raw_AML = AML;
     int raw_DML = DML;
     int a_critF = (100 - raw_AML) / 20; // half of index
@@ -939,27 +943,37 @@ int switchweapon(Game &GAME, bool mode){
     }    
 
     if(GAME.player->rangeweapon){ // switch back to melee, always possible 
-        sprintf(msgd.message, "Player weapon switch in progress.");
+        sprintf(msgd.message, "%c>%cPlayer weapon switch in progress. (cost: %c%d%cAP)", 
+                TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_2, action, TCOD_COLCTRL_STOP);
+        msgd.color1 = TCODColor::lighterBlue;
+        msgd.color2 = TCODColor::red;
         msg_log_list.push_back(msgd);
         GAME.player->APburn = action;
         //GAME.player->AP -= action;
         GAME.player->forcedswap = false;
         GAME.player->rangeaim = 0; // resets aim phase
         GAME.player->aim = 0; // resets aim
+        GAME.player->ranged_target = -2;
         if(mode) return 6;
         else return 0;
     } else if (is_ok){ // if melee to ranged, and check passed, do the switch
-        sprintf(msgd.message, "Player weapon switch in progress.");
+        sprintf(msgd.message, "%c>%cPlayer weapon switch in progress. (cost: %c%d%cAP)", 
+                TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
+                TCOD_COLCTRL_2, action, TCOD_COLCTRL_STOP);
+        msgd.color1 = TCODColor::lighterBlue;
+        msgd.color2 = TCODColor::red;
         msg_log_list.push_back(msgd);
         GAME.player->APburn = action;
         //GAME.player->AP -= action;
         GAME.player->forcedswap = false;
         GAME.player->rangeaim = 0; // resets aim phase
         GAME.player->aim = 0; // resets aim
+        GAME.player->ranged_target = -2;
         if(mode) return 6;
         else return 0;
     } else { // if melee to ranged, but check not passed
-        debugmsg("Can't equip bow.  Needed: %d Have: %d", GAME.player->eRangedDW, formula);
+        debugmsg("Can't equip bow. Needed: %d Have: %d", GAME.player->eRangedDW, formula);
         msgd.color1 = dicec;
         msgd.color2 = TCODColor::red;
         sprintf(msgd.message, "Can't equip bow. Needed: %c%d%c Have: %c%d%c", TCOD_COLCTRL_1, GAME.player->eRangedDW, TCOD_COLCTRL_STOP,
@@ -984,14 +998,14 @@ void switchweapon_ex(Game &GAME){
     if(GAME.player->rangeweapon){ // switch back to melee, always possible 
         GAME.player->rangeweapon = false;
         GAME.player->att_phase = 3; // average phase weapon
-        GAME.player->attAP = 4;
+        GAME.player->attAP = 4; // attack APs
         sprintf(msgd.message, "Sword equipped. Melee mode active.");
         msg_log_list.push_back(msgd);
         return;
     } else { 
         GAME.player->rangeweapon = true;
         GAME.player->att_phase = 3; // average phase weapon
-        GAME.player->attAP = 2;
+        GAME.player->attAP = 2; // default attack APs
         if(GAME.player->DEX >= 10 && GAME.player->DEX < 20) GAME.player->attAP = 1;
         if(GAME.player->DEX >= 20) GAME.player->attAP = 0;
         msgd.color1 = dicec;
@@ -1025,7 +1039,29 @@ bool is_threat(Game &GAME, const std::vector<Object_monster> &monvector){
     return false;
 }   
 
-bool fire_target(Game &GAME, int &phasemove, std::vector<Object_monster> &monsters){
+void success_l(msg_log &msgd, int s_level){
+    switch(s_level){
+        case 0:
+            msgd.c4 = 1;
+            msgd.color4 = TCODColor::white;
+            msgd.bcolor4 = TCODColor::blue;
+            break;
+        case 1:
+            msgd.color4 = TCODColor::lighterBlue;
+            break;
+        case 2:
+            msgd.color4 = TCODColor::red;
+            break;
+        case 3:
+            msgd.c4 = 1;
+            msgd.color4 = TCODColor::white;
+            msgd.bcolor4 = TCODColor::red;
+            break;
+    }
+    return;
+}
+
+bool fire_target(Game &GAME, int &phasemove, std::vector<Object_monster> &monsters, int &whohit){
     msg_log msgd;
 
     if(GAME.player->AP == 0){
@@ -1045,20 +1081,227 @@ bool fire_target(Game &GAME, int &phasemove, std::vector<Object_monster> &monste
     if(GAME.player->ranged_target >= 0){ // if targeting a monster
         if(!monsters[GAME.player->ranged_target].alive){ // if target has been killed
             GAME.player->ranged_target = -1; // convert to point blank
+        } else {
+            GAME.player->tlocx = monsters[GAME.player->ranged_target].x; // update target pos
+            GAME.player->tlocy = monsters[GAME.player->ranged_target].y;
         } 
+        if(!GAME.gstate.fov_map->isInFov(monsters[GAME.player->ranged_target].x,monsters[GAME.player->ranged_target].y)){
+            GAME.player->ranged_target = -2; // reset if gone out of fov
+            GAME.player->aim = 0; // resets aim
+            if(GAME.player->rangeaim > 2) GAME.player->rangeaim = 2; // resets rangephase, but not unlock target
+            sprintf(msgd.message, "Target not visible."); 
+            msg_log_list.push_back(msgd);
+            return 0;
+        }
     }
+
+    // initial base to-hit
+    bool didhit = false; 
+    int firstroll = 0; // first to-hit roll 
+    int firstchance = 0; // first to-hit corrected by distance 
+    int stepdistance = 0; // distance
+    int rangepenalty = 0;
+    stepdistance = (int)sqrt(pow(GAME.player->tlocx-GAME.player->x,2)+pow(GAME.player->tlocy-GAME.player->y,2));
+    if(stepdistance <= GAME.player->rangedD1) rangepenalty = 10;
+    else if(stepdistance > GAME.player->rangedD1 && stepdistance <= GAME.player->rangedD2) rangepenalty = 5;
+    else if(stepdistance > GAME.player->rangedD2 && stepdistance <= GAME.player->rangedD3) rangepenalty = 0;
+    else if(stepdistance > GAME.player->rangedD3 && stepdistance <= GAME.player->rangedD4) rangepenalty = -20;
+    else if(stepdistance > GAME.player->rangedD4 && stepdistance <= GAME.player->rangedD5) rangepenalty = -40; 
+    else if(stepdistance > GAME.player->rangedD5 && stepdistance <= GAME.player->rangedD6) rangepenalty = -80;
+    if(stepdistance <= GAME.player->rangedD4 && stepdistance > 0){ // not too close and not hitting ceiling
+        firstchance = GAME.player->aim + rangepenalty;
+        if(firstchance > 0){
+            // should add here target modificators, like target is moving
+            firstroll = dice(1,100);
+
+            // to-hit success levels
+            int critS = GAME.player->skill.bowML / 10;
+            if(critS < 1) critS = 1;
+            int critF = (100 - GAME.player->skill.bowML) / 20;
+            if(critF < 1) critF = 1;
+            int success_level = 0;
+            if (firstroll <= critS) success_level = 0; // CS Critical Success
+            else if(firstroll <= firstchance) success_level = 1; // MS Marginal Success
+            else success_level = 2; // MF Marginal Failure
+            if(firstroll > (100 - critF)) success_level = 3; // CF Critical Failure
+
+            sprintf(msgd.message, 
+                    "%c>%cThe player fires an arrow. Aim(%c%d%%%c) + distance(%c%d%%%c) %c1d100%c(%c%d%c)",
+                    TCOD_COLCTRL_5, TCOD_COLCTRL_STOP,
+                    TCOD_COLCTRL_1, GAME.player->aim, TCOD_COLCTRL_STOP,
+                    TCOD_COLCTRL_1, rangepenalty, TCOD_COLCTRL_STOP,
+                    TCOD_COLCTRL_2, TCOD_COLCTRL_STOP, 
+                    TCOD_COLCTRL_4, firstroll, TCOD_COLCTRL_STOP);
+            msgd.color5 = TCODColor::lighterBlue;
+            msgd.color1 = TCODColor::lighterGreen;
+            msgd.color2 = dicec;
+            success_l(msgd, success_level);
+            msg_log_list.push_back(msgd);
+
+            if(success_level < 2){ // 0/1 successes 2/3 failures
+                int x = GAME.player->x;
+                int y = GAME.player->y;
+                int impiled = 0; // numbers of monsters passing through
+                TCODLine::init(GAME.player->x,GAME.player->y,GAME.player->tlocx,GAME.player->tlocy);
+                while (!TCODLine::step(&x,&y)) {
+                    if(map_array[y * MAP_WIDTH + x].blocked){ 
+                        if(GAME.gstate.fov_map->isInFov(x,y)){
+                                GAME.player->tlocx = x;
+                                GAME.player->tlocy = y; // updates coord with wall hit
+                                sprintf(msgd.message, "  The arrow struck a wall.");
+                        } else {
+                            if((int)sqrt(pow(x-GAME.player->x,2)+pow(y-GAME.player->y,2)) <= 20)
+                                sprintf(msgd.message, "  You hear the sound of the arrow hitting a wall.");
+                            else sprintf(msgd.message, "  The arrow flies out of sight."); 
+                        }    
+                        msg_log_list.push_back(msgd);
+                        didhit = true; // CHECK CHECK CHECK
+                        break; // hit a wall
+                    }
+                    int i = monster_this(x, y, monsters);
+                    if(i != -1){ // if found a monster alive at coord
+                        if(x == GAME.player->tlocx && y == GAME.player->tlocy){
+                            if(impiled == 0){ // hit designated
+                                whohit = i;
+                                monsters[i].stats.hp -= 20;
+                                didhit = true;
+                            } else { // reached the target, but after going through
+                                int secondroll = dice(1,100);
+                                if(secondroll <= 100 - (20 * (impiled + 1)) ){ // hit
+                                    whohit = i;
+                                    monsters[i].stats.hp -= 20;
+                                    didhit = true;
+                                }    
+                            }    
+                        }else { // found a different monster
+                            if(impiled == 4){ // no more chance, abort
+                                GAME.player->deflx = x;
+                                GAME.player->defly = y;
+                                didhit = true;
+                                break;
+                            }    
+                            int secondroll = dice(1,100);
+                            if(secondroll <= 100 - (20 * (impiled + 1)) ){ // hit
+                                whohit = i;
+                                monsters[i].stats.hp -= 20;
+                                GAME.player->deflected = true;
+                                GAME.player->deflx = x;
+                                GAME.player->defly = y;
+                                msgd.color4 = TCODColor::lighterBlue;
+                                didhit = true;
+                            } else msgd.color4 = TCODColor::red;
+                            sprintf(msgd.message, 
+                                    "  There's a different monster in the arrow's path: chance(%c%d%%%c) %c1d100%c(%c%d%c)", 
+                                    TCOD_COLCTRL_1, 100 - (20 * (impiled + 1)), TCOD_COLCTRL_STOP,
+                                    TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                                    TCOD_COLCTRL_4, secondroll, TCOD_COLCTRL_STOP);
+                            msgd.color1 = TCODColor::lighterGreen;
+                            msgd.color2 = dicec;
+                            msg_log_list.push_back(msgd);
+                            ++impiled;
+                        }    
+                    }        
+                    if (didhit) break; // stop arrow
+                }    
+            } else { // change trajectory
+                GAME.player->deflected = true;
+                int fail_index = (firstroll - firstchance) / 10;
+                if(fail_index < 1) fail_index = 1;
+                int stepdistance = (int)sqrt(pow(GAME.player->tlocx-GAME.player->x,2)+
+                        pow(GAME.player->tlocy-GAME.player->y,2));
+                if(stepdistance < fail_index) fail_index = stepdistance; // avoid shooting arrows backwards
+                sprintf(msgd.message, "  Fail index: %d", fail_index); 
+                msg_log_list.push_back(msgd);
+                bool devx = one_in(2); // to determine negative or not
+                bool devy = one_in(2);
+                do{
+                    GAME.player->deflx = rng(0,fail_index);
+                    GAME.player->defly = rng(0,fail_index);
+                } while (GAME.player->deflx == 0 && GAME.player->defly == 0);
+                if(!devx) GAME.player->deflx = -abs(GAME.player->deflx); // make negative
+                if(!devy) GAME.player->defly = -abs(GAME.player->defly); // make negative
+                sprintf(msgd.message, "  The arrow flies away from your target: x,y(%d,%d)", 
+                        GAME.player->deflx, GAME.player->defly); 
+                msg_log_list.push_back(msgd);
+
+                GAME.player->deflx = GAME.player->tlocx + GAME.player->deflx;
+                GAME.player->defly = GAME.player->tlocy + GAME.player->defly;
+
+                int x = GAME.player->x;
+                int y = GAME.player->y;
+                int impiled = 0; // numbers of monsters passing through
+                TCODLine::init(GAME.player->x,GAME.player->y,GAME.player->deflx,GAME.player->defly);
+                while (!TCODLine::step(&x,&y)) {
+                    if(map_array[y * MAP_WIDTH + x].blocked){ 
+                        if(GAME.gstate.fov_map->isInFov(x,y)){
+                            sprintf(msgd.message, "  The arrow struck a wall.");
+                        } else {
+                            if((int)sqrt(pow(x-GAME.player->x,2)+pow(y-GAME.player->y,2)) <= 20)
+                                sprintf(msgd.message, "  You hear the sound of the arrow hitting a wall.");
+                            else sprintf(msgd.message, "  The arrow flies out of sight."); 
+                        }   
+                        GAME.player->deflx = x;
+                        GAME.player->defly = y;
+                        didhit = true;
+                        msg_log_list.push_back(msgd);
+                        break; // hit a wall
+                    }
+                    int i = monster_this(x, y, monsters);
+                    if(i != -1){ // if found a monster alive at coord
+                        int secondroll = dice(1,100);
+                        if(firstchance / (2 * (impiled + 1)) < 5){ // no skill, arrow stops there 
+                            GAME.player->deflx = x;
+                            GAME.player->defly = y;
+                            didhit = true; 
+                            break;
+                        }
+                        if(secondroll <= firstchance / (2 * (impiled + 1))){ // hit
+                            whohit = i; // sent to ragekill function in main.cpp
+                            monsters[i].stats.hp -= 20;
+                            GAME.player->deflx = x;
+                            GAME.player->defly = y;
+                            didhit = true;
+                            msgd.color4 = TCODColor::lighterBlue;
+                        } else msgd.color4 = TCODColor::red;
+                        sprintf(msgd.message, 
+                                "  There's a different monster in the arrow's path: aim/%d(%c%d%%%c) %c1d100%c(%c%d%c)",
+                                2*(impiled+1), 
+                                TCOD_COLCTRL_1, firstchance / (2 * (impiled + 1)), TCOD_COLCTRL_STOP,
+                                TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                                TCOD_COLCTRL_4, secondroll, TCOD_COLCTRL_STOP);
+                        msgd.color2 = dicec;
+                        msgd.color1 = TCODColor::lighterGreen;
+                        msg_log_list.push_back(msgd);
+                        ++impiled;
+                    }
+                    if (didhit) break; // stop arrow    
+                }
+                
+            }    
+        } else { // if firstchance <= 0
+            sprintf(msgd.message, "Not enough aim, aborted."); 
+            msg_log_list.push_back(msgd);
+            return 0;
+        }    
+    } else { 
+        sprintf(msgd.message, "Either too close or too far."); 
+        msg_log_list.push_back(msgd);
+        return 0;
+    } 
 
     GAME.player->AP -= GAME.player->attAP;
     phasemove += GAME.player->attAP;
     GAME.player->aim = 0; // resets aim
-    GAME.player->rangeaim = 0; // resets rangephase, but not unlock target
-    return 0;
+    GAME.player->rangeaim = 0; // resets rangephase, but not unlock target 
+    return didhit;
+    // verify all returns for spending points even when not hitting anything and exiting earlier
 }
 
 int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &monsters){
     msg_log msgd;
+
     bool nothreat = false;
-    nothreat = !is_threat(GAME, monsters); 
+    nothreat = !is_threat(GAME, monsters); nothreat = true; //DISABLE 
     int cost = 2; // cost in AP for the aim action
     if(GAME.player->rangeaim == 0 && !nothreat){
         sprintf(msgd.message, "Cannot nock arror, monster too close.");
@@ -1146,7 +1389,7 @@ int player_aim(Game &GAME, int &phasemove, const std::vector<Object_monster> &mo
         if((GAME.player->rangeaim - 2) >= 3) { GAME.player->aim += GAME.player->DEX / 2; strcpy(formula, "DEX / 2"); }
 
         if(GAME.player->ranged_target >= 0 && !monsters[GAME.player->ranged_target].alive)
-            GAME.player->ranged_target == -1; // if monster died, revert to point blank
+            GAME.player->ranged_target = -1; // if monster died, revert to point blank
         if(GAME.player->ranged_target == -1){
             sprintf(msgd.message, "%c>%cPlayer targeting point-blank. x(%d) y(%d)", 
                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, GAME.player->tlocx, GAME.player->tlocy); 

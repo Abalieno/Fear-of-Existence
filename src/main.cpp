@@ -51,7 +51,7 @@ const int MAP_WIDTH_AREA = 110;
 const int MAP_HEIGHT_AREA = 70;
 // visible area
 
-// HD = 960 540
+// HD = 960 540 120 65
 int   win_x   = (MAP_WIDTH_AREA) + 15 +3; // window width in cells 128 1024
 int   win_y   = (MAP_HEIGHT_AREA)+ 18 +3; // window height in cells 91 728
 int   LIMIT_FPS = 30;
@@ -1351,6 +1351,18 @@ void set_black(Game &tgame){
     } 
 } // fill "con" with black
 
+// find if there's a monster alive at x,y coordinates, returns -1 if none found
+int monster_this(int x, int y, const std::vector<Object_monster> &monsters){
+    for (unsigned int i = 0; i<monsters.size(); ++i){ 
+        if (monsters[i].x == x && monsters[i].y == y){
+            if(monsters[i].alive){ // found a monster in path
+                return i;
+            }
+        }    
+    }
+    return -1;
+}    
+
 void set_black_b(Game &tgame){
     for (int i = 0; i < (MAP_HEIGHT*2) ;++i){
         for (int l = 0; l < (MAP_WIDTH*2) ;++l) {
@@ -1480,7 +1492,7 @@ void I_am_moused(Game &tgame){
         // extended msg log
         if(mousez.lbutton && y == 73 && (x == 33 || x == 34)) {
             if(MSG_MODE_XTD){ 
-                MSG_MODE_XTD=0; 
+                MSG_MODE_XTD = 0 ; 
                 UI_unhook(tgame, 3);
             } else {
                 MSG_MODE_XTD = 1; 
@@ -1667,7 +1679,8 @@ void I_am_moused(Game &tgame){
                         else if(in_y == 6 && tgame.player->rangeweapon){ // aim
                             if(tgame.player->aim != tgame.player->skill.bowML) fetch = 5; // only if not filled
                         } else if(in_y == 7 && tgame.player->rangeweapon && 
-                                tgame.player->ranged_target != -2 && tgame.player->rangeaim >= 2 ) fetch = 6;    
+                                tgame.player->ranged_target != -2) fetch = 6;  
+                                // excluded tgame.player->rangeaim >= 2 
                     }else fetch = 0; 
                 } else if(tgame.gstate.mode_move){ // move mode
                     if(in_y == 2) prompt_selection = 1; 
@@ -1779,18 +1792,25 @@ void render_bar_s2(int x, int y, int total_width, const char *name,
             --ivalue;
         } else { 
             panel->setDefaultForeground(TCODColor::lighterGreen);
-            if(phase == 0) panel->setDefaultForeground(TCODColor::lighterYellow);
-            panel->putChar(x+index+1, y, '=');
+            panel->putChar(x+index+1, y, '+');
+            if(phase == 0){ 
+                panel->setDefaultForeground(TCODColor::lighterYellow);
+                panel->putChar(x+index+1, y, '=');
+            }    
             if(phase > 0) --phase;
         }
         panel->setDefaultForeground(TCODColor::lighterGrey);
         panel->putChar(x+index+2, y, '.');
         index += 2;
     } 
+    panel->setDefaultForeground(TCODColor::grey);
+    // 9 ap 3 used -> 9 maximum 6 value (left)
+    if ((maximum - value) > 0) panel->putChar(x+(maximum-value)*2, y, '|'); // two dividers
+    if (temphase > 0) panel->putChar(x+((maximum-value)+temphase)*2, y, '|');
     panel->setDefaultForeground(TCODColor::lighterGrey);
     panel->putChar(x+index, y, ']');
     panel->setDefaultForeground(TCODColor::lighterGreen);
-    panel->print(x, y+1, "Phase: %d", temphase);
+    panel->print(x, y+1, "Phase left: %d", temphase);
 
     panel->setDefaultForeground(TCODColor::lighterGrey);
     TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::white, TCODColor::black);
@@ -1956,7 +1976,6 @@ void render_help(){
     widget_help->print(0, 3, "> bla bla bla");
     widget_help->print(19, 8, " OK ");
     TCODConsole::blit(widget_help,0,0,40,10,TCODConsole::root, 73, 2);
-
 }
 
 void render_base(Game &tgame){
@@ -2289,7 +2308,7 @@ void render_prompt(Game &GAME){
                         ranged_offx = 7;
                         break;    
                 } 
-                if(GAME.player->rangeaim >= 3){
+                if(GAME.player->rangeaim >= 2 && GAME.player->ranged_target != -2){
                     TCODConsole::root->print(loc_x, loc_y+6, "%cA%c%cIM%c",
                                 TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
                     ranged_offx = 4;
@@ -2314,7 +2333,7 @@ void render_prompt(Game &GAME){
                         ranged_offx = 7;
                         break;    
                 }
-                if(GAME.player->rangeaim >= 3){
+                if(GAME.player->rangeaim >= 2 && GAME.player->ranged_target != -2){
                     TCODConsole::root->print(loc_x, loc_y+6, "%cA%c%cIM%c",
                             TCOD_COLCTRL_4,TCOD_COLCTRL_STOP,TCOD_COLCTRL_1,TCOD_COLCTRL_STOP);
                     ranged_offx = 4;
@@ -3510,7 +3529,7 @@ bool ranged_target(Game &GAME){
         }
     }    
 
-    TCODLine::init(GAME.player->x,GAME.player->y,GAME.gstate.mapx,GAME.gstate.mapy);
+    //TCODLine::init(GAME.player->x,GAME.player->y,GAME.gstate.mapx,GAME.gstate.mapy); // ?????
     return true;
 }    
 
@@ -4144,6 +4163,145 @@ int init_UI(TCODConsole *r_panel, Game &GAME, const std::vector<Unit> &Phase, co
     return init_ln - line_temp;
 } 
 
+// blink UI, not the action animation
+// blink effect is within player_turn
+void rangedraw(Game &GAME, const std::vector<Object_monster> &monsters){
+    int nonx = 0; int nony = 0;
+    int x = GAME.player->x;
+    int y = GAME.player->y;
+
+    if(GAME.player->ranged_target >= 0){ // if targeting a monster
+        if(!monsters[GAME.player->ranged_target].alive){ // if target has been killed
+            GAME.player->ranged_target = -1; // convert to point blank
+        } else {
+            GAME.player->tlocx = monsters[GAME.player->ranged_target].x; // update target pos
+            GAME.player->tlocy = monsters[GAME.player->ranged_target].y;
+        }  
+        if(!GAME.gstate.fov_map->isInFov(monvector[GAME.player->ranged_target].x,monvector[GAME.player->ranged_target].y)){
+            GAME.player->ranged_target = -2; // reset if gone out of fov
+            GAME.player->aim = 0; // resets aim
+            if(GAME.player->rangeaim > 2) GAME.player->rangeaim = 2; // resets rangephase, but not unlock target
+            msg_log msgd;
+            sprintf(msgd.message, "Target not visible."); 
+            msg_log_list.push_back(msgd);
+        }
+    }
+
+    TCODLine::init(GAME.player->x,GAME.player->y,GAME.player->tlocx,GAME.player->tlocy);
+    while (!TCODLine::step(&x,&y)) {
+
+        if (!GAME.gstate.bigg){
+            nonx = x - GAME.gstate.off_xx;
+            nony = y - GAME.gstate.off_yy;
+        } else if (GAME.gstate.bigg){    
+            nonx = ((x*2) - GAME.gstate.off_xx)-28;
+            nony = ((y*2) - GAME.gstate.off_yy)-18;
+        }
+
+        TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+        //if(GAME.gstate.fov_map->isInFov(x,y))
+            TCODConsole::root->putChar(nonx, nony, 178, TCOD_BKGND_SET);
+        //else break;
+    }  
+    if(x != GAME.player->x || y != GAME.player->y){ 
+        TCODConsole::root->setDefaultForeground(TCODColor::red);
+        TCODConsole::root->putChar(nonx, nony, '*', TCOD_BKGND_SET);
+    }
+    return;
+}    
+
+void rangeanimation(Game &GAME, const std::vector<Object_monster> &monvector, const int whohit){
+
+    TCOD_mouse_t mouse;
+    TCOD_key_t key;
+    uint32 millisecond = 0;
+    int second = -2;
+
+    int x = GAME.player->x;
+    int y = GAME.player->y;
+    int nonx = 0; int nony = 0;
+    bool done = false;
+    int step = 0;
+    do{
+        uint32 millicounter = TCODSystem::getElapsedMilli();
+        if(millicounter > millisecond){ 
+            millisecond = millicounter + 1000;
+            ++second;
+        }
+        render_all(GAME);
+        //I_am_moused(GAME);
+
+        if(GAME.player->deflected) 
+            TCODLine::init(GAME.player->x,GAME.player->y,GAME.player->deflx,GAME.player->defly);
+        else TCODLine::init(GAME.player->x,GAME.player->y,GAME.player->tlocx,GAME.player->tlocy);
+        while (!TCODLine::step(&x,&y)) {
+
+            if (!GAME.gstate.bigg){
+                nonx = x - GAME.gstate.off_xx;
+                nony = y - GAME.gstate.off_yy;
+            } else if (GAME.gstate.bigg){    
+                nonx = ((x*2) - GAME.gstate.off_xx)-28;
+                nony = ((y*2) - GAME.gstate.off_yy)-18;
+            }
+
+            TCODConsole::root->setDefaultForeground(TCODColor::yellow);
+            if(GAME.gstate.fov_map->isInFov(x,y))
+                TCODConsole::root->putChar(nonx, nony, 178, TCOD_BKGND_SET);
+            TCODConsole::root->setDefaultForeground(TCODColor::grey);
+            if(step == second){
+                int *tgtx; int *tgty;
+                if(GAME.player->deflected){ 
+                    tgtx = &GAME.player->deflx; 
+                    tgty = &GAME.player->defly;
+                } else {
+                    tgtx = &GAME.player->tlocx; 
+                    tgty = &GAME.player->tlocy;
+                }    
+                if(GAME.gstate.fov_map->isInFov(x,y))
+                    TCODConsole::root->putChar(nonx, nony, 'x', TCOD_BKGND_SET);
+                else {done = true; break;} // stop when out of fov
+                if(x == *tgtx && y == *tgty){ 
+                    TCODConsole::root->setDefaultForeground(TCODColor::lightRed);
+                    TCODConsole::root->putChar(nonx, nony, 'X', TCOD_BKGND_SET);
+                }
+            }    
+            ++step;
+        }
+        if(second > step-1) done = true;
+        step = 0;
+
+        if(whohit >= 0);
+
+        TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+        TCODConsole::flush(); // this updates the screen
+
+    } while (!done);
+    TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+    GAME.player->deflected = false;
+    return;
+}    
+
+void rangekill(Game GAME, int whohit){
+    if (monvector[whohit].stats.hp < 1){
+        --killall;
+        bloodsplat(monvector[whohit]);
+        bloodycount = 23;
+
+        monvector[whohit].selfchar = '%';
+        monvector[whohit].color = monsterdead;
+        monvector[whohit].blocks = false;
+        monvector[whohit].alive = false;
+
+        monvector[whohit].self_16 = 526;
+        monvector[whohit].self_8 = 451; // was 506, why?
+
+        player.move(0, 0, monvector); // updates player position so feet get bloody
+        if(GAME.player->ranged_target != -1) // keeps point blank as valid
+            GAME.player->ranged_target = -2; // resets target
+    }
+    return;
+}    
+
 int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Unit> AllPhases[10], int turnseq, int phase){
     bool in_sight = false;
     GAME.gstate.con->clear();
@@ -4171,9 +4329,14 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
 
     // PLAYER BLOCK
     // PLAYER BLOCK
+    bool actionflag = false; // used to skip mouse when command is already sent 
     int action = 0; // option selected in combat prompt 
     int phasemove = 0; // used to count movements done during phase
     bool exitcycle = false;
+
+    bool blink = false;
+    uint32 millisecond = 0;
+
     while (player.AP >= 1 && !exitcycle){
 
         // phaseAP = points left in phase
@@ -4250,7 +4413,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         }   
 
         if(action == 6){ // NEW TARGET AIMING
-            if(GAME.player->rangeaim > 2 && GAME.player->ranged_target != -2){ // if further phase and already targerting
+            if(GAME.player->rangeaim >= 2 && GAME.player->ranged_target != -2){ // if further phase and already targerting
                 GAME.player->ranged_target = -2; // reset target
                 GAME.player->rangeaim = 2; // reset phase back to drawing
                 GAME.player->aim = 0; // resets aim
@@ -4287,8 +4450,15 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
                     msg_log msgd;
                     sprintf(msgd.message, "This is the wrong rangeaim phase.");
                     msg_log_list.push_back(msgd);
-                } else fire_target(GAME, phasemove, monvector);
+                } else {
+                    int whohit = -1;
+                    if (fire_target(GAME, phasemove, monvector, whohit)){
+                        rangeanimation(GAME, monvector, whohit);
+                        if (whohit >= 0) rangekill(GAME, whohit);
+                    }    
+                }    
                 fetch = 1; // end phase
+                actionflag = true; // skip mouse to not override command
             }
         }
 
@@ -4377,7 +4547,17 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
             Message_Log(GAME);
         }
         render_all(GAME);
-        I_am_moused(GAME); 
+
+        // used to blink rangedraw()
+        uint32 millicounter = TCODSystem::getElapsedMilli();
+        if(millicounter > millisecond){ 
+            millisecond = millicounter + 500;
+            blink = !blink;
+        }
+        if(GAME.player->rangeweapon && GAME.player->ranged_target != -2 && blink && !MSG_MODE_XTD) 
+            rangedraw(GAME, monvector);
+
+        if(!actionflag) I_am_moused(GAME); // skip mouse if command is in queue
         TCODConsole::flush(); // this updates the screen
     }
     // PLAYER BLOCK
@@ -4849,6 +5029,9 @@ int main() {
     //uint32 timin2 = 0; 
 
     std::vector<Unit> AllPhases[10];
+
+    //DEBUG DEBUG DEBUG DEBUG
+    //player.skill.bowML = 90;
 
     while (! TCODConsole::isWindowClosed()) {
         
