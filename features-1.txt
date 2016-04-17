@@ -1,0 +1,25 @@
+CAVE LVL 1 features
+
+f:8,11
+[[
+Secondly, theist theses too are completely open, since it's not possible to radically disprove god (see "brain in a vat" and similar impossible-to-refute hypothesis). We deal instead with considerations at the general and personal level both, that lead to determine in what direction to focus a research. Eliminativist theses look for an answer to that question (that is LEGITIMATE regardless the angle) in a reductionist direction after a series of considerations that led to believe that's the area that seems more valid and worthwhile. So not to dismiss other areas on a dogmatic premise that refuses everything else. That would be an erroneous description.
+]]
+p:0
+
+f:7,9
+[[
+Two things, since the debate has been framed incorrectly and so the result can't be balanced.
+%t
+First, who supports and researches reductionist/eliminativist theses does NOT consider the question illegitimate, quite the opposite. All the efforts are focused on obtaining an answer precisely to that question. If consciousness is thought to be "illusory" then it does not mean that an eliminativist position refuses to investigate into it, but that it is necessary to find an answer that describes why consciousness is an illusion and that precisely describes how it works. If the mind is a trick, that trick has to be thoroughly explained in its totality and the question needs to have an exhaustive explanation. Removing consciousness as a thesis doesn't mean removing the problem it poses.
+]]
+p:0
+
+f:2,32
+[[
+"More valid and worthwhile" means that a simple comparison has been made. The reason why Nagel's thesis is not accepted within reductionist fields is not because there's an "a-priori" rejection, or a principle, rather it's because Nagel doesn't point to or demonstrates an alternative theoretical framework that can be considered as solid or more solid when compared to the reductionist one.
+%t
+That means, again, that Nagel's hypothesis is still completely open. Reductionists simply aren't convinced the answers are going to come from that direction, and so focus their work on a different area.
+]]
+
+
+z

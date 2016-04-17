@@ -38,6 +38,8 @@ std::string trim(const std::string &orig)
   return ret;
 }
 
+
+// load monster data > load_element > load_data
 bool load_from(std::string filename, lvl1 &enc)
 {
     std::ifstream fin;
@@ -125,108 +127,183 @@ bool load_element(std::istream &data, lvl1 &enc)
 bool load_data(std::istream &data, lvl1 &enc){
     std::string ident, junk;
     //do {
-        for(int x = 0; x < 3; x++){
-            if ( ! (data >> ident) ) { // loads a words, removes it from stream
-                return false; // finds nothing in the file
-            }
-            ident = no_caps(ident);
-            switch (x){
-                case 0:
-                    if (ident == "cave") { debugmsg("%s", ident.c_str()); } // looks at the word it grabbed
-                    break;
-                case 1:    
-                    if (ident == "lvl") { debugmsg("%s", ident.c_str()); }
-                    break;
-                case 2:
-                    if (ident == "1") { debugmsg("%s", ident.c_str()); }
-                    break;
-                default:
-                    debugmsg("I'm broken.");
-                    break;
-            } 
+    for(int x = 0; x < 3; x++){
+        if ( ! (data >> ident) ) { // loads a words, removes it from stream
+            return false; // finds nothing in the file
+        }
+        ident = no_caps(ident);
+        switch (x){
+            case 0:
+                if (ident == "cave") { debugmsg("%s", ident.c_str()); } // looks at the word it grabbed
+                break;
+            case 1:    
+                if (ident == "lvl") { debugmsg("%s", ident.c_str()); }
+                break;
+            case 2:
+                if (ident == "1") { debugmsg("%s", ident.c_str()); }
+                break;
+            default:
+                debugmsg("I'm broken.");
+                break;
         } 
-        // encounter block
-        char parse;
-        int parseint = 0; // temp int to use in push back
+    } 
+    // encounter block
+    char parse;
+    int parseint = 0; // temp int to use in push back
+    data >> parse;
+    while (parse != '[') {
         data >> parse;
-        while (parse != '[') {
+    }    
+    data >> parse; // e
+    while (parse != 'e' || parse != ']') {
+        if(parse == ']') break; // break while, hopefully
+        if(parse == 'e'){
+            std::vector<int> l_enc;
+            room_enc t_room; // temp object
+            data >> parse; // [
+            data >> parseint; // load first element after e
+            l_enc.push_back(parseint);
+            std::cout << "countnum: " << parseint << std::endl;
             data >> parse;
-        }    
-        data >> parse; // e
-        while (parse != 'e' || parse != ']') {
-            if(parse == ']') break; // break while, hopefully
-            if(parse == 'e'){
-                std::vector<int> l_enc;
-                room_enc t_room; // temp object
-                data >> parse; // [
-                data >> parseint; // load first element after e
-                l_enc.push_back(parseint);
-                std::cout << "countnum: " << parseint << std::endl;
+            while(parse != ':'){
+                if(parse == ','){
+                    data >> parseint;
+                    l_enc.push_back(parseint);
+                    std::cout << "countnum: " << parseint << std::endl;
+                }  
+                data >> parse; // load anothr char for the while
+            }        
+            if(parse == ':'){     
+                data >> t_room.probability;
+                t_room.enc = l_enc;
+                enc.cave1.push_back(t_room);
+                std::cout << "percent: " << t_room.probability << std::endl;
                 data >> parse;
-                while(parse != ':'){
-                    if(parse == ','){
-                        data >> parseint;
-                        l_enc.push_back(parseint);
-                        std::cout << "countnum: " << parseint << std::endl;
-                    }  
-                    data >> parse; // load anothr char for the while
-                }        
-                if(parse == ':'){     
-                    data >> t_room.probability;
-                    t_room.enc = l_enc;
-                    enc.cave1.push_back(t_room);
-                    std::cout << "percent: " << t_room.probability << std::endl;
-                    data >> parse;
-                }    
-            }
-            data >> parse;
+            }    
         }
+        data >> parse;
+    }
 
-        // check if all encounters fill all possibilities
-        std::cout << "total percent: " << enc.cave1[enc.cave1.size()-1].probability << std::endl;
-        if (enc.cave1[enc.cave1.size()-1].probability != 100) return false; // fail
-        
-        // monster types block
-        data >> ident; // monster number type ID (not used?)
-        while(ident != "end" && !data.eof()){ // stops on "end" or end of file
-            debugmsg("%s", ident.c_str());
-            data >> ident; // [
-            mob_types tempmob; // object
-            while(ident != "]"){
-                if (ident == "s_hp:") {data >> tempmob.s_hp;}
-                else if (ident == "s_defense:") {data >> tempmob.s_defense;}
-                else if (ident == "s_power:") {data >> tempmob.s_power;}
-                else if (ident == "s_speed:") {data >> tempmob.s_speed;}
-                else if (ident == "name:") {data >> ident; strcpy(tempmob.name, ident.c_str());}
-                else if (ident == "selfchar:") {data >> tempmob.selfchar;}
-                else if (ident == "self_8:") {data >> tempmob.self_8;}
-                else if (ident == "self_16:") {data >> tempmob.self_16;}
-                else if (ident == "color:") {
-                    int a, b, c = 0;
-                    data >> a; data >> parse;
-                    data >> b; data >> parse;
-                    data >> c;
-                    TCODColor tempcolor(a, b, c);
-                    tempmob.color = tempcolor;
-                }    
-                else if (ident == "colorb:") {data >> ident;}
-                else if (ident == "h:") {data >> tempmob.h;}
-                else if (ident == "combat_move:") {data >> tempmob.combat_move;}
-                else if (ident == "speed:") {data >> tempmob.speed;}
-                else if (ident == "STR:") {data >> tempmob.STR;}
-                else if (ident == "armor:") {data >> tempmob.armor;}
-                else if (ident == "wpn_AC:") {data >> tempmob.wpn_AC;}
-                else if (ident == "wpn_DC:") {data >> tempmob.wpn_DC;}
-                else if (ident == "wpn_B:") {data >> tempmob.wpn_B;}
-                else if (ident == "wpn_E:") {data >> tempmob.wpn_E;}
-                else if (ident == "wpn_P:") {data >> tempmob.wpn_P;}
-                else if (ident == "wpn_aspect:") {data >> tempmob.wpn_aspect;}
-                else if (ident == "reach:") {data >> tempmob.reach;}
-                else if (ident == "ML:") {data >> tempmob.ML; }   
-                data >> ident;
-            } 
-            enc.vmob_types.push_back(tempmob);
+    // check if all encounters fill all possibilities
+    std::cout << "total percent: " << enc.cave1[enc.cave1.size()-1].probability << std::endl;
+    if (enc.cave1[enc.cave1.size()-1].probability != 100) return false; // fail
+
+    // monster types block
+    data >> ident; // monster number type ID (not used?)
+    while(ident != "end" && !data.eof()){ // stops on "end" or end of file
+        debugmsg("%s", ident.c_str());
+        data >> ident; // [
+        mob_types tempmob; // object
+        while(ident != "]"){
+            if (ident == "s_hp:") {data >> tempmob.s_hp;}
+            else if (ident == "s_defense:") {data >> tempmob.s_defense;}
+            else if (ident == "s_power:") {data >> tempmob.s_power;}
+            else if (ident == "s_speed:") {data >> tempmob.s_speed;}
+            else if (ident == "name:") {data >> ident; strcpy(tempmob.name, ident.c_str());}
+            else if (ident == "selfchar:") {data >> tempmob.selfchar;}
+            else if (ident == "self_8:") {data >> tempmob.self_8;}
+            else if (ident == "self_16:") {data >> tempmob.self_16;}
+            else if (ident == "color:") {
+                int a, b, c = 0;
+                data >> a; data >> parse;
+                data >> b; data >> parse;
+                data >> c;
+                TCODColor tempcolor(a, b, c);
+                tempmob.color = tempcolor;
+            }    
+            else if (ident == "colorb:") {data >> ident;}
+            else if (ident == "h:") {data >> tempmob.h;}
+            else if (ident == "combat_move:") {data >> tempmob.combat_move;}
+            else if (ident == "speed:") {data >> tempmob.speed;}
+            else if (ident == "STR:") {data >> tempmob.STR;}
+            else if (ident == "armor:") {data >> tempmob.armor;}
+            else if (ident == "wpn_AC:") {data >> tempmob.wpn_AC;}
+            else if (ident == "wpn_DC:") {data >> tempmob.wpn_DC;}
+            else if (ident == "wpn_B:") {data >> tempmob.wpn_B;}
+            else if (ident == "wpn_E:") {data >> tempmob.wpn_E;}
+            else if (ident == "wpn_P:") {data >> tempmob.wpn_P;}
+            else if (ident == "wpn_aspect:") {data >> tempmob.wpn_aspect;}
+            else if (ident == "reach:") {data >> tempmob.reach;}
+            else if (ident == "ML:") {data >> tempmob.ML; }   
             data >> ident;
-        }
-        return true;
+        } 
+        enc.vmob_types.push_back(tempmob);
+        data >> ident;
+    }
+    return true;
 }
+
+bool load_from_feat(std::string filename, Game &GAME){
+    std::ifstream fin;
+    fin.open(filename.c_str());
+    if (!fin.is_open()) {
+      debugmsg("Failed to open '%s'", filename.c_str());
+      return false;
+    }
+     
+    while (!fin.eof()) {
+      if (!load_feature(fin, GAME)) {
+        return false;
+      }
+    }
+    
+    return true;
+}   
+
+bool load_feature(std::istream &data, Game &GAME){
+    std::string ident, desc;
+    for(int x = 0; x < 4; x++){
+        if ( ! (data >> ident) ) { // loads a words, removes it from stream
+            return false; // finds nothing in the file
+        }
+        ident = no_caps(ident);
+        switch (x){
+            case 0:
+                if (ident == "cave") { debugmsg("%s", ident.c_str()); } // looks at the word it grabbed
+                break;
+            case 1:    
+                if (ident == "lvl") { debugmsg("%s", ident.c_str()); }
+                break;
+            case 2:
+                if (ident == "1") { debugmsg("%s", ident.c_str()); }
+                break;
+            case 3:
+                if (ident == "features") { debugmsg("%s", ident.c_str()); }
+                break;    
+            default:
+                debugmsg("I'm broken.");
+                break;
+        } 
+    }
+    int coord_x = 0;
+    int coord_y = 0;
+    char parse;
+    while(!data.eof()){ // stops on "end" or end of file
+        data >> parse; // f
+        if(parse == 'z') break;
+        if(parse == 'f'){
+            data >> parse; // :
+            data >> coord_x;
+            data >> parse; // ,
+            data >> coord_y;
+
+            Feature thisfeature(coord_x, coord_y, 0);
+            data >> ident; // [[
+            while(ident != "[["){
+                data >> ident;
+            }    
+            data >> ident;
+            strcpy(thisfeature.content, ident.c_str());
+            data >> ident;
+            while(ident != "]]"){
+                strcat(thisfeature.content, " ");
+                strcat(thisfeature.content, ident.c_str());
+                data >> ident;
+            }  
+            debugmsg("%s", thisfeature.content);
+            GAME.gstate.features.push_back(thisfeature);
+        }
+    }
+    debugmsg("%s", "Loading features into code COMPLETE");
+    return true;
+}    

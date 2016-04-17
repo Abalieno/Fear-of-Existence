@@ -6,4 +6,6 @@
 
 void char_sheet(Game &GAME);
 
+void event_description(Game &GAME, int sender);
+
 #endif

@@ -90,6 +90,7 @@ TCODColor blood2(160, 0, 0);
 TCODColor blood3(120, 0, 0);
 TCODColor blood4(100, 0, 0);
 TCODColor door_c(222, 136, 0);
+TCODColor feature_c(254, 197, 42);
 
 TCODColor demake(0,146,170);
 
@@ -128,6 +129,7 @@ TCODConsole *con_mini = new TCODConsole(MAP_WIDTH_AREA+2, MAP_HEIGHT_AREA+2); //
 TCODConsole *load = new TCODConsole(win_x, win_y);  // load screen
 
 TCODConsole *widget_top = new TCODConsole(win_x, 1);  // UI topbar
+TCODConsole *widget_prompt = new TCODConsole(win_x, 1);  // UI prompt
 
 TCODConsole *widget_popup = new TCODConsole(100, 50);  // UI popup
 
@@ -155,6 +157,8 @@ int wid_rpanel_open = 0;
 bool wid_prompt_open = false; // player combat prompt panel
 int prompt_selection = 0; // which option is selected
 int fetch = 0; // returns player command during combat
+
+int event_sender = -1;
 
 /*
 TCODMap * fov_map_mons = new TCODMap(MAP_WIDTH,MAP_HEIGHT);
@@ -1132,11 +1136,12 @@ void make_map_BSP(Object_player &duh, Game &GAME){
     }    
 }  
 
-void load_map(Object_player &duh){
+void load_map(Object_player &duh, Game &GAME){
    
 
     lvl1_map map1;
     load_level(map1);
+    // loader.cpp > 
 
     map_array.resize(MAP_HEIGHT * MAP_WIDTH);
      
@@ -1157,7 +1162,10 @@ void load_map(Object_player &duh){
 
     player.x = 7;
     player.y = 7;
-    
+
+    //Feature thisfeature(8, 11, 0);
+    //GAME.gstate.features.push_back(thisfeature);
+    load_features(GAME);
 }
 
 void make_map(Object_player &duh){
@@ -1721,7 +1729,7 @@ void I_am_moused(Game &tgame){
                         col_obj = monvector[n].color;
                         TCODConsole::setColorControl(TCOD_COLCTRL_1,col_obj,TCODColor::black);
                         TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::black);
-                        TCODConsole::root->print(0, 71, "Mouse on [dead %c%s%c] at [%c%d%c.%c%d%c]",
+                        TCODConsole::root->print(0, 70, "Mouse on [dead %c%s%c] at [%c%d%c.%c%d%c]",
                                 TCOD_COLCTRL_1, whatis, TCOD_COLCTRL_STOP, 
                                 TCOD_COLCTRL_2, mapx, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, mapy, TCOD_COLCTRL_STOP);
                         TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the rest of the screen as black
@@ -1735,9 +1743,9 @@ void I_am_moused(Game &tgame){
         TCODConsole::root->setDefaultForeground(TCODColor::white);
         TCODConsole::root->setAlignment(TCOD_LEFT);
         TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::lighterYellow,TCODColor::black);
-        TCODConsole::root->print(0, 70, "Mouse on [Nothing] at [%c%d%c.%c%d%c]", 
+        TCODConsole::root->print(0, 69, "Mouse on [Nothing] at [%c%d%c.%c%d%c]", 
                 TCOD_COLCTRL_2, x, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, y, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(0, 71, "MAP x,y [Nothing] at [%c%d%c.%c%d%c]", 
+        TCODConsole::root->print(0, 70, "MAP x,y [Nothing] at [%c%d%c.%c%d%c]", 
                 TCOD_COLCTRL_2, mapx, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, mapy, TCOD_COLCTRL_STOP);
         TCODConsole::root->setDefaultBackground(TCODColor::black); // sets the screen as black
         found = false;
@@ -2102,6 +2110,12 @@ void render_minimaps(Game &tgame){
         TCODConsole::blit(con_mini,0,0,0,0,TCODConsole::root,0,1); // minimap layer
     } // end bigg3 tinimap
 }
+
+void render_context(Game &tgame){
+    widget_prompt->setDefaultBackground(TCODColor::darkerGrey);
+    widget_prompt->clear();
+    TCODConsole::blit(widget_prompt,0,0,0,0,TCODConsole::root,0,71);
+}    
 
 void render_top(Game &tgame){
     if(wid_top_open){
@@ -3035,6 +3049,30 @@ void render_all (Game &tgame){
 
     }
 
+    for (unsigned int i = 0; i<tgame.gstate.features.size(); ++i){
+        int shortx = tgame.gstate.features[i].x; 
+        int shorty = tgame.gstate.features[i].y;
+        if(shortx == player.x && shorty == player.y){ 
+            if(!tgame.gstate.features[i].observed){ 
+                //event_description(tgame);
+                event_sender = i;
+                tgame.gstate.features[i].observed = true; // visited 
+            }    
+        }    
+        if(tgame.gstate.fov_map->isInFov(shortx, shorty)){
+            if(tgame.gstate.bigg){
+            } else {
+                tgame.gstate.con->putChar((shortx)-tgame.gstate.off_xx, 
+                        (shorty)-tgame.gstate.off_yy, '?', TCOD_BKGND_SET);
+                tgame.gstate.con->setCharBackground((shortx)-tgame.gstate.off_xx, (shorty)-tgame.gstate.off_yy, TCODColor::black, TCOD_BKGND_SET);
+                if(tgame.gstate.features[i].observed)
+                    tgame.gstate.con->setCharForeground((shortx)-tgame.gstate.off_xx, (shorty)-tgame.gstate.off_yy, TCODColor::grey);
+                else
+                    tgame.gstate.con->setCharForeground((shortx)-tgame.gstate.off_xx, (shorty)-tgame.gstate.off_yy, feature_c);
+            }  
+        }    
+    }    
+
     // draw doors
     for (unsigned int i = 0; i<doors.size(); ++i){
         if(tgame.gstate.fov_map->isInFov(doors[i].x,doors[i].y)){
@@ -3144,6 +3182,7 @@ void render_all (Game &tgame){
     }
 
     render_top(tgame);
+    render_context(tgame);
 
     if(!combat_mode && !wid_combat_open) render_base(tgame);
     render_messagelog(tgame);
@@ -3156,7 +3195,7 @@ void render_all (Game &tgame){
 
     if(combat_mode){
         render_prompt(tgame);
-    }    
+    } 
 }
 
 int blx = 0;
@@ -3698,6 +3737,17 @@ int handle_keys(Object_player &duh, Game &tgame) {
             }    
         }    
 
+    }  
+
+    // read descriptions manually
+    if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'i' ){
+        for (unsigned int i = 0; i<tgame.gstate.features.size(); ++i){
+            int shortx = tgame.gstate.features[i].x; 
+            int shorty = tgame.gstate.features[i].y;
+            if(shortx == player.x && shorty == player.y){ 
+                event_description(tgame, i); // screens.cpp
+            }
+        }
     }    
 
     if ( eve == TCOD_EVENT_KEY_PRESS && keyr.c == 'r' ){
@@ -4985,7 +5035,7 @@ int main() {
     menu_index = 1;
     while(menu_index == 1){
         menu_index = UI_menu(19, 29, vecstr, 0);
-        if(menu_index == 2) {load_map(player); break;}
+        if(menu_index == 2) {load_map(player, GAME); break;}
         if(menu_index == 1) {make_map_BSP(player, GAME); break;}
         if(menu_index == -1) return 0;
         else if(menu_index == 0) break;
@@ -5051,6 +5101,9 @@ int main() {
         I_am_moused(GAME);
 
         TCODConsole::flush(); // this updates the screen
+
+        if(event_sender >= 0) event_description(GAME, event_sender); // open windows event
+        event_sender = -1; // reset
         
         bool in_sight;
 

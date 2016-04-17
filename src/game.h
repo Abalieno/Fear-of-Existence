@@ -122,6 +122,32 @@ public:
     }
 };
 
+class Feature {
+
+public:
+    int x;
+    int y;
+    int phase;
+    bool observed;
+
+    char content[3000];
+    int options;
+    char content_a[200];
+    char content_b[200];
+    char content_c[200];
+    char content_d[200];
+    char content_e[200];
+
+    Feature(int initx, int inity, int initphase){
+        x = initx;
+        y = inity;
+        phase = initphase;
+        observed = false;
+        options = 1;
+    }
+
+};
+
 struct UIhook{
     int ID;
     int x;
@@ -186,6 +212,8 @@ struct global_state{
     std::vector<Generic_object> wd_object;
 
     std::vector<UIhook> UI_hook;
+
+    std::vector<Feature> features;
 };    
 
 class Game
