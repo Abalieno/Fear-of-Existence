@@ -241,11 +241,7 @@ bool load_from_feat(std::string filename, Game &GAME){
       return false;
     }
      
-    while (!fin.eof()) {
-      if (!load_feature(fin, GAME)) {
-        return false;
-      }
-    }
+     if (!load_feature(fin, GAME)) return false;
     
     return true;
 }   
@@ -254,6 +250,7 @@ bool load_feature(std::istream &data, Game &GAME){
     std::string ident, desc;
     for(int x = 0; x < 4; x++){
         if ( ! (data >> ident) ) { // loads a words, removes it from stream
+            debugmsg("%s", "sdfgsdfgsdssgsdgsdg");
             return false; // finds nothing in the file
         }
         ident = no_caps(ident);
@@ -301,6 +298,32 @@ bool load_feature(std::istream &data, Game &GAME){
                 data >> ident;
             }  
             debugmsg("%s", thisfeature.content);
+
+            data >> parse; // x or p
+            while(parse != 'p') data >> parse;
+            data >> parse; // :
+            unsigned option = 0;
+            data >> option;
+            debugmsg("Options: %d", option);
+            if(option){
+                thisfeature.isoption = true;
+                for(unsigned y = 0; y < option; ++y){
+                    while(ident != "[["){
+                        data >> ident;
+                    }
+                    data >> ident;
+                    char thisoption[200];
+                    strcpy(thisoption, ident.c_str());
+                    data >> ident;
+                    while(ident != "]]"){
+                        strcat(thisoption, " ");
+                        strcat(thisoption, ident.c_str());
+                        data >> ident;
+                    }
+                    debugmsg("OP: %s", thisoption);
+                    thisfeature.options.push_back(thisoption);
+                }  
+            } else thisfeature.isoption = false;     
             GAME.gstate.features.push_back(thisfeature);
         }
     }

@@ -1,6 +1,8 @@
 #ifndef _GAME_H_
 #define _GAME_H_
 
+#include <string>
+
 #include "liventities.h"
 
 struct tilevalues{
@@ -131,21 +133,15 @@ public:
     bool observed;
 
     char content[3000];
-    int options;
-    char content_a[200];
-    char content_b[200];
-    char content_c[200];
-    char content_d[200];
-    char content_e[200];
+    bool isoption;
+    std::vector<std::string> options;
 
     Feature(int initx, int inity, int initphase){
         x = initx;
         y = inity;
         phase = initphase;
         observed = false;
-        options = 1;
     }
-
 };
 
 struct UIhook{

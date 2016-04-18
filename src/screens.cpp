@@ -122,7 +122,45 @@ void event_description(Game &GAME, int sender){
         if(skip) {line_n = line_n + 2; ++i;}
         //if(line_n > 16) break;
     }
+    for (int n = 0; n <= 80; ++n){
+    wg_char->print(2+n, 4 + line_n, "%c", TCOD_CHAR_HLINE);
+    }
+    bool fade = false;
+    int colfr = 100;
+    int colfg = 100;
+    int colfb = 100;
+    int colr = 100;
+    unsigned selected = 1;
+    TCODColor fadedark(90, 90, 90);
     while(1){
+
+        if(GAME.gstate.features[sender].isoption){
+            if(colfr >= 255) fade = false;
+            if(colfr <= 150) fade = true;
+
+            if(fade){
+                colr += 3;
+            }else{
+                colr -= 2;
+            }
+            if(colr > 255) colr = 255;
+            colfr = colr;
+            colfg = colr;
+            colfb = colr;
+            TCODColor fadec(colfr, colfg, colfb);
+
+            for(unsigned cy = 0; cy < GAME.gstate.features[sender].options.size(); cy++){
+                if(selected == cy+1){
+                    print_8x16(wg_char, 2, 6 + line_n + (3*cy), //"%d. %s", cy+1, 
+                        GAME.gstate.features[sender].options[cy].c_str(), fadec, TCODColor::black);
+                    
+                }else{ 
+                    print_8x16(wg_char, 2, 6 + line_n + (3*cy), //"%d. %s", cy+1, 
+                        GAME.gstate.features[sender].options[cy].c_str(), fadedark, TCODColor::black);
+                }    
+            }
+        }
+
         TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
         if (TCODConsole::isWindowClosed()) return;
         mouse = TCODMouse::getStatus();
