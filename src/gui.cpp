@@ -62,10 +62,15 @@ int menu_key(TCOD_event_t &eve, char &sel){
             (eve == TCOD_EVENT_KEY_PRESS && key.vk == TCODK_SPACE) ){
         return action;
     }
+    if (key.vk == TCODK_ESCAPE){ 
+        sel = key.c;
+        return outhere;
+    }
     if (key.vk != TCODK_NONE){ 
         sel = key.c;
         return keysel;
-    }    
+    }  
+    
     return 0;
 }
 

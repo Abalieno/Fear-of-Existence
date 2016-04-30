@@ -2,6 +2,7 @@
 
 #include "screens.h"
 #include "chargen.h"
+#include "gui.h"
 
 extern void print_8x16(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back);
 extern void print_c64(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back);
@@ -132,6 +133,19 @@ void event_description(Game &GAME, int sender){
     int colr = 100;
     unsigned selected = 1;
     TCODColor fadedark(90, 90, 90);
+
+    std::vector<std::string> hereoptions;
+    char thisoption[200];
+    for(unsigned cy = 0; cy < GAME.gstate.features[sender].options.size(); cy++){
+        sprintf(thisoption, "%d. ", cy+1);
+        strcat(thisoption, GAME.gstate.features[sender].options[cy].c_str());
+        hereoptions.push_back(thisoption);
+    }  
+
+    int what_menu = 1; // constant-based for keys
+    TCOD_event_t eve;
+    char sel = '!';
+
     while(1){
 
         if(GAME.gstate.features[sender].isoption){
@@ -149,19 +163,18 @@ void event_description(Game &GAME, int sender){
             colfb = colr;
             TCODColor fadec(colfr, colfg, colfb);
 
-            for(unsigned cy = 0; cy < GAME.gstate.features[sender].options.size(); cy++){
+            for(unsigned cy = 0; cy < hereoptions.size(); cy++){
                 if(selected == cy+1){
                     print_8x16(wg_char, 2, 6 + line_n + (3*cy), //"%d. %s", cy+1, 
-                        GAME.gstate.features[sender].options[cy].c_str(), fadec, TCODColor::black);
+                        hereoptions[cy].c_str(), fadec, TCODColor::black);
                     
                 }else{ 
                     print_8x16(wg_char, 2, 6 + line_n + (3*cy), //"%d. %s", cy+1, 
-                        GAME.gstate.features[sender].options[cy].c_str(), fadedark, TCODColor::black);
+                        hereoptions[cy].c_str(), fadedark, TCODColor::black);
                 }    
             }
         }
 
-        TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
         if (TCODConsole::isWindowClosed()) return;
         mouse = TCODMouse::getStatus();
         unsigned int mousex = mouse.cx;
@@ -170,7 +183,7 @@ void event_description(Game &GAME, int sender){
         if(mouse.lbutton && !flagged) { x = mousex; y = mousey; flagged = true;}
         if(mouse.lbutton && ( x != mousex || y != mousey) ) { button = false; }
         else button = true;
-        if( (mousex > (wx+8) && mousex < (wx+12)) && mousey == (wy+0)){
+        if( (mousex > (wx+8) && mousex < (wx+12)) && mousey == (wy+0)){ // mouse cursor on ESC
             wg_char->setColorControl(TCOD_COLCTRL_1, TCODColor::black, TCODColor::white);
             if(button && mouse.lbutton){
                 delete wg_char;
@@ -179,10 +192,33 @@ void event_description(Game &GAME, int sender){
         } else {    
             wg_char->setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
         }
-        if(key.vk == TCODK_ESCAPE){
+
+        // keyboard -> gui.cpp | uses int constants as commands
+        what_menu = menu_key(eve, sel); // polls keyboard
+        if(what_menu == outhere){ // if ESC
             delete wg_char;
             return;
         }    
+        if (what_menu == move_up){
+            if(selected == 1){ 
+                selected = hereoptions.size();
+            } else --selected;
+        }    
+        
+        if (what_menu == move_down){
+            if(selected == hereoptions.size()){ 
+                selected = 1;
+            } else ++selected; 
+        }
+
+        // mouse hover
+        for(unsigned int op = 0; op < hereoptions.size(); ++op){
+            if( (mousex >= (2 + wx)  && mousex < (83 + wx) ) && (mousey == (6+wy) + line_n + (3*op) || mousey == (7+wy) + line_n + (3*op) ) ){
+                selected = op+1;
+            }
+        }
+
+        wg_char->setDefaultForeground(TCODColor::darkGrey);
         wg_char->print(2, 0, " Press %cESC%c to close ", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         TCODConsole::blit(wg_char,0,0,0,0, TCODConsole::root, wx, wy);
         TCODConsole::flush(); // this updates the screen

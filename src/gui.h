@@ -19,6 +19,7 @@ const int move_up = 5;
 const int move_down = 10;
 const int keysel = 100; // used in UI_menu
 const int action = 15;
+const int outhere = 999;
 const TCODColor colorbase(185, 192, 168); // made const for conflict in linking with main?
 
 int menu_key(TCOD_event_t &eve, char &sel);
