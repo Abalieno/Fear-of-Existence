@@ -4,7 +4,7 @@
 #include "chargen.h"
 #include "gui.h"
 
-extern void print_8x16(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back);
+extern int print_8x16(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back, int linemax = 0);
 extern void print_c64(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back);
 
 void char_sheet(Game &GAME){
@@ -75,57 +75,16 @@ void event_description(Game &GAME, int sender){
     bool flagged = true;
     unsigned int x = 0;
     unsigned int y = 0;
-    bool endline = false;
     draw_frame(85, 75, wg_char);
-    //print_c64(wg_char, 5, 10, "HELLO", TCODColor::lightGrey, TCODColor::black);
-    //print_8x16(wg_char, 10, 5, "In eternity, where there is no time,", TCODColor::lightGrey, TCODColor::black);
-    char line[80];
-    int line_n = 0; // counter for line
-    unsigned i = 0;
-    unsigned endi = 80;
-    unsigned int inner = 0;
-    while(!endline){
-        inner = 0;
-        bool skip = false;
-        while(i <= endi){
-            if(GAME.gstate.features[sender].content[i] == '%' &&
-                    GAME.gstate.features[sender].content[i+1] == 't'){
-                line[inner] = '\0';
-                //line_n = line_n + 2;
-                ++i;
-                ++inner;
-                endi = i;
-                skip = true;
-                //break;
-            } else{   
-                line[inner] = GAME.gstate.features[sender].content[i];
-                if(GAME.gstate.features[sender].content[i] == '\0') endline = true;
-                ++i;
-                ++inner;
-            }
-        } 
-        if(!skip){
-        if(!endline){
-            while(line[inner] != ' '){
-                --endi;
-                --i;
-                --inner;
-                if (endi == 0) break;
-            } 
-            ++i;
-        }
-        line[inner] = '\0';
-        }
-        //print_8x16(wg_char, 2, 3,  GAME.gstate.features[0].content , TCODColor::lightGrey, TCODColor::black);
-        print_8x16(wg_char, 2, 3 + line_n, line, TCODColor::lightGrey, TCODColor::black);
-        endi += 83;
-        line_n = line_n + 2;
-        if(skip) {line_n = line_n + 2; ++i;}
-        //if(line_n > 16) break;
+
+    int cursor_at = 2;
+    cursor_at = print_8x16(wg_char, 2, cursor_at, GAME.gstate.features[sender].content, TCODColor::lightGrey, TCODColor::black, 81); 
+    cursor_at++;
+    for (int n = 0; n <= 80; ++n){ // adds the line spacing
+    wg_char->print(2+n, cursor_at, "%c", TCOD_CHAR_HLINE);
     }
-    for (int n = 0; n <= 80; ++n){
-    wg_char->print(2+n, 4 + line_n, "%c", TCOD_CHAR_HLINE);
-    }
+    cursor_at += 2;
+
     bool fade = false;
     int colfr = 100;
     int colfg = 100;
@@ -135,16 +94,22 @@ void event_description(Game &GAME, int sender){
     TCODColor fadedark(90, 90, 90);
 
     std::vector<std::string> hereoptions;
-    char thisoption[200];
+    std::vector<unsigned int> optionsize;
+    char thisoption[3000];
+    bool multiline[GAME.gstate.features[sender].options.size()];
     for(unsigned cy = 0; cy < GAME.gstate.features[sender].options.size(); cy++){
         sprintf(thisoption, "%d. ", cy+1);
         strcat(thisoption, GAME.gstate.features[sender].options[cy].c_str());
         hereoptions.push_back(thisoption);
-    }  
+        optionsize.push_back(0); // int is set below when the string is printed
+    }
+    optionsize.push_back(0);
 
     int what_menu = 1; // constant-based for keys
     TCOD_event_t eve;
     char sel = '!';
+
+    int cursor_orig = cursor_at;
 
     while(1){
 
@@ -163,16 +128,31 @@ void event_description(Game &GAME, int sender){
             colfb = colr;
             TCODColor fadec(colfr, colfg, colfb);
 
-            for(unsigned cy = 0; cy < hereoptions.size(); cy++){
+            cursor_at = cursor_orig;
+            for(unsigned cy = 0; cy < hereoptions.size(); cy++){ // line_n is offset from above
                 if(selected == cy+1){
-                    print_8x16(wg_char, 2, 6 + line_n + (3*cy), //"%d. %s", cy+1, 
-                        hereoptions[cy].c_str(), fadec, TCODColor::black);
-                    
-                }else{ 
-                    print_8x16(wg_char, 2, 6 + line_n + (3*cy), //"%d. %s", cy+1, 
-                        hereoptions[cy].c_str(), fadedark, TCODColor::black);
+                    optionsize[cy] =  cursor_at;
+                    if(multiline[cy]){
+                        cursor_at = print_8x16(wg_char, 2, cursor_at, //"%d. %s", cy+1, 
+                        hereoptions[cy].c_str(), fadec, TCODColor::black, 81);
+                    }else {
+                        cursor_at = print_8x16(wg_char, 2, cursor_at, //"%d. %s", cy+1, 
+                        hereoptions[cy].c_str(), fadec, TCODColor::black, 81);
+                    }  
+                    cursor_at++;
+                }else{
+                    optionsize[cy] = cursor_at;
+                    if(multiline[cy]){
+                        cursor_at = print_8x16(wg_char, 2, cursor_at, //"%d. %s", cy+1, 
+                        hereoptions[cy].c_str(), fadedark, TCODColor::black, 81);
+                    }else {
+                        cursor_at = print_8x16(wg_char, 2, cursor_at, //"%d. %s", cy+1, 
+                        hereoptions[cy].c_str(), fadedark, TCODColor::black, 81);
+                    }
+                    cursor_at++;
                 }    
             }
+            optionsize[optionsize.size()-1] = cursor_at ;
         }
 
         if (TCODConsole::isWindowClosed()) return;
@@ -213,10 +193,14 @@ void event_description(Game &GAME, int sender){
 
         // mouse hover
         for(unsigned int op = 0; op < hereoptions.size(); ++op){
-            if( (mousex >= (2 + wx)  && mousex < (83 + wx) ) && (mousey == (6+wy) + line_n + (3*op) || mousey == (7+wy) + line_n + (3*op) ) ){
+            if( (mousex >= (2 + wx)  && mousex < (83 + wx) ) && 
+                    ( mousey >= optionsize[op]+wy && mousey < optionsize[op+1]+wy ) ){
+                        
                 selected = op+1;
             }
         }
+        wg_char->setDefaultForeground(TCODColor::lighterGrey);
+        wg_char->print(62, 74, "Mouse at [%d.%d]", mousex - 20, mousey - 5);
 
         wg_char->setDefaultForeground(TCODColor::darkGrey);
         wg_char->print(2, 0, " Press %cESC%c to close ", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);

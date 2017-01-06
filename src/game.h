@@ -135,6 +135,7 @@ public:
     char content[3000];
     bool isoption;
     std::vector<std::string> options;
+    //std::vector<char[3000]> options;
 
     Feature(int initx, int inity, int initphase){
         x = initx;

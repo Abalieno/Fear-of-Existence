@@ -193,31 +193,61 @@ void map_c64_font(){
     }
 }
 
-void print_8x16(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back){
+// linemax set from 0 to last useful + 1
+int print_8x16(TCODConsole* &loc, int where_x, int where_y, 
+        const char *msg, TCODColor front, TCODColor back, int linemax = 0){
 
     loc->setDefaultForeground(front);
     loc->setDefaultBackground(back);
-    int msg_length = 0;
-    for (int i = 0; msg[i] != '\0'; i++){
-        msg_length = i;
+    unsigned int i = 0;
+    unsigned int inner = 0; 
+    bool endline = false;
+    int line_n = 0; // lines printed
+    if(linemax == 0) linemax = win_x; // use the max line length 
+    unsigned int curmax = linemax;
+
+    while(!endline){
+        bool skip = false;
+        inner = i; // sets the beginning of current line to print below
+        while(i <= curmax){
+            if(msg[i] == '%' && msg[i+1] == 't'){ // paragraph break
+                skip = true;
+                curmax = i;
+                ++i; // skip character
+            } else{
+                if(msg[i] == '\0'){ 
+                    endline = true; // found EOL
+                    curmax = i;
+                }    
+            }  
+            ++i;
+            if(endline == true) break;
+        }   
+        if(!skip){
+            if(!endline){
+                while(msg[curmax] != ' '){
+                    --curmax;
+                    if (curmax == 0) break;
+                } 
+            }
+        }    
+
+        int linestart = 0;
+        for (unsigned int n = inner; n < curmax; ++n){
+            int letter = 0;
+            letter = int(msg[n]);
+            int step = 0;
+            step = 2*(letter - 32);
+            loc->putChar(where_x + linestart, where_y + line_n, 1001+step, TCOD_BKGND_SET);
+            loc->putChar(where_x + linestart, where_y+1 + line_n, 1001+(step+1), TCOD_BKGND_SET);
+            ++linestart;
+        }
+        i = curmax + 1; // sets on the beginning of next line
+        curmax = i + linemax; // sets length for the next line
+        if(!endline) line_n += 2;
+        if(skip) {line_n += 2; ++i; ++i;}
     }
-    
-    for (int n = 0; n <= msg_length; ++n){
-        int letter = 0;
-        letter = int(msg[n]);
-        int step = 0;
-        step = 2*(letter - 32);
-        // 936 + 65 = 1001
-        loc->putChar(where_x + n, where_y, 1001+step, TCOD_BKGND_SET);
-        loc->putChar(where_x + n, where_y+1, 1001+(step+1), TCOD_BKGND_SET);
-        //con->putChar((where_x + (m + 1))-2, where_y+1, 936+(step+1), TCOD_BKGND_SET);
-
-    }
-
-    //con->putChar(3, 3, 1001+step, TCOD_BKGND_SET);
-    //con->putChar(3, 4, 1001+(step+1), TCOD_BKGND_SET);
-
-    //std::cout << "char 1: " << first << std::endl;
+    return (where_y + 2 + line_n);
 }
 
 void print_c64(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back){
@@ -4455,9 +4485,10 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
             else{ // need to acquire target
                 GAME.gstate.mode_attack = true; // for aim menu UI, right?
                 ranged_target(GAME); // acquire target function
-                if(GAME.player->ranged_target != -2) // do only if now target exists 
+                if(GAME.player->ranged_target != -2){ // do only if now target exists 
                     player_aim(GAME, phasemove, monvector); // messages + takes 1 aim automatically
-                    fetch = 1; // end phase
+                    fetch = 1; // end phase, might need to be outside {} ?
+                }    
             }    
             action = 0;
         }   
@@ -4469,9 +4500,10 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
                 GAME.player->aim = 0; // resets aim
                 GAME.gstate.mode_attack = true;
                 ranged_target(GAME); // acquire target
-                if(GAME.player->ranged_target != -2) // do only if now target exists
+                if(GAME.player->ranged_target != -2){ // do only if now target exists
                     player_aim(GAME, phasemove, monvector); // messages + takes 1 aim automatically
-                    fetch = 1; // end phase
+                    fetch = 1; // end phase, might need to be outside {} ?
+                }    
             }    
             action = 0;
         }

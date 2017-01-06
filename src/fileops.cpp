@@ -312,7 +312,7 @@ bool load_feature(std::istream &data, Game &GAME){
                         data >> ident;
                     }
                     data >> ident;
-                    char thisoption[200];
+                    char thisoption[3000];
                     strcpy(thisoption, ident.c_str());
                     data >> ident;
                     while(ident != "]]"){

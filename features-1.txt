@@ -21,13 +21,17 @@ First, who supports and researches reductionist/eliminativist theses does NOT co
 ]]
 p:3
 [[
-This is the first option.
+Here's  fancy line break!
+%t
+Did it work? Did it not? If it didn't I'm FUCKED! Anyway, this was the first selectable and delectable option. You should pick this one, amazing things will happen. Or maybe they won't. Because things hate you.
 ]]
 [[
-This is the second option.
+This would be the second option, in an ideal world. Otherwise everything might happen. The game might work, or it might not. We are at the whims of incompetence. In shameless display.
 ]]
 [[
-This is the third option.
+Would this be the third option? That would be great. I'm not putting line break checks even here. You know, if it worked once it will work forever. But maybe it's better to check twice.
+%t
+...FUCK?! Or maybe everything works and I'm only being a drama queen.
 ]]
 
 f:2,32
