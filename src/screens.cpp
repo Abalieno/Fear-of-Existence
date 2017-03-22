@@ -37,7 +37,7 @@ void char_sheet(Game &GAME){
             wg_char->setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
             wg_char->print(3, 2, "%c>EXIT<%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         }
-        compile_sheet(wg_char, GAME, 3, 5); // chargen.cpp
+        compile_sheet(wg_char, GAME, 3, 5, 0); // chargen.cpp
         TCODConsole::blit(wg_char,0,0,0,0, TCODConsole::root, 0, 1);
         TCODConsole::flush(); // this updates the screen
     }   
@@ -94,7 +94,7 @@ void event_description(Game &GAME, int sender){
     TCODColor fadedark(90, 90, 90);
 
     std::vector<std::string> hereoptions;
-    std::vector<unsigned int> optionsize;
+    std::vector<unsigned int> optionsize; // used to store the y pointer to use for mouse selection
     char thisoption[3000];
     bool multiline[GAME.gstate.features[sender].options.size()];
     for(unsigned cy = 0; cy < GAME.gstate.features[sender].options.size(); cy++){
@@ -103,7 +103,7 @@ void event_description(Game &GAME, int sender){
         hereoptions.push_back(thisoption);
         optionsize.push_back(0); // int is set below when the string is printed
     }
-    optionsize.push_back(0);
+    optionsize.push_back(0); // adds another to store where the y cursor ends up
 
     int what_menu = 1; // constant-based for keys
     TCOD_event_t eve;
@@ -133,21 +133,21 @@ void event_description(Game &GAME, int sender){
                 if(selected == cy+1){
                     optionsize[cy] =  cursor_at;
                     if(multiline[cy]){
-                        cursor_at = print_8x16(wg_char, 2, cursor_at, //"%d. %s", cy+1, 
+                        cursor_at = print_8x16(wg_char, 2, cursor_at, 
                         hereoptions[cy].c_str(), fadec, TCODColor::black, 81);
                     }else {
-                        cursor_at = print_8x16(wg_char, 2, cursor_at, //"%d. %s", cy+1, 
+                        cursor_at = print_8x16(wg_char, 2, cursor_at,  
                         hereoptions[cy].c_str(), fadec, TCODColor::black, 81);
                     }  
                     cursor_at++;
                 }else{
                     optionsize[cy] = cursor_at;
                     if(multiline[cy]){
-                        cursor_at = print_8x16(wg_char, 2, cursor_at, //"%d. %s", cy+1, 
-                        hereoptions[cy].c_str(), fadedark, TCODColor::black, 81);
+                        cursor_at = print_8x16(wg_char, 2, cursor_at, 
+                            hereoptions[cy].c_str(), fadedark, TCODColor::black, 81);
                     }else {
-                        cursor_at = print_8x16(wg_char, 2, cursor_at, //"%d. %s", cy+1, 
-                        hereoptions[cy].c_str(), fadedark, TCODColor::black, 81);
+                        cursor_at = print_8x16(wg_char, 2, cursor_at,  
+                            hereoptions[cy].c_str(), fadedark, TCODColor::black, 81);
                     }
                     cursor_at++;
                 }    

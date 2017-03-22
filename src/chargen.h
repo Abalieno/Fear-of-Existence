@@ -116,7 +116,7 @@ const char *txt_morality(Game &GAME);
 
 void build_armor(Game &GAME);
 
-void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_osety);
+void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_osety, bool editing);
 
 int chargen(Game &GAME);
 

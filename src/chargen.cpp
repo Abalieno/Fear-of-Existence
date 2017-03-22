@@ -725,6 +725,18 @@ void gen_othervalues(Game &GAME){
     else if (GAME.player->AGI > 18) points += 4 + (GAME.player->AGI - 18);
     GAME.player->APm = points;
     GAME.player->AP = GAME.player->APm;
+
+    if(GAME.player->AGI == 18) GAME.player->phase = 1; // agility improves initiative phase
+    else if(GAME.player->AGI <= 5) GAME.player->phase = 3;
+    else GAME.player->phase = 2;
+
+    // should be updated with weapon value
+    if(GAME.player->DEX == 18) GAME.player->att_phase = GAME.player->wpn_phase - 1; // agility improves initiative phase
+    else if(GAME.player->DEX <= 5) GAME.player->att_phase = GAME.player->wpn_phase + 1;
+    else GAME.player->att_phase = GAME.player->wpn_phase;
+
+    // attack always follows or equals move
+    if(GAME.player->att_phase < GAME.player->phase) GAME.player->att_phase = GAME.player->phase;
 }    
 
 void draw_frame(const char *title1, const char *title2){
@@ -890,6 +902,15 @@ const char *txt_morality(Game &GAME){
     else return "Null";
 }
 
+const char *txt_phase(int phase){
+    if(phase == 1) return "Very Fast(1)";
+    else if(phase == 2) return "Fast(2)";
+    else if(phase == 3) return "Average(3)";
+    else if(phase == 4) return "Slow(4)";
+    else if(phase == 5) return "Very Slow(5)";
+    else return "Null";
+}
+
 void print_choice(){
     TCODConsole::root->setBackgroundFlag(TCOD_BKGND_SET);
     TCODConsole::root->print(43, 15, "Generation method:");
@@ -930,142 +951,6 @@ void addpoint(unsigned int &stat, int ostat, int &points, bool subadd, int who){
     else if(who > 6) TCODConsole::root->print(56, 12+who, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP);
     else TCODConsole::root->print(56, 9+who, "%c%d  %c", TCOD_COLCTRL_2, ostat+stat, TCOD_COLCTRL_STOP);
 }   
-
-int edit_char(Game &GAME, int points){
-    unsigned int main_osetx = 4;
-    TCODConsole::root->setColorControl(TCOD_COLCTRL_1, TCODColor::black, TCODColor::white);
-    TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
-    TCODConsole::root->print(main_osetx+35, 9, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    TCODConsole::root->print(main_osetx+35, 10, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    TCODConsole::root->print(main_osetx+35, 11, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    TCODConsole::root->print(main_osetx+35, 12, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    TCODConsole::root->print(main_osetx+35, 13, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-
-    TCODConsole::root->print(main_osetx+35, 17, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    TCODConsole::root->print(main_osetx+35, 18, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    TCODConsole::root->print(main_osetx+35, 19, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    TCODConsole::root->print(main_osetx+35, 20, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-    TCODConsole::root->print(main_osetx+35, 21, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-
-    TCODConsole::root->print(21, 5, "%c*%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-
-    std::shared_ptr<TCODConsole> menu (new TCODConsole(60, 3));
-    TCOD_key_t key;
-    TCOD_mouse_t mouse;
-    bool button = false; // used to make sure the button is unpressed at first
-    bool accepted = false;
-    unsigned int str = 0, con = 0, end = 0, dex = 0, agi = 0, per = 0, mys = 0, intel = 0, aur = 0, wil = 0;
-    while(accepted == false){
-        TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
-        if (TCODConsole::isWindowClosed()) return 0;
-        mouse = TCODMouse::getStatus();
-        unsigned int mousex = mouse.cx;
-        unsigned int mousey = mouse.cy;
-        if( (mousex >= 5 && mousex <= 10) && mousey == 33){ // menu
-            menu->setDefaultForeground(TCODColor::black);
-            menu->setDefaultBackground(TCODColor::white);
-            menu->print(0, 1, "Accept");
-            menu->setDefaultForeground(TCODColor::white);
-            menu->setDefaultBackground(TCODColor::black);
-            if(mouse.lbutton) accepted = true;
-        } else {
-            menu->setDefaultForeground(colorbase);
-            menu->setDefaultBackground(TCODColor::black);
-            menu->print(0, 1, "Accept");
-        }    
-        if(!mouse.lbutton) button = true;
-        if(button && mouse.lbutton){
-            if(mousex == main_osetx+35 && mousey == 9){
-                addpoint(str, GAME.player->STR, points, 0, 0);
-            }    
-            else if(mousex == main_osetx+36 && mousey == 9){
-                addpoint(str, GAME.player->STR, points, 1, 0);
-            }    
-            else if(mousex == main_osetx+35 && mousey == 10){
-                addpoint(con, GAME.player->CON, points, 0, 1);
-            }
-            else if(mousex == main_osetx+36 && mousey == 10){
-                addpoint(con, GAME.player->CON, points, 1, 1);
-            }
-            else if(mousex == main_osetx+35 && mousey == 11){
-                addpoint(end, GAME.player->END, points, 0, 2);
-            }
-            else if(mousex == main_osetx+36 && mousey == 11){
-                addpoint(end, GAME.player->END, points, 1, 2);
-            }
-            else if(mousex == main_osetx+35 && mousey == 12){
-                addpoint(agi, GAME.player->AGI, points, 0, 3);
-            }
-            else if(mousex == main_osetx+36 && mousey == 12){
-                addpoint(agi, GAME.player->AGI, points, 1, 3);
-            }  
-            else if(mousex == main_osetx+35 && mousey == 13){
-                addpoint(dex, GAME.player->DEX, points, 0, 4);
-            }
-            else if(mousex == main_osetx+36 && mousey == 13){
-                addpoint(dex, GAME.player->DEX, points, 1, 4);
-            }
-            
-            else if(mousex == main_osetx+35 && mousey == 17){
-                addpoint(per, GAME.player->PER, points, 0, 5);
-            }
-            else if(mousex == main_osetx+36 && mousey == 17){
-                addpoint(per, GAME.player->PER, points, 1, 5);
-            }
-            else if(mousex == main_osetx+35 && mousey == 18){
-                addpoint(intel, GAME.player->INT, points, 0, 6);
-            }
-            else if(mousex == main_osetx+36 && mousey == 18){
-                addpoint(intel, GAME.player->INT, points, 1, 6);
-            }
-            else if(mousex == main_osetx+35 && mousey == 19){
-                addpoint(aur, GAME.player->AUR, points, 0, 7);
-            }
-            else if(mousex == main_osetx+36 && mousey == 19){
-                addpoint(aur, GAME.player->AUR, points, 1, 7);
-            }
-            else if(mousex == main_osetx+35 && mousey == 20){
-                addpoint(wil, GAME.player->WIL, points, 0, 8);
-            }
-            else if(mousex == main_osetx+36 && mousey == 20){
-                addpoint(wil, GAME.player->WIL, points, 1, 8);
-            }
-            else if(mousex == main_osetx+35 && mousey == 21){
-                addpoint(mys, GAME.player->MYS, points, 0, 9);
-            }
-            else if(mousex == main_osetx+36 && mousey == 21){
-                addpoint(mys, GAME.player->MYS, points, 1, 9);
-            }
-
-            else if(mousex == 21 && mousey == 5){
-                gen_name(GAME);
-            }
-
-            button = false; // reset mouse button
-        }
-        TCODConsole::root->print(main_osetx+1, 29, "%cTo distribute:%c %c%d%c  ", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, points, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(main_osetx+1, 30, "%c2 points when > 12, 3 points when > 15%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
-        menu->setDefaultForeground(TCODColor::lighterGrey);
-        menu->setDefaultBackground(TCODColor::black);
-        for(int x = 0; x < 6; ++x) menu->putChar(x, 0, '=', TCOD_BKGND_SET);
-        for(int x = 0; x < 6; ++x) menu->putChar(x, 3-1, '-', TCOD_BKGND_SET);
-        TCODConsole::root->print(22, 5, "%c%s%c                    ", TCOD_COLCTRL_1, GAME.player->name2, TCOD_COLCTRL_STOP);
-        TCODConsole::root->print(5, 90, "[%d.%d]%c%c", mousex, mousey, TCOD_CHAR_HLINE, TCOD_CHAR_HLINE);
-        TCODConsole::blit(menu.get(),0,0,0,0,TCODConsole::root, 5, 32);
-        TCODConsole::flush(); // this updates the screen
-    } 
-    GAME.player->STR += str;
-    GAME.player->CON += con;
-    GAME.player->END += end;
-    GAME.player->DEX += dex;
-    GAME.player->AGI += agi;
-    GAME.player->PER += per;
-    GAME.player->MYS += mys;
-    GAME.player->INT += intel;
-    GAME.player->AUR += aur;
-    GAME.player->WIL += wil;
-    return points;
-}  
 
 int calc_bonuses(Game &GAME, int stat1, int stat2, int stat3){
     int bonus = 0;
@@ -1150,7 +1035,7 @@ int prot_value(Armor piece, int type, int location){
 
 void compile_armor(Game &GAME, TCODConsole *local){
     int sety = 44;
-    int setx = 32;
+    int setx = 34;
     local->setAlignment(TCOD_LEFT);
     local->print(setx, sety, "%cARMOR%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     for(unsigned int n = 0; n < GAME.player->armor_worn.size(); ++n){
@@ -1290,7 +1175,7 @@ void compile_armor(Game &GAME, TCODConsole *local){
     local->setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
 }    
 
-void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_osety){
+void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_osety, bool editing){
     local->setAlignment(TCOD_LEFT);
     local->setDefaultForeground(TCODColor::lighterGrey);
     local->setDefaultBackground(TCODColor::black);
@@ -1346,29 +1231,37 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
 
     local->print(main_osetx+35, 7, "%cPHYSICAL%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 9, "Strength:");
-    local->print(56, 9, "%c%d%c", TCOD_COLCTRL_2, GAME.player->STR, TCOD_COLCTRL_STOP);
+    
     local->print(main_osetx+37, 10, "Constitution:");
-    local->print(56, 10, "%c%d%c", TCOD_COLCTRL_2, GAME.player->CON, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 11, "Endurance:");
-    local->print(56, 11, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 12, "Agility:");
-    local->print(56, 12, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AGI, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 13, "Dexterity:");
-    local->print(56, 13, "%c%d%c", TCOD_COLCTRL_2, GAME.player->DEX, TCOD_COLCTRL_STOP);
+
+    if(!editing){
+        local->print(56, 9, "%c%d%c", TCOD_COLCTRL_2, GAME.player->STR, TCOD_COLCTRL_STOP);
+        local->print(56, 10, "%c%d%c", TCOD_COLCTRL_2, GAME.player->CON, TCOD_COLCTRL_STOP);
+        local->print(56, 11, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END, TCOD_COLCTRL_STOP);
+        local->print(56, 12, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AGI, TCOD_COLCTRL_STOP);
+        local->print(56, 13, "%c%d%c", TCOD_COLCTRL_2, GAME.player->DEX, TCOD_COLCTRL_STOP);
+    }
 
     local->print(main_osetx+35, 15, "%cPERSONALITY%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 17, "Perception:");
-    local->print(56, 17, "%c%d%c", TCOD_COLCTRL_2, GAME.player->PER, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 18, "Intelligence:");
-    local->print(56, 18, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->INT, txt_intelligence(GAME.player->INT), TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 19, "Aura:");
-    local->print(56, 19, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AUR, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 20, "Will:");
-    local->print(56, 20, "%c%d%c", TCOD_COLCTRL_2, GAME.player->WIL, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 21, "Mystique:");
-    local->print(56, 21, "%c%d%c", TCOD_COLCTRL_2, GAME.player->MYS, TCOD_COLCTRL_STOP);
     local->print(main_osetx+37, 23, "Morality:");
-    local->print(56, 23, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->MOR, txt_morality(GAME), TCOD_COLCTRL_STOP);
+    
+
+    if(!editing){
+        local->print(56, 17, "%c%d%c", TCOD_COLCTRL_2, GAME.player->PER, TCOD_COLCTRL_STOP);
+        local->print(56, 18, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->INT, txt_intelligence(GAME.player->INT), TCOD_COLCTRL_STOP);
+        local->print(56, 19, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AUR, TCOD_COLCTRL_STOP);
+        local->print(56, 20, "%c%d%c", TCOD_COLCTRL_2, GAME.player->WIL, TCOD_COLCTRL_STOP);
+        local->print(56, 21, "%c%d%c", TCOD_COLCTRL_2, GAME.player->MYS, TCOD_COLCTRL_STOP);
+        local->print(56, 23, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->MOR, txt_morality(GAME), TCOD_COLCTRL_STOP);
+    }
 
     local->print(main_osetx+70, 7, "%cPHYSICAL SKILLS%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     local->print(main_osetx+90, 7, "%cSB%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -1459,22 +1352,28 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
     local->print(combatpr_x+2, combatpr_y+6, "INITIATIVE");
     local->print(combatpr_x+2, combatpr_y+7, "MOVE");
     local->print(combatpr_x+2, combatpr_y+8, "ENCUMBRANCE PEN.");
+        
 
     local->print(combatpr_x+2, combatpr_y+10, "Action Points (AP)");
+    local->print(combatpr_x+2, combatpr_y+11, "Mov Phase");
+    local->print(combatpr_x+2, combatpr_y+12, "Atk Phase");
     local->setAlignment(TCOD_RIGHT);
-    local->print(combatpr_x+22, combatpr_y+2, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.condML, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+22, combatpr_y+3, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.dodgML, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+24, combatpr_y+2, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.condML, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+24, combatpr_y+3, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.dodgML, TCOD_COLCTRL_STOP);
     GAME.player->Load = total_weight(GAME);
     if(GAME.player->END < 1) GAME.player->END = 1;
-    local->print(combatpr_x+22, combatpr_y+4, "%c%d%c", TCOD_COLCTRL_2, int(GAME.player->Load) / GAME.player->END, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+22, combatpr_y+5, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END / 6, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+22, combatpr_y+6, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.initML, TCOD_COLCTRL_STOP);
-    local->print(combatpr_x+22, combatpr_y+7, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.mobiML / 5, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+24, combatpr_y+4, "%c%d%c", TCOD_COLCTRL_2, int(GAME.player->Load) / GAME.player->END, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+24, combatpr_y+5, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END / 6, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+24, combatpr_y+6, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.initML, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+24, combatpr_y+7, "%c%d%c", TCOD_COLCTRL_2, GAME.player->skill.mobiML / 5, TCOD_COLCTRL_STOP);
     enc_pen(GAME);
-    local->print(combatpr_x+22, combatpr_y+8, "%c%d%c", TCOD_COLCTRL_2, GAME.player->enc_pen, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+24, combatpr_y+8, "%c%d%c", TCOD_COLCTRL_2, GAME.player->enc_pen, TCOD_COLCTRL_STOP);
 
-    local->print(combatpr_x+22, combatpr_y+10, "%c%d%c", TCOD_COLCTRL_2, GAME.player->APm, TCOD_COLCTRL_STOP);
-    combatpr_x = 32;
+    local->print(combatpr_x+24, combatpr_y+10, "%c%d%c", TCOD_COLCTRL_2, GAME.player->APm, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+24, combatpr_y+11, "%c%s%c", TCOD_COLCTRL_2, txt_phase(GAME.player->phase), TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+24, combatpr_y+12, "%c%s%c", TCOD_COLCTRL_2, txt_phase(GAME.player->att_phase), TCOD_COLCTRL_STOP);
+
+    combatpr_x = 34;
     local->setAlignment(TCOD_LEFT);
     local->print(combatpr_x, combatpr_y, "%cWEAPON%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     local->print(combatpr_x+18, combatpr_y, "%cReach%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -1484,6 +1383,7 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
     local->print(combatpr_x+45, combatpr_y, "%cB/E/P%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     local->print(combatpr_x+57, combatpr_y, "%cAML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     local->print(combatpr_x+67, combatpr_y, "%cDML%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+73, combatpr_y, "%cSpeed%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
     
     local->print(combatpr_x+2, combatpr_y+2, "%cBroadsword%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
     local->setAlignment(TCOD_RIGHT);
@@ -1494,6 +1394,7 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
     local->print(combatpr_x+49, combatpr_y+2, "%c3/5/3%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
     local->print(combatpr_x+59, combatpr_y+2, "%c%d(%d)%c", TCOD_COLCTRL_2, GAME.player->skill.lswdAML, GAME.player->skill.lswdAB, TCOD_COLCTRL_STOP);
     local->print(combatpr_x+69, combatpr_y+2, "%c%d(%d)%c", TCOD_COLCTRL_2, GAME.player->skill.lswdDML, GAME.player->skill.lswdDB, TCOD_COLCTRL_STOP);
+    local->print(combatpr_x+77, combatpr_y+2, "%c3(10)%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
 
     for(int n = 0; n < 3; ++n){
         local->putChar(combatpr_x+23, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
@@ -1503,13 +1404,241 @@ void compile_sheet(TCODConsole *local, Game &GAME, int main_osetx, int main_oset
         local->putChar(combatpr_x+50, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
         local->putChar(combatpr_x+60, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
         local->putChar(combatpr_x+70, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
+        local->putChar(combatpr_x+78, combatpr_y+n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
     }
 
     compile_armor(GAME, local);
 
     local->setAlignment(TCOD_LEFT);
     return;
-}  
+} 
+
+int edit_char(Game &GAME, int points){
+    unsigned int main_osetx = 4;
+
+    std::shared_ptr<TCODConsole> menu (new TCODConsole(60, 3));
+    TCOD_key_t key;
+    TCOD_mouse_t mouse;
+    bool button = false; // used to make sure the button is unpressed at first
+    bool accepted = false;
+    unsigned int str = 0, con = 0, end = 0, dex = 0, agi = 0, per = 0, mys = 0, intel = 0, aur = 0, wil = 0;
+    while(accepted == false){
+        TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
+        if (TCODConsole::isWindowClosed()) return 0;
+        mouse = TCODMouse::getStatus();
+        unsigned int mousex = mouse.cx;
+        unsigned int mousey = mouse.cy;
+        if( (mousex >= 5 && mousex <= 10) && mousey == 33){ // menu
+            menu->setDefaultForeground(TCODColor::black);
+            menu->setDefaultBackground(TCODColor::white);
+            menu->print(0, 1, "Accept");
+            menu->setDefaultForeground(TCODColor::white);
+            menu->setDefaultBackground(TCODColor::black);
+            if(mouse.lbutton) accepted = true;
+        } else {
+            menu->setDefaultForeground(colorbase);
+            menu->setDefaultBackground(TCODColor::black);
+            menu->print(0, 1, "Accept");
+        }    
+        if(!mouse.lbutton) button = true;
+        if(button && mouse.lbutton){
+            if(mousex == main_osetx+35 && mousey == 9){
+                addpoint(str, GAME.player->STR, points, 0, 0);
+            }    
+            else if(mousex == main_osetx+36 && mousey == 9){
+                addpoint(str, GAME.player->STR, points, 1, 0);
+            }    
+            else if(mousex == main_osetx+35 && mousey == 10){
+                addpoint(con, GAME.player->CON, points, 0, 1);
+            }
+            else if(mousex == main_osetx+36 && mousey == 10){
+                addpoint(con, GAME.player->CON, points, 1, 1);
+            }
+            else if(mousex == main_osetx+35 && mousey == 11){
+                addpoint(end, GAME.player->END, points, 0, 2);
+            }
+            else if(mousex == main_osetx+36 && mousey == 11){
+                addpoint(end, GAME.player->END, points, 1, 2);
+            }
+            else if(mousex == main_osetx+35 && mousey == 12){
+                addpoint(agi, GAME.player->AGI, points, 0, 3);
+            }
+            else if(mousex == main_osetx+36 && mousey == 12){
+                addpoint(agi, GAME.player->AGI, points, 1, 3);
+            }  
+            else if(mousex == main_osetx+35 && mousey == 13){
+                addpoint(dex, GAME.player->DEX, points, 0, 4);
+            }
+            else if(mousex == main_osetx+36 && mousey == 13){
+                addpoint(dex, GAME.player->DEX, points, 1, 4);
+            }
+            
+            else if(mousex == main_osetx+35 && mousey == 17){
+                addpoint(per, GAME.player->PER, points, 0, 5);
+            }
+            else if(mousex == main_osetx+36 && mousey == 17){
+                addpoint(per, GAME.player->PER, points, 1, 5);
+            }
+            else if(mousex == main_osetx+35 && mousey == 18){
+                addpoint(intel, GAME.player->INT, points, 0, 6);
+            }
+            else if(mousex == main_osetx+36 && mousey == 18){
+                addpoint(intel, GAME.player->INT, points, 1, 6);
+            }
+            else if(mousex == main_osetx+35 && mousey == 19){
+                addpoint(aur, GAME.player->AUR, points, 0, 7);
+            }
+            else if(mousex == main_osetx+36 && mousey == 19){
+                addpoint(aur, GAME.player->AUR, points, 1, 7);
+            }
+            else if(mousex == main_osetx+35 && mousey == 20){
+                addpoint(wil, GAME.player->WIL, points, 0, 8);
+            }
+            else if(mousex == main_osetx+36 && mousey == 20){
+                addpoint(wil, GAME.player->WIL, points, 1, 8);
+            }
+            else if(mousex == main_osetx+35 && mousey == 21){
+                addpoint(mys, GAME.player->MYS, points, 0, 9);
+            }
+            else if(mousex == main_osetx+36 && mousey == 21){
+                addpoint(mys, GAME.player->MYS, points, 1, 9);
+            }
+
+            else if(mousex == 21 && mousey == 5){
+                gen_name(GAME);
+            }
+
+            button = false; // reset mouse button
+        }
+
+        TCODConsole::root->clear();
+        TCODConsole::root->setColorControl(TCOD_COLCTRL_1, TCODColor::black, TCODColor::white);
+        TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        TCODConsole::root->print(main_osetx+35, 9, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+35, 10, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+35, 11, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+35, 12, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+35, 13, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+
+        TCODConsole::root->print(main_osetx+35, 17, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+35, 18, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+35, 19, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+35, 20, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+35, 21, "%c-+%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(21, 5, "%c*%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+
+        TCODConsole::root->print(main_osetx+1, 29, "%cTo distribute:%c %c%d%c  ", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, points, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(main_osetx+1, 30, "%c2 points when > 12, 3 points when > 15%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
+        menu->setDefaultForeground(TCODColor::lighterGrey);
+        menu->setDefaultBackground(TCODColor::black);
+        for(int x = 0; x < 6; ++x) menu->putChar(x, 0, '=', TCOD_BKGND_SET);
+        for(int x = 0; x < 6; ++x) menu->putChar(x, 3-1, '-', TCOD_BKGND_SET);
+        TCODConsole::root->print(22, 5, "%c%s%c                    ", TCOD_COLCTRL_1, GAME.player->name2, TCOD_COLCTRL_STOP);
+        TCODConsole::root->print(5, 90, "[%d.%d]%c%c", mousex, mousey, TCOD_CHAR_HLINE, TCOD_CHAR_HLINE);
+        TCODConsole::blit(menu.get(),0,0,0,0,TCODConsole::root, 5, 32);
+
+
+        GAME.player->STR += str;
+        GAME.player->CON += con;
+        GAME.player->END += end;
+        GAME.player->DEX += dex;
+        GAME.player->AGI += agi;
+        GAME.player->PER += per;
+        GAME.player->MYS += mys;
+        GAME.player->INT += intel;
+        GAME.player->AUR += aur;
+        GAME.player->WIL += wil;
+        if(str != 0){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        }else{
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+        }
+        TCODConsole::root->print(56, 9, "%c%d%c", TCOD_COLCTRL_2, GAME.player->STR, TCOD_COLCTRL_STOP);
+        if(con != 0){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        }else{
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+        }
+        TCODConsole::root->print(56, 10, "%c%d%c", TCOD_COLCTRL_2, GAME.player->CON, TCOD_COLCTRL_STOP);
+        if(end != 0){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        }else{
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+        }
+        TCODConsole::root->print(56, 11, "%c%d%c", TCOD_COLCTRL_2, GAME.player->END, TCOD_COLCTRL_STOP);
+        if(agi != 0){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        }else{
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+        }
+        TCODConsole::root->print(56, 12, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AGI, TCOD_COLCTRL_STOP);
+        if(dex != 0){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        }else{
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+        }
+        TCODConsole::root->print(56, 13, "%c%d%c", TCOD_COLCTRL_2, GAME.player->DEX, TCOD_COLCTRL_STOP);
+        if(per != 0){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        }else{
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+        }
+        TCODConsole::root->print(56, 17, "%c%d%c", TCOD_COLCTRL_2, GAME.player->PER, TCOD_COLCTRL_STOP);
+        if(intel != 0){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        }else{
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+        }
+        TCODConsole::root->print(56, 18, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->INT, txt_intelligence(GAME.player->INT), TCOD_COLCTRL_STOP);
+        if(aur != 0){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        }else{
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+        }
+        TCODConsole::root->print(56, 19, "%c%d%c", TCOD_COLCTRL_2, GAME.player->AUR, TCOD_COLCTRL_STOP);
+        if(wil != 0){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        }else{
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+        }
+        TCODConsole::root->print(56, 20, "%c%d%c", TCOD_COLCTRL_2, GAME.player->WIL, TCOD_COLCTRL_STOP);
+        if(mys != 0){
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterBlue, TCODColor::black);
+        }else{
+            TCODConsole::root->setColorControl(TCOD_COLCTRL_2, TCODColor::lighterYellow, TCODColor::black);
+        }
+        TCODConsole::root->print(56, 21, "%c%d%c", TCOD_COLCTRL_2, GAME.player->MYS, TCOD_COLCTRL_STOP);
+        gen_rollskill(GAME);
+        gen_othervalues(GAME);
+        GAME.player->skill.lswdAB = calc_bonuses(GAME, GAME.player->STR, GAME.player->STR, GAME.player->DEX);
+        GAME.player->skill.lswdDB = calc_bonuses(GAME, GAME.player->DEX, GAME.player->DEX, GAME.player->AGI);
+        compile_sheet(TCODConsole::root, GAME, 5, 5, 1);
+        TCODConsole::root->print(56, 23, "%c%d (%s)%c", TCOD_COLCTRL_2, GAME.player->MOR, txt_morality(GAME), TCOD_COLCTRL_STOP);
+        GAME.player->STR -= str;
+        GAME.player->CON -= con;
+        GAME.player->END -= end;
+        GAME.player->DEX -= dex;
+        GAME.player->AGI -= agi;
+        GAME.player->PER -= per;
+        GAME.player->MYS -= mys;
+        GAME.player->INT -= intel;
+        GAME.player->AUR -= aur;
+        GAME.player->WIL -= wil;
+
+        TCODConsole::flush(); // this updates the screen
+    } 
+    GAME.player->STR += str;
+    GAME.player->CON += con;
+    GAME.player->END += end;
+    GAME.player->DEX += dex;
+    GAME.player->AGI += agi;
+    GAME.player->PER += per;
+    GAME.player->MYS += mys;
+    GAME.player->INT += intel;
+    GAME.player->AUR += aur;
+    GAME.player->WIL += wil;
+    return points;
+}
 
 int chargen(Game &GAME){
     bool method = false; // using 4 dice or point allocation
@@ -1619,9 +1748,10 @@ int chargen(Game &GAME){
         TCODConsole::root->clear();
         TCODConsole::root->setColorControl(TCOD_COLCTRL_3, TCODColor::lighterBlue, TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_4, TCODColor::black, TCODColor::lighterBlue);
-        if(method) TCODConsole::root->print(main_osetx, 29, "%cTo distribute:%c %c%d%c", TCOD_COLCTRL_3, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, alpoint, TCOD_COLCTRL_STOP);
+        if(method) TCODConsole::root->print(main_osetx, 29, "%cTo distribute:%c %c%d%c", TCOD_COLCTRL_3, 
+                TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, alpoint, TCOD_COLCTRL_STOP);
         draw_frame("CHARACTOR GENERATOR", "Pick your fool");
-        compile_sheet(TCODConsole::root, GAME, 5, 5);
+        compile_sheet(TCODConsole::root, GAME, 5, 5, 0);
         
         TCODConsole::root->setColorControl(TCOD_COLCTRL_3, TCODColor::lighterBlue, TCODColor::black);
         TCODConsole::root->setColorControl(TCOD_COLCTRL_4, TCODColor::black, TCODColor::lighterBlue);

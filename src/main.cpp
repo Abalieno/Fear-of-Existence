@@ -20,6 +20,7 @@
 #include "inventory.h"
 #include "gui.h"
 #include "screens.h"
+#include "busywork.h"
 
 #include "chargen.h"
 
@@ -605,7 +606,7 @@ void place_objects(Rect room, lvl1 myenc, Game &GAME){
                     monster.facing = rng(0,3); // random facing
                     monster.initML = rng(35, 65);
 
-                    monster.phase = 3;
+                    monster.phase = 3; // hardcoded at average
 
                     monster.overpower_l = 0;
 
@@ -4827,8 +4828,11 @@ int main() {
     player.skill.rangedAML = 65;
 
     player.stats.ML = 60;
+
+    // unit size = fast
     player.phase = 2; // 1veryfast 2fast 3average 4slow 5veryslow 
     player.att_phase = 3; // boardsword is average
+    player.wpn_phase = 3; // boardsword is average
 
     player.rangeweapon = 0; // set melee as default
     player.eRangedDW = 80; // Ranged Weapon default draw weight
@@ -5074,7 +5078,8 @@ int main() {
         TCODConsole::root->clear();
     }
     TCODConsole::root->clear();
-    
+   
+    // creates FOVs/paths
     for (int i = 0; i < MAP_HEIGHT; ++i){
         for (int l = 0; l < MAP_WIDTH; ++l) {
             GAME.gstate.fov_map->setProperties(l, i, !(map_array[i * MAP_WIDTH + l].block_sight), !(map_array[i * MAP_WIDTH +
@@ -5226,7 +5231,7 @@ int main() {
                     if(monvector[i].phase == 3){
                         Unit tempunit;
                         tempunit.mon_index = i;
-                        AllPhases[2].push_back(tempunit);
+                        AllPhases[2].push_back(tempunit); // hardcoded to "average"?
                     }            
                 }    
             }  
@@ -5273,44 +5278,42 @@ int main() {
                         break_combat = false; // set flag, so that if this cycle never entered, combat is interrupted
                     }    
 
-                    // calculate initiative only once, or whenever a monster joins combat
-                    if(1){
-                        bool wasincombat = false;
-                        if(monvector[i].initiative != -1) wasincombat = true; // alredy joined
-                        int roll = 0;
-                        roll = rng(1, 20);
-                        monvector[i].initiative = monvector[i].initML + (roll - 10);
-                        monvector[i].temp_init = monvector[i].initiative; // temp_init keeps original roll
+                    // initiative monster block
+                    bool wasincombat = false;
+                    if(monvector[i].initiative != -1) wasincombat = true; // alredy joined
+                    int roll = 0;
+                    roll = rng(1, 20);
+                    monvector[i].initiative = monvector[i].initML + (roll - 10);
+                    monvector[i].temp_init = monvector[i].initiative; // temp_init keeps original roll
 
-                        Monster tempm;
-                        tempm.initiative = &monvector[i].initiative;
-                        tempm.speed = &monvector[i].initML;
-                        monsters.push_back(tempm); // pushed to initiative vector
+                    Monster tempm;
+                    tempm.initiative = &monvector[i].initiative;
+                    tempm.speed = &monvector[i].initML;
+                    monsters.push_back(tempm); // pushed to initiative vector
 
-                        if(turn > 1 && !wasincombat){
-                            msg_log msg2;
-                            sprintf(msg2.message, "%c!%cJoining the fray: %s", 
-                                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, monvector[i].name);
-                            msg2.color1 = dicec;
-                            msg2.filter = 102; // general filter
-                            msg_log_list.push_back(msg2);
-                        }
-
-                        msg_log msg1;
-                        if(monvector[i].in_sight)
-                            sprintf(msg1.message, "%c>%c%s initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d",
-                                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
-                                    monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
-                                    monvector[i].initiative); 
-                        else 
-                            sprintf(msg1.message, "%c>***%c%s initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d",
-                                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
-                                    monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
-                                    monvector[i].initiative);
-                        msg1.color1 = dicec;
-                        msg1.filter = 101; // initiative filter
-                        msg_log_list.push_back(msg1);
+                    if(turn > 1 && !wasincombat){
+                        msg_log msg2;
+                        sprintf(msg2.message, "%c!%cJoining the fray: %s", 
+                                TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, monvector[i].name);
+                        msg2.color1 = dicec;
+                        msg2.filter = 102; // general filter
+                        msg_log_list.push_back(msg2);
                     }
+
+                    msg_log msg1;
+                    if(monvector[i].in_sight)
+                        sprintf(msg1.message, "%c>%c%s initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d",
+                                TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, 
+                                monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
+                                monvector[i].initiative); 
+                    else 
+                        sprintf(msg1.message, "%c>***%c%s initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d",
+                                TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,
+                                monvector[i].name,*tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, roll, 
+                                monvector[i].initiative);
+                    msg1.color1 = dicec;
+                    msg1.filter = 101; // initiative filter
+                    msg_log_list.push_back(msg1);
                 }
             }
 
@@ -5355,34 +5358,43 @@ int main() {
             r_panel->clear();
             TCODConsole::root->clear();
 
-            // roll initiative once (player)
-            if(1){
-                player.distance = player.stats.wpn1.reach; // initial reach
-                player.phase_attack = 0;
-                int myroll = 0;
-                myroll = rng(1, 20);
-                player.initiative = GAME.player->skill.initML + (myroll - 10);
-                player.temp_init = player.initiative;
+            // roll initiative (player)
+            player.distance = player.stats.wpn1.reach; // initial reach
+            player.phase_attack = 0;
+            int myroll = 0;
+            myroll = rng(1, 20);
+            player.initiative = GAME.player->skill.initML + (myroll - 10);
+            player.temp_init = player.initiative;
 
-                Monster tempm; // player counts as monster for initiative
-                tempm.initiative = &player.initiative;
-                tempm.speed = &GAME.player->skill.initML;
-                monsters.push_back(tempm);
 
-                msg_log msg1;
-                sprintf(msg1.message, "%c>%c%c>%cPlayer initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d",
-                        TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                        *tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, player.initiative);
-                msg1.color1 = dicec;
-                msg1.color2 = TCODColor::lighterBlue;
-                msg1.filter = 101; // initiative filter
-                msg_log_list.push_back(msg1);
-
-                // SORTING INITIATIVE
-                std::sort(monsters.begin(), monsters.end(), compare);
-                for (unsigned int i = 0; i<monsters.size(); ++i) {
-                    *(monsters[i].initiative) = i+1;
+            //if initiative = xx, then
+                for(unsigned int p = 0; p<10; ++p){
+                    for(unsigned int i = 0; i<AllPhases[p].size(); ++i){
+                        if(AllPhases[p][i].mon_index == 666){
+                            AllPhases[p].erase(AllPhases[p].begin() + i); // erase
+                        }
+                    }
                 }
+            AllPhases[player.phase-1].push_back(tempunit); //re-add 
+
+            Monster tempm; // player counts as monster for initiative
+            tempm.initiative = &player.initiative;
+            tempm.speed = &GAME.player->skill.initML;
+            monsters.push_back(tempm);
+
+            msg_log msg1;
+            sprintf(msg1.message, "%c>%c%c>%cPlayer initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d",
+                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
+                    *tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, player.initiative);
+            msg1.color1 = dicec;
+            msg1.color2 = TCODColor::lighterBlue;
+            msg1.filter = 101; // initiative filter
+            msg_log_list.push_back(msg1);
+
+            // SORTING INITIATIVE
+            std::sort(monsters.begin(), monsters.end(), compare);
+            for (unsigned int i = 0; i<monsters.size(); ++i) {
+                *(monsters[i].initiative) = i+1;
             }
 
             r_panel->setAlignment(TCOD_RIGHT);
@@ -5402,25 +5414,7 @@ int main() {
             } 
 
             // press a key to begin combat
-            widget_popup->setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-            widget_popup->setColorControl(TCOD_COLCTRL_2,TCODColor::black,TCODColor::white);
-            widget_popup->setBackgroundFlag(TCOD_BKGND_SET);
-            widget_popup->print(1, 1,"%c START COMBAT TURN, Press any key %c",
-                TCOD_COLCTRL_2,TCOD_COLCTRL_STOP);
-            widget_popup->setDefaultForeground(TCODColor::black);
-            widget_popup->setDefaultBackground(TCODColor::white);
-            for (int n = 0; n < 3; ++n){
-                widget_popup->putChar(0, n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
-                widget_popup->putChar(35, n, TCOD_CHAR_VLINE, TCOD_BKGND_SET);
-            }
-            for (int n = 0; n < 35; ++n){
-                widget_popup->putChar(n, 0, TCOD_CHAR_HLINE, TCOD_BKGND_SET);
-                widget_popup->putChar(n, 2, TCOD_CHAR_HLINE, TCOD_BKGND_SET);
-            }
-            widget_popup->putChar(0, 0,  TCOD_CHAR_NW, TCOD_BKGND_SET);
-            widget_popup->putChar(35, 0, TCOD_CHAR_NE, TCOD_BKGND_SET);
-            widget_popup->putChar(0, 2, TCOD_CHAR_SW, TCOD_BKGND_SET);
-            widget_popup->putChar(35, 2, TCOD_CHAR_SE, TCOD_BKGND_SET);
+            press_key_combat(widget_popup);
             
             GAME.gstate.fov_recompute = true;
             render_all(GAME);

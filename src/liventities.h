@@ -317,8 +317,10 @@ public: // public should be moved down, but I keep it here for debug messages
     int phase_attack; // number of attacks this phase
 
     int facing; // 0 to 3, N E S W
-    int phase;
-    int att_phase; // weapon speed
+
+    int phase; // 2 set in main, human size moves in 2nd phase = fast
+    int att_phase; // current attack phase modified by stats
+    int wpn_phase; // weapon attack phase
 
     std::vector<Armor> armor_worn;
 
