@@ -320,7 +320,9 @@ public: // public should be moved down, but I keep it here for debug messages
 
     int phase; // 2 set in main, human size moves in 2nd phase = fast
     int att_phase; // current attack phase modified by stats
-    int wpn_phase; // weapon attack phase
+    int wpn_phase; // weapon own attack phase
+    int wpn_speed; // value to subtract from initiative
+    int phaseshift; // phase changes due to current initiative rolls
 
     std::vector<Armor> armor_worn;
 

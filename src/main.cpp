@@ -2447,7 +2447,7 @@ void render_prompt(Game &GAME){
                 if(GAME.player->phaseAP < GAME.player->attAP) 
                     TCODConsole::root->print(loc_x+aimoffset, loc_y+5, "> Not enough AP (%d)", GAME.player->attAP);
                 else TCODConsole::root->print(loc_x+aimoffset, loc_y+5, "> Attack phase: %c%d%c",
-                        TCOD_COLCTRL_5, player.att_phase, TCOD_COLCTRL_STOP);
+                        TCOD_COLCTRL_5, player.att_phase + player.phaseshift, TCOD_COLCTRL_STOP);
                 TCODConsole::root->setColorControl(TCOD_COLCTRL_4,TCODColor::darkGrey,TCODColor::black);
                 if(GAME.player->rangeweapon)
                     TCODConsole::root->print(loc_x, loc_y+5, "%cFIRE%c",TCOD_COLCTRL_4,TCOD_COLCTRL_STOP);
@@ -3349,6 +3349,18 @@ int player_action = 0;
 int m_x = 0;
 int m_y = 0;
 bool combat_null = false; // set if waiting instead of moving, in combat
+
+int pure_result(int roll, int skill){
+    int critS = skill / 10;
+    if(critS < 1) critS = 1;
+    int critF = (100 - skill) / 20; // half of index
+    if(critF < 1) critF = 1;
+
+    if (roll <= critS) return 0; // CS Critical Success
+    else if(roll <= skill) return 1; // MS Marginal Success
+    else if (roll > (100 - critF)) return 3; // CF Critical Failure
+    else return 2; // MF Marginal Failure
+}    
 
 void player_move_attack(int dx, int dy, Game &tgame, int overpowering){
 
@@ -4400,8 +4412,11 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
     GAME.gstate.mode_attack = false;
     GAME.gstate.mode_pass = false;
 
+    int p_movphase = player.phase + player.phaseshift; // modified by initiative phase shifts
+    int p_atkphase = player.att_phase + player.phaseshift;   
+
     if(phase < 9) GAME.gstate.first = true; // cannot hold at last phase
-    if(player.phase <= phase+1) GAME.gstate.second = true;
+    if(p_movphase <= phase+1) GAME.gstate.second = true;
 
     if (player.AP > 0 && !wid_prompt_open){
         UI_hook(GAME, 4); // hooks the prompt
@@ -4424,7 +4439,7 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         player.phaseAP = 4 - phasemove;
         if(player.phaseAP > player.AP) player.phaseAP = player.AP; // phase AP can't exceed pool left
 
-        if(player.att_phase > phase+1) GAME.gstate.third = false; // weapon speed, cannot attack
+        if(p_atkphase > phase+1) GAME.gstate.third = false; // weapon speed, cannot attack
         else if(player.phaseAP >= player.attAP) GAME.gstate.third = true; // enough AP this phase, can attack
         else GAME.gstate.third = false; // retrigger false is phaseAP were modified
 
@@ -4831,8 +4846,10 @@ int main() {
 
     // unit size = fast
     player.phase = 2; // 1veryfast 2fast 3average 4slow 5veryslow 
-    player.att_phase = 3; // boardsword is average
-    player.wpn_phase = 3; // boardsword is average
+    player.att_phase = 3; // modified by DEX
+    player.wpn_phase = 3; // weapon own stat
+    player.wpn_speed = 20; // penalty to initiative roll
+    player.phaseshift = 0;
 
     player.rangeweapon = 0; // set melee as default
     player.eRangedDW = 80; // Ranged Weapon default draw weight
@@ -5360,14 +5377,24 @@ int main() {
 
             // roll initiative (player)
             player.distance = player.stats.wpn1.reach; // initial reach
-            player.phase_attack = 0;
+            player.phase_attack = 0; // number of attacks this turn
             int myroll = 0;
-            myroll = rng(1, 20);
-            player.initiative = GAME.player->skill.initML + (myroll - 10);
+            int init_skip; // phases to skip
+            init_skip = 0;
+            myroll = dice(1, 100);
+            int init_result = pure_result(myroll, player.skill.initML);
+            if(init_result == 0) init_skip--; // CS, anticipate phase
+            else if(init_result == 3) init_skip++; // CF, skip phase
+            player.initiative = (100 + (player.skill.initML - myroll - player.wpn_speed - player.enc_pen)) / 2;
+            if(player.initiative < 1){
+                init_skip++; // skip phase
+                player.initiative = 100 - player.initiative;
+            } 
+            player.phaseshift = init_skip; // mod to phase
+
             player.temp_init = player.initiative;
 
-
-            //if initiative = xx, then
+            if(init_skip != 0){
                 for(unsigned int p = 0; p<10; ++p){
                     for(unsigned int i = 0; i<AllPhases[p].size(); ++i){
                         if(AllPhases[p][i].mon_index == 666){
@@ -5375,7 +5402,8 @@ int main() {
                         }
                     }
                 }
-            AllPhases[player.phase-1].push_back(tempunit); //re-add 
+                AllPhases[(player.phase-1) + init_skip].push_back(tempunit); //re-add
+            }    
 
             Monster tempm; // player counts as monster for initiative
             tempm.initiative = &player.initiative;
@@ -5383,11 +5411,17 @@ int main() {
             monsters.push_back(tempm);
 
             msg_log msg1;
-            sprintf(msg1.message, "%c>%c%c>%cPlayer initiative: Skill(%d%%) %c1d20%c(%d) - 10 Total: %d",
+            sprintf(msg1.message, "%c>%c%c>%cPlayer initiative: Skill(%d%%, %d, %d) %c1d100%c(%d) I: %d(%c%d%c)",
                     TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, TCOD_COLCTRL_2, TCOD_COLCTRL_STOP,
-                    *tempm.speed, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, player.initiative);
+                    *tempm.speed, player.wpn_speed, player.enc_pen, 
+                    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP, myroll, player.initiative, 
+                    TCOD_COLCTRL_3, init_skip, TCOD_COLCTRL_STOP);
             msg1.color1 = dicec;
             msg1.color2 = TCODColor::lighterBlue;
+            if(init_skip != 0){ 
+                if(init_skip > 0) msg1.color3 = TCODColor::lighterRed;
+                else msg1.color3 = TCODColor::lighterGreen;
+            }else msg1.color3 = TCODColor::lighterGrey;
             msg1.filter = 101; // initiative filter
             msg_log_list.push_back(msg1);
 
