@@ -39,6 +39,7 @@ Long-term, the game has quite an ambitious set of goals that will keep me busy f
 - Resource/consumables system (basic crafting, need to sleep, food, drink)
 - Settlement mode and city management (very long term)
 - Menu-driven (no memorization of esoteric commands required)
+- Physically based ASCII rendering
 
 
 The idea is to work toward a fully realized (ideally epic-sized) game-world that still has a 'story' to follow, but that it can also be 'lived-in' in a sort of sandbox-lite mode. Where it is the player who decides what to do and when. Including if to go after the story(ies) or completely ignore it.
