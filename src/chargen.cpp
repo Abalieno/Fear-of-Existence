@@ -1778,17 +1778,17 @@ int chargen(Game &GAME){
 
                 break;
             case 4:
-                if(method) return 1;
+                if(method) { TCODConsole::root->clear(); return 1;} //back
                 else return -1;
                 break;
             case -1:
                 return -1;
                 break;
             case 3:
-                if(method){
-                    alpoint = edit_char(GAME, alpoint);
+                if(method){ //edit
+                    alpoint = edit_char(GAME, alpoint); 
                 }
-                else return 1;
+                else { TCODConsole::root->clear(); return 1;} //back
                 goto override;       
         }
     }

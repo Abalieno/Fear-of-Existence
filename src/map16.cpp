@@ -131,4 +131,24 @@ void map_16x16_tile(){
     TCODConsole::mapAsciiCodeToFont(626,15,56);
     TCODConsole::mapAsciiCodeToFont(726,14,57);
     TCODConsole::mapAsciiCodeToFont(826,15,57); // tile 28_corpse
+
+    TCODConsole::mapAsciiCodeToFont(527,14,58);
+    TCODConsole::mapAsciiCodeToFont(627,15,58);
+    TCODConsole::mapAsciiCodeToFont(727,14,59);
+    TCODConsole::mapAsciiCodeToFont(827,15,59); // tile 29_arrow north
+
+    TCODConsole::mapAsciiCodeToFont(528,14,60);
+    TCODConsole::mapAsciiCodeToFont(628,15,60);
+    TCODConsole::mapAsciiCodeToFont(728,14,61);
+    TCODConsole::mapAsciiCodeToFont(828,15,61); // tile 30_arrow east
+
+    TCODConsole::mapAsciiCodeToFont(529,14,62);
+    TCODConsole::mapAsciiCodeToFont(629,15,62);
+    TCODConsole::mapAsciiCodeToFont(729,14,63);
+    TCODConsole::mapAsciiCodeToFont(829,15,63); // tile 31_arrow south
+
+    TCODConsole::mapAsciiCodeToFont(530,14,64);
+    TCODConsole::mapAsciiCodeToFont(630,15,64);
+    TCODConsole::mapAsciiCodeToFont(730,14,65);
+    TCODConsole::mapAsciiCodeToFont(830,15,65); // tile 32_arrow west
 }

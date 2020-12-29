@@ -48,13 +48,17 @@ const int MAP_WIDTH = 220;
 const int MAP_HEIGHT = 140;
 // 16map 55 35
 
-const int MAP_WIDTH_AREA = 110;
-const int MAP_HEIGHT_AREA = 70;
+const int MAP_WIDTH_AREA = 110; // 16px = 55 cells
+const int MAP_HEIGHT_AREA = 70; // 16px = 35 cells
 // visible area
 
 // HD = 960 540 120 65
-int   win_x   = (MAP_WIDTH_AREA) + 15 +3; // window width in cells 128 1024
-int   win_y   = (MAP_HEIGHT_AREA)+ 18 +3; // window height in cells 91 728
+//int   win_x   = (MAP_WIDTH_AREA) + 15 +3; // window width in cells 128 1024
+//int   win_y   = (MAP_HEIGHT_AREA)+ 18 +3; // window height in cells 91 728
+
+// new res
+int   win_x   = (MAP_WIDTH_AREA) + 40; // window width in cells 128 1024
+int   win_y   = (MAP_HEIGHT_AREA)+ 40; // window height in cells 91 728
 int   LIMIT_FPS = 30;
 
 const int quit = 1;
@@ -1500,15 +1504,56 @@ void overlay(int who, int mapx, int mapy, int realx, int realy, bool bigg){
     } 
     if (!bigg){
         TCODConsole::root->setDefaultForeground(TCODColor::yellow);
-        TCODConsole::root->putChar(realx, realy, 178, TCOD_BKGND_SET);
+        switch (facing){
+            case 0:
+                TCODConsole::root->putChar(realx, realy, 24, TCOD_BKGND_SET);
+                break;
+            case 1:
+                TCODConsole::root->putChar(realx, realy, 26, TCOD_BKGND_SET);
+                break;
+            case 2:
+                TCODConsole::root->putChar(realx, realy, 25, TCOD_BKGND_SET);
+                break;
+            case 3:
+                TCODConsole::root->putChar(realx, realy, 27, TCOD_BKGND_SET);
+                break;
+            default:
+                g_debugmsg("Broken facing: %d", facing);
+                break;
+        }        
     } else {        
         if (realx % 2 == 1) realx -= 1;
         if (realy % 2 == 1) realy -= 1;
         TCODConsole::root->setDefaultForeground(TCODColor::yellow);
-        TCODConsole::root->putChar(realx, realy, 178, TCOD_BKGND_SET);
-        TCODConsole::root->putChar(realx+1, realy, 178, TCOD_BKGND_SET);
-        TCODConsole::root->putChar(realx, realy+1, 178, TCOD_BKGND_SET);
-        TCODConsole::root->putChar(realx+1, realy+1, 178, TCOD_BKGND_SET);
+        switch (facing){
+            case 0:
+                TCODConsole::root->putChar(realx, realy, 527, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx+1, realy, 627, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx, realy+1, 727, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx+1, realy+1, 827, TCOD_BKGND_SET);
+                break;
+            case 1:
+                TCODConsole::root->putChar(realx, realy, 528, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx+1, realy, 628, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx, realy+1, 728, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx+1, realy+1, 828, TCOD_BKGND_SET);
+                break;
+            case 2:
+                TCODConsole::root->putChar(realx, realy, 529, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx+1, realy, 629, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx, realy+1, 729, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx+1, realy+1, 829, TCOD_BKGND_SET);
+                break;
+            case 3:
+                TCODConsole::root->putChar(realx, realy, 530, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx+1, realy, 630, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx, realy+1, 730, TCOD_BKGND_SET);
+                TCODConsole::root->putChar(realx+1, realy+1, 830, TCOD_BKGND_SET);
+                break;
+            default:
+                g_debugmsg("Broken facing: %d", facing);
+                break;
+        }
     }
     TCODConsole::root->setDefaultBackground(TCODColor::black);
 }    
@@ -2634,10 +2679,10 @@ void render_all (Game &tgame){
                             if(tgame.gstate.bigg && l > 27 && i > 17 ){
                                 l -= 28;
                                 i -= 18;
-                                tgame.gstate.con->putChar(l*2,i*2, 509, TCOD_BKGND_SET);
-                                tgame.gstate.con->putChar((l*2)+1,i*2, 609, TCOD_BKGND_SET);
-                                tgame.gstate.con->putChar(l*2,(i*2)+1, 709, TCOD_BKGND_SET);
-                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, 809, TCOD_BKGND_SET); 
+                                tgame.gstate.con->putChar(l*2,i*2, 503, TCOD_BKGND_SET); // modified for black floor
+                                tgame.gstate.con->putChar((l*2)+1,i*2, 603, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l*2,(i*2)+1, 703, TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar((l*2)+1,(i*2)+1, 803, TCOD_BKGND_SET); 
                         
                                 tgame.gstate.con->setCharForeground((l*2), (i*2), color_dark_groundF);
                                 tgame.gstate.con->setCharForeground((l*2)+1, (i*2), color_dark_groundF);
@@ -2651,7 +2696,7 @@ void render_all (Game &tgame){
                                 l += 28;
                                 i += 18;
                             } else if (!tgame.gstate.bigg){
-                                tgame.gstate.con->putChar(l, i, '.', TCOD_BKGND_SET);
+                                tgame.gstate.con->putChar(l, i, ' ', TCOD_BKGND_SET);
                                 tgame.gstate.con->setCharForeground(l, i, color_dark_groundF);
                                 tgame.gstate.con->setCharBackground(l, i, tgame.gstate.color_dark_ground, TCOD_BKGND_SET);
                             }
@@ -5009,7 +5054,7 @@ int main() {
     TCODConsole::root->clear();
     std::vector<std::string> vecstr;
     std::string st1 = "Generate &New Character";
-    std::string st2 = "&Random Character";
+    std::string st2 = "&Test Maps";
     std::string st3 = "&QUIT";
     vecstr.push_back(st1);
     vecstr.push_back(st2);
@@ -5047,12 +5092,12 @@ int main() {
         menu_index = UI_menu(19, 29, vecstr, 0);
         if(menu_index == -1 || menu_index == 3) return 0;
         if(menu_index == 2) break;
-        TCODConsole::root->clear();
-        if(menu_index == 1) menu_index = chargen(GAME);
+        //TCODConsole::root->clear();
+        if(menu_index == 1) {TCODConsole::root->clear(); menu_index = chargen(GAME);}
         if(menu_index == -1) return 0;
         else if(menu_index == 0) break;
-        TCODConsole::root->clear();
-        print_c64(TCODConsole::root, 6, 10, "FEAR OF EXISTENCE.", TCODColor::white, TCODColor::black);
+        //TCODConsole::root->clear();
+        //print_c64(TCODConsole::root, 6, 10, "FEAR OF EXISTENCE.", TCODColor::white, TCODColor::black);
     } 
 
     // test custom

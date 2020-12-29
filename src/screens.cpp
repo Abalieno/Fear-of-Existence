@@ -3,6 +3,7 @@
 #include "screens.h"
 #include "chargen.h"
 #include "gui.h"
+#include "rng.h"
 
 extern int print_8x16(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back, int linemax = 0);
 extern void print_c64(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCODColor front, TCODColor back);
@@ -86,10 +87,17 @@ void event_description(Game &GAME, int sender){
     cursor_at += 2;
 
     bool fade = false;
+
+    bool mouseactive = false;
+    unsigned int mouseVx = 0;
+    unsigned int mouseVy = 0;
+    int framer = 0;
+    int sec = 0;
+
     int colfr = 100;
     int colfg = 100;
     int colfb = 100;
-    int colr = 100;
+    int colr = 255;
     unsigned selected = 1;
     TCODColor fadedark(90, 90, 90);
 
@@ -158,7 +166,9 @@ void event_description(Game &GAME, int sender){
         if (TCODConsole::isWindowClosed()) return;
         mouse = TCODMouse::getStatus();
         unsigned int mousex = mouse.cx;
+        if(mousex != mouseVx) {mouseVx = mousex; mouseactive = true;} // enable mouse only if moved
         unsigned int mousey = mouse.cy;
+        if(mousey != mouseVy) {mouseVy = mousey; mouseactive = true;}
         if(!mouse.lbutton) flagged = false; 
         if(mouse.lbutton && !flagged) { x = mousex; y = mousey; flagged = true;}
         if(mouse.lbutton && ( x != mousex || y != mousey) ) { button = false; }
@@ -180,27 +190,94 @@ void event_description(Game &GAME, int sender){
             return;
         }    
         if (what_menu == move_up){
+            colr=255; // white if menu moves
+            mouseactive = false; // disable mouse (until it moves) if keyboard is used
             if(selected == 1){ 
                 selected = hereoptions.size();
             } else --selected;
         }    
         
         if (what_menu == move_down){
+            colr=255;
+            mouseactive = false;
             if(selected == hereoptions.size()){ 
                 selected = 1;
             } else ++selected; 
         }
 
         // mouse hover
+        if(mouseactive){
+            mouseactive = false; // disable mouse to check for dialogue options area
         for(unsigned int op = 0; op < hereoptions.size(); ++op){
             if( (mousex >= (2 + wx)  && mousex < (83 + wx) ) && 
                     ( mousey >= optionsize[op]+wy && mousey < optionsize[op+1]+wy ) ){
-                        
+                 
+                if(selected != op+1) colr=255;
                 selected = op+1;
+                mouseactive = true; // enable mouse only if within dialogue options space
             }
         }
+    }
+
+        if (what_menu == action || (mouse.lbutton && mouseactive)){
+            colr=255;
+            for( int tinycount = 30; tinycount >0 ; tinycount--){
+            colfr = colr;
+            colfg = colr;
+            colfb = colr;
+            TCODColor fadec(colfr, colfg, colfb);
+            if(colr >= 150) colr = rng(50,150); else colr = rng(151,255);
+
+
+            cursor_at = cursor_orig;
+            for(unsigned cy = 0; cy < hereoptions.size(); cy++){ // line_n is offset from above
+                if(selected == cy+1){
+                    optionsize[cy] =  cursor_at;
+                    if(multiline[cy]){
+                        cursor_at = print_8x16(wg_char, 2, cursor_at, 
+                        hereoptions[cy].c_str(), fadec, TCODColor::black, 81);
+                    }else {
+                        cursor_at = print_8x16(wg_char, 2, cursor_at,  
+                        hereoptions[cy].c_str(), fadec, TCODColor::black, 81);
+                    }  
+                    cursor_at++;
+                }else{
+                    optionsize[cy] = cursor_at;
+                    if(multiline[cy]){
+                        cursor_at = print_8x16(wg_char, 2, cursor_at, 
+                            hereoptions[cy].c_str(), fadedark, TCODColor::black, 81);
+                    }else {
+                        cursor_at = print_8x16(wg_char, 2, cursor_at,  
+                            hereoptions[cy].c_str(), fadedark, TCODColor::black, 81);
+                    }
+                    cursor_at++;
+                }    
+            }
+            optionsize[optionsize.size()-1] = cursor_at ;
+               
+            what_menu = menu_key(eve, sel); // polls keyboard
+
+            wg_char->setDefaultForeground(TCODColor::lighterGrey);
+        wg_char->print(62, 74, "Mouse at [%d.%d]", mousex - 20, mousey - 5);
+
+        framer++;
+        if(framer >= 30) {sec++; framer = 0;}
+        wg_char->print(32, 74, "seconds: %d", sec);
+
+        wg_char->setDefaultForeground(TCODColor::darkGrey);
+        wg_char->print(2, 0, " Press %cESC%c to close ", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        TCODConsole::blit(wg_char,0,0,0,0, TCODConsole::root, wx, wy);
+        TCODConsole::flush(); // this updates the screen
+            }
+        }
+
+
         wg_char->setDefaultForeground(TCODColor::lighterGrey);
         wg_char->print(62, 74, "Mouse at [%d.%d]", mousex - 20, mousey - 5);
+
+        framer++;
+        if(framer >= 30) {sec++; framer = 0;}
+        wg_char->print(32, 74, "seconds: %d", sec);
 
         wg_char->setDefaultForeground(TCODColor::darkGrey);
         wg_char->print(2, 0, " Press %cESC%c to close ", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);

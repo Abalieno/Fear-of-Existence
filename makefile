@@ -1,4 +1,4 @@
-LIBTCODDIR=D:/foe/libtcod-svn
+LIBTCODDIR=G:\msys2\home\Abalieno\foe\libtcod-svn
 SRCDIR=./src
 INCDIR=$(LIBTCODDIR)/include
 LIBDIR=$(LIBTCODDIR)/lib 
@@ -22,8 +22,9 @@ CPP_OBJS=$(TEMP)/main.o $(TEMP)/fileops.o $(TEMP)/map16.o $(TEMP)/rng.o $(TEMP)/
 all : main  
 
 main : $(CPP_OBJS) 
-	$(CPP) $(CPP_OBJS) -o $@ -L${LIBDIR} -ltcod-mingw -static 
-	$(UPX) main.exe
+	$(CPP) $(CPP_OBJS) -o $@ -L${LIBDIR} -ltcod-mingw -static
+	#disabling UPX to avoid virus heuristics
+	#$(UPX) main.exe
 clean :
 	rm -f obj/*.o *.exe
 
