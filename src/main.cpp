@@ -61,6 +61,12 @@ int   win_x   = (MAP_WIDTH_AREA) + 40; // window width in cells 128 1024
 int   win_y   = (MAP_HEIGHT_AREA)+ 40; // window height in cells 91 728
 int   LIMIT_FPS = 30;
 
+// 1200 x 880
+const int w_maxx = win_x - 1; // coordinates of last usable space
+const int w_maxy = win_y - 1;
+const int w_centerx = (win_x / 2) - 1; // 75 - 1
+const int w_centery = (win_y / 2) - 1; // 55 - 1
+
 const int quit = 1;
 const int quit2 = 99; // combat mode exit game
 const int playing = 1;
@@ -133,7 +139,7 @@ TCODConsole *con_mini = new TCODConsole(MAP_WIDTH_AREA+2, MAP_HEIGHT_AREA+2); //
 
 TCODConsole *load = new TCODConsole(win_x, win_y);  // load screen
 
-TCODConsole *widget_top = new TCODConsole(win_x, 1);  // UI topbar
+TCODConsole *widget_top = new TCODConsole(win_x, 2);  // UI topbar
 TCODConsole *widget_prompt = new TCODConsole(win_x, 1);  // UI prompt
 
 TCODConsole *widget_popup = new TCODConsole(100, 50);  // UI popup
@@ -146,7 +152,10 @@ TCODConsole *widget_2_p = new TCODConsole(80, MAP_HEIGHT-10); // UI pop up objec
 
 TCODConsole *panel = new TCODConsole(win_x, (win_y - MAP_HEIGHT_AREA));  // combat UI panel (includes Message Log)
 TCODConsole *panel_xtd = new TCODConsole(win_x-32, (win_y - MAP_HEIGHT_AREA)+60);  // Message Log extended
-TCODConsole *r_panel = new TCODConsole((win_x - MAP_WIDTH_AREA), MAP_HEIGHT_AREA-3); // panel on right of map 
+//TCODConsole *r_panel = new TCODConsole((win_x - MAP_WIDTH_AREA), MAP_HEIGHT_AREA-3); // panel on right of map 
+TCODConsole *r_panel = new TCODConsole(30, 80); // panel on right of map 
+
+
 // 30, 46 message log
 int BAR_WIDTH = 20;
 int MSG_X = 30; // BAR_WIDTH + 2;
@@ -252,6 +261,7 @@ int print_8x16(TCODConsole* &loc, int where_x, int where_y,
         if(!endline) line_n += 2;
         if(skip) {line_n += 2; ++i; ++i;}
     }
+    loc->setDefaultForeground(TCODColor::white);
     return (where_y + 2 + line_n);
 }
 
@@ -271,11 +281,12 @@ void print_c64(TCODConsole* &loc, int where_x, int where_y, const char *msg, TCO
         step = 2*(letter - 32);
         // 936 + 65 = 1001
         //step = step +2; 
-        loc->putChar((where_x + n)*2, where_y, 1301+step, TCOD_BKGND_SET);
-        loc->putChar((where_x + n)*2, where_y + 1, 1301+(step+1), TCOD_BKGND_SET);
-        loc->putChar((where_x + n)*2+1, where_y, 1601+step, TCOD_BKGND_SET);
-        loc->putChar((where_x + n)*2+1, where_y + 1, 1601+(step+1), TCOD_BKGND_SET);
+        loc->putChar(where_x + (n*2), where_y, 1301+step, TCOD_BKGND_SET);
+        loc->putChar(where_x + (n*2), where_y + 1, 1301+(step+1), TCOD_BKGND_SET);
+        loc->putChar(where_x + (n*2)+1, where_y, 1601+step, TCOD_BKGND_SET);
+        loc->putChar(where_x + (n*2)+1, where_y + 1, 1601+(step+1), TCOD_BKGND_SET);
     }
+    loc->setDefaultForeground(TCODColor::white);
 }
 
 std::vector<Tile> map_array; // declared here because used in Object.moved
@@ -1502,6 +1513,7 @@ void overlay(int who, int mapx, int mapy, int realx, int realy, bool bigg){
             g_debugmsg("Broken facing: %d", facing);
             break;
     } 
+    // draw facing arrows
     if (!bigg){
         TCODConsole::root->setDefaultForeground(TCODColor::yellow);
         switch (facing){
@@ -1584,8 +1596,9 @@ void I_am_moused(Game &tgame){
             }
             release_button = 0;
         }    
-        
-        if(mousez.lbutton && y == 0 && (x == 0 || x == 1 || x == 2)) {
+       
+        // widget top button control
+        if(mousez.lbutton && y <= 1 && x <= 1) { // 16x16 button
             if(wid_top_open){ 
                 wid_top_open=0;
                 UI_unhook(tgame, 0); 
@@ -1597,6 +1610,7 @@ void I_am_moused(Game &tgame){
         }
         
 
+        // log? 
         if(mousez.lbutton && y > (win_y-2) && x > (win_x-4) ) {
             if(wid_combat_open){ 
                 wid_combat_open=0; 
@@ -1608,9 +1622,8 @@ void I_am_moused(Game &tgame){
         release_button = 0;
         }
 
-        if( (mousez.lbutton && y == 3 && x == 127) ||
-                (mousez.lbutton && y == 3 && x == 126) ||
-                (mousez.lbutton && y == 3 && x == 125) ) {
+        // right panel
+        if( mousez.lbutton && (y == 3 || y == 4) && x >= win_x-2){ 
             if(wid_rpanel_open){ 
                 wid_rpanel_open=0; 
                 UI_unhook(tgame, 1);
@@ -1623,14 +1636,14 @@ void I_am_moused(Game &tgame){
     
     // MAP MODES TOPBAR
     if(wid_top_open){
-        if(mousez.lbutton && y == 0 && (x >= 92 && x <= 94)) {
+        if(mousez.lbutton && y <= 1 && (x >= 92 && x <= 94)) {
             wid_help = 1;
         }
-        if(mousez.lbutton_pressed && (y == 0 && x == 27) ) { // set ranged mode or melee
+        if(mousez.lbutton_pressed && (y <= 1 && x == 27) ) { // set ranged mode or melee
             fetch = switchweapon(tgame, combat_mode); // in inventory.h 
             release_button = 0;
         }
-        if(mousez.lbutton && x == 4 && y == 0) {
+        if(mousez.lbutton && x == 3 && y <= 1) { //map1
             if(tgame.gstate.mapmode != 1){
                 stance_pos = 1; 
                 tgame.gstate.bigg = 0; 
@@ -1638,7 +1651,7 @@ void I_am_moused(Game &tgame){
                 tgame.gstate.mapmode = 1;
             }
         }
-        if(mousez.lbutton && x == 5 && y == 0) {
+        if(mousez.lbutton && x == 4 && y <= 1) { //map2
             if(tgame.gstate.mapmode != 2){
                 stance_pos = 2; 
                 tgame.gstate.bigg = 1; 
@@ -1646,14 +1659,14 @@ void I_am_moused(Game &tgame){
                 tgame.gstate.mapmode = 2;
             }
         }
-        if(x == 6 && y == 0) {
-            if(tgame.gstate.mapmode != 3){
+        if(x == 5 && y <= 1) {
+            if(tgame.gstate.mapmode != 3){ //map3
                 tgame.gstate.bigg2 = 1;
                 tgame.gstate.fov_recompute = true;
                 tgame.gstate.mapmode = 3;
             }
         } else {
-            if(tgame.gstate.mapmode == 3){
+            if(tgame.gstate.mapmode == 3){ //map4
                 tgame.gstate.bigg2 = 0;
                 tgame.gstate.fov_recompute = true;
                 if(stance_pos == 1) {tgame.gstate.mapmode = 1; tgame.gstate.bigg = 0;}
@@ -1661,7 +1674,7 @@ void I_am_moused(Game &tgame){
             }
             tgame.gstate.bigg2 = 0;
         }
-        if(x == 7 && y == 0) {
+        if(x == 6 && y <= 1) {
             if(tgame.gstate.mapmode != 4){
                 tgame.gstate.bigg3 = 1;
                 tgame.gstate.fov_recompute = true;
@@ -1676,7 +1689,7 @@ void I_am_moused(Game &tgame){
             }
             tgame.gstate.bigg3 = 0;
         }
-        if( (x >= 10 && x < 18) && y == 0) {
+        if( (x >= 10 && x < 18) && y <= 1) {
             stance_pos2 = 1;
         } else {
             stance_pos2 = 0;
@@ -1711,16 +1724,21 @@ void I_am_moused(Game &tgame){
         if( (x >= i.x && x <= (i.x + i.w)) && (y >= i.y && y <= (i.y + i.h) ) ){
             mapx = -1;
             mapy = -1;
-            if (i.ID == 1 && mon_list.size() > 0){ // initiative list
+            if (i.ID == 1 && mon_list.size() > 0){ // INITIATIVE list
                 int list_h = mon_list.size();
-                if (y-6 >= 0 && y-6 < list_h){
-                    for(int p = 0; p < 17; ++p){
+                if (y-6 >= 0 && y-6 < list_h){ // initiative list white highlight
+                    for(int p = 0; p < 25; ++p){
                         TCODColor fore;
                         TCODColor back;
-                        fore = TCODConsole::root->getCharBackground(110+p, y);
-                        back = TCODConsole::root->getCharForeground(110+p, y);
-                        TCODConsole::root->setCharForeground(110+p, y, fore);
-                        TCODConsole::root->setCharBackground(110+p, y, back, TCOD_BKGND_SET);
+                        fore = TCODConsole::root->getCharBackground(win_x-p, y);
+                        back = TCODConsole::root->getCharForeground(win_x-p, y);
+                        TCODConsole::root->setCharForeground(win_x-p, y, fore);
+                        TCODConsole::root->setCharBackground(win_x-p, y, back, TCOD_BKGND_SET);
+                        //fore = r_panel->getCharBackground(30-p, y+3);
+                        //back = r_panel->getCharForeground(30-p, y+3);
+                        //r_panel->setCharForeground(30-p, y+3, fore);
+                        //r_panel->setCharBackground(30-p, y+3, back, TCOD_BKGND_SET);
+                        //print_8x16(widget_top, 30-p, y+3, "X", TCODColor::white, TCODColor::red, 999);
                     }    
                     if (mon_list[y-6] == 255){
                         int rx = player.x;
@@ -2040,16 +2058,17 @@ void render_rpanel(){
         //r_panel->clear();
         //r_panel->setDefaultForeground(TCODColor::white);
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
-        r_panel->print((win_x - MAP_WIDTH_AREA)-1, 0, "[%c<%c]", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
-        TCODConsole::blit(r_panel, 0, 0, 0, 0,TCODConsole::root, MAP_WIDTH_AREA, 3);
+        //r_panel->print(29, 0, "[%c<%c]", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        print_c64(r_panel, 28, 0, "X", TCODColor::red, TCODColor::black);
+        TCODConsole::blit(r_panel, 0, 0, 30, 80,TCODConsole::root, win_x-30, 3);
     } else {
         //r_panel->clear();
         //r_panel->setDefaultForeground(TCODColor::red);
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
-        r_panel->print((win_x - MAP_WIDTH_AREA)-1, 0, "[%c*%c]", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        //r_panel->print(29, 0, "[%c*%c]", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        print_c64(r_panel, 28, 0, "<", TCODColor::red, TCODColor::black);
         //r_panel->print(win_x-1, (win_y - MAP_HEIGHT_AREA)-1, "*");
-        TCODConsole::blit(r_panel, (win_x - MAP_WIDTH_AREA)-3, 0, 3, 1,TCODConsole::root, win_x-3, 3);
-        //TCODConsole::blit(r_panel,0,0,0,0,TCODConsole::root,MAP_WIDTH_AREA, 0);
+        TCODConsole::blit(r_panel, 28, 0, 2, 2,TCODConsole::root, win_x-2, 3);
     }
 }
 
@@ -2199,15 +2218,19 @@ void render_top(Game &tgame){
     // map modes
         switch(stance_pos){
             case 1:
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::red);
-                TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::black);
-                TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::black);
+                //TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::red);
+                //TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::black);
+                //TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::black);
                 //std::cout << std::endl << stance_pos << std::endl;
+                print_8x16(widget_top, 3, 0, "1", TCODColor::white, TCODColor::red, 999);
+                print_8x16(widget_top, 4, 0, "2", TCODColor::white, TCODColor::black, 999);
                 break;
             case 2:
-                TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
-                TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::red);
-                TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::black);
+                //TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
+                //TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::white,TCODColor::red);
+                //TCODConsole::setColorControl(TCOD_COLCTRL_3,TCODColor::white,TCODColor::black);
+                print_8x16(widget_top, 3, 0, "1", TCODColor::white, TCODColor::black, 999);
+                print_8x16(widget_top, 4, 0, "2", TCODColor::white, TCODColor::red, 999);
                 break;
             case 3:   
                 TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
@@ -2219,9 +2242,14 @@ void render_top(Game &tgame){
         TCODConsole::setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::black);
 
         widget_top->setBackgroundFlag(TCOD_BKGND_SET);
-        widget_top->print(0, 0, "%c[%c%c>%c%c]%c %c1%c%c2%c%c34%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, TCOD_COLCTRL_STOP, TCOD_COLCTRL_5, TCOD_COLCTRL_STOP,
-            TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
-            TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
+        //widget_top->print(0, 0, "%c[%c%c>%c%c]%c %c1%c%c2%c%c34%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, TCOD_COLCTRL_STOP, TCOD_COLCTRL_5, TCOD_COLCTRL_STOP,
+        //    TCOD_COLCTRL_1, TCOD_COLCTRL_STOP,TCOD_COLCTRL_2,
+        //    TCOD_COLCTRL_STOP,TCOD_COLCTRL_3, TCOD_COLCTRL_STOP);
+        
+        print_c64(widget_top, 0, 0, "X", TCODColor::red, TCODColor::black);
+        print_8x16(widget_top, 5, 0, "34", TCODColor::white, TCODColor::black, 999); 
+                        
+
         TCODConsole::blit(widget_top,0,0,0,0,TCODConsole::root,0,0);
 
         // object-list pop up window
@@ -2254,7 +2282,9 @@ void render_top(Game &tgame){
         //widget_2->setBackgroundFlag(TCOD_BKGND_SET);
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
         TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::red,TCODColor::black);
-        widget_top->print(10, 0, "%cOn Sight%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        //widget_top->print(10, 0, "%cOn Sight%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        print_8x16(widget_top, 10, 0, 
+                        "In Sight", TCODColor::white, TCODColor::black, 999);
 
         // player widget
         widget_top->print(22, 0, "%c@-%c",TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -2270,14 +2300,23 @@ void render_top(Game &tgame){
         int fpscount = TCODSystem::getFps();
         TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
         //TCODConsole::root->print(100, 0, "FPS: %d", fpscount);
-        widget_top->print(100, 0, "%cFPS: %d%c", TCOD_COLCTRL_1, fpscount, TCOD_COLCTRL_STOP);
-        widget_top->print(92, 0, "%c>?<%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+        //widget_top->print(100, 0, "%cFPS: %d%c", TCOD_COLCTRL_1, fpscount, TCOD_COLCTRL_STOP);
+        
+        char fpscountc[10]; 
+        sprintf(fpscountc, "FPS: %d", fpscount); 
+        print_8x16(widget_top, 100, 0, 
+                        fpscountc, TCODColor::white, TCODColor::black, 999);
+        //widget_top->print(92, 0, "%c>?<%c", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+        print_8x16(widget_top, 92, 0, 
+                        ">?<", TCODColor::red, TCODColor::black, 999);
 
         if(!combat_mode)
-        widget_top->print(win_x-6, 0, "%c%c%c%c%c%c%c%cMode-N%c", TCOD_COLCTRL_FORE_RGB,255,255,255,
-                TCOD_COLCTRL_BACK_RGB,0,0,0,TCOD_COLCTRL_STOP);
-        else widget_top->print(win_x-6, 0, "%c%c%c%c%c%c%c%cMode-C%c", TCOD_COLCTRL_FORE_RGB,255,255,255,
-                TCOD_COLCTRL_BACK_RGB,0,0,0,TCOD_COLCTRL_STOP);
+        //widget_top->print(win_x-6, 0, "%c%c%c%c%c%c%c%cMode-N%c", TCOD_COLCTRL_FORE_RGB,255,255,255,
+        //        TCOD_COLCTRL_BACK_RGB,0,0,0,TCOD_COLCTRL_STOP);
+            print_8x16(widget_top, win_x-6, 0, "Mode-N", TCODColor::white, TCODColor::black, 999);
+        //else widget_top->print(win_x-6, 0, "%c%c%c%c%c%c%c%cMode-C%c", TCOD_COLCTRL_FORE_RGB,255,255,255,
+        //        TCOD_COLCTRL_BACK_RGB,0,0,0,TCOD_COLCTRL_STOP);
+        else print_8x16(widget_top, win_x-6, 0, "Mode-C", TCODColor::white, TCODColor::black, 999);
 
         TCODConsole::blit(widget_top,0,0,0,0,TCODConsole::root,0,0);
 
@@ -2286,9 +2325,10 @@ void render_top(Game &tgame){
         //widget_top->setDefaultForeground(TCODColor::red);
         TCODConsole::setColorControl(TCOD_COLCTRL_5,TCODColor::white,TCODColor::black);
         TCODConsole::setColorControl(TCOD_COLCTRL_4,TCODColor::red,TCODColor::black);
-        widget_top->print(0, 0, "%c[%c%c*%c%c]%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4,
-                TCOD_COLCTRL_STOP, TCOD_COLCTRL_5, TCOD_COLCTRL_STOP);
-        TCODConsole::blit(widget_top,0,0,3,1,TCODConsole::root,0,0);
+        //widget_top->print(0, 0, "%c[%c%c*%c%c]%c", TCOD_COLCTRL_5, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4,
+        //        TCOD_COLCTRL_STOP, TCOD_COLCTRL_5, TCOD_COLCTRL_STOP);
+        print_c64(widget_top, 0, 0, ">", TCODColor::red, TCODColor::black);
+        TCODConsole::blit(widget_top,0,0,2,2,TCODConsole::root,0,0);
         }
 }
 
@@ -4225,13 +4265,13 @@ int init_UI(TCODConsole *r_panel, Game &GAME, const std::vector<Unit> &Phase, co
                         ++init_ln;
                         mon_list.push_back(255); // for mouse lookup on list
                         if(init_ln-2 < turnseq){ // turnseq == 2 if player 2nd phase
-                            r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "%c[%d] Player%c %c %c", TCOD_COLCTRL_5, 
+                            r_panel->print(29, init_ln, "%c[%d] Player%c %c %c", TCOD_COLCTRL_5, 
                                 player.temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                         } else if(init_ln-2 == turnseq){
-                            r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "[%c%d%c] Player < %c %c", TCOD_COLCTRL_2, 
+                            r_panel->print(29, init_ln, "[%c%d%c] Player < %c %c", TCOD_COLCTRL_2, 
                                 GAME.player->temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                         }else{
-                            r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "[%c%d%c] Player %c %c", TCOD_COLCTRL_2, 
+                            r_panel->print(29, init_ln, "[%c%d%c] Player %c %c", TCOD_COLCTRL_2, 
                                 GAME.player->temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                         }  
                     }    
@@ -4246,16 +4286,16 @@ int init_UI(TCODConsole *r_panel, Game &GAME, const std::vector<Unit> &Phase, co
                                     mon_list.push_back(b); // for mouse lookup on list
                                     ++init_ln;
                                     if(init_ln-2 < turnseq){
-                                        r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "%c[%d] %s%c %c %c",
+                                        r_panel->print(29, init_ln, "%c[%d] %s%c %c %c",
                                             TCOD_COLCTRL_5, monvector[b].temp_init, monvector[b].name,
                                             TCOD_COLCTRL_STOP, TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                                     } else if(init_ln-2 == turnseq){
-                                        r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "[%c%d%c] %c%s%c < %c %c", 
+                                        r_panel->print(29, init_ln, "[%c%d%c] %c%s%c < %c %c", 
                                             TCOD_COLCTRL_2, monvector[b].temp_init, TCOD_COLCTRL_STOP,
                                             TCOD_COLCTRL_3, monvector[b].name, TCOD_COLCTRL_STOP, 
                                             TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                                     }else{
-                                        r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "[%c%d%c] %c%s%c %c %c", 
+                                        r_panel->print(29, init_ln, "[%c%d%c] %c%s%c %c %c", 
                                             TCOD_COLCTRL_2, monvector[b].temp_init, TCOD_COLCTRL_STOP,
                                             TCOD_COLCTRL_3, monvector[b].name, TCOD_COLCTRL_STOP, 
                                             TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -4270,16 +4310,16 @@ int init_UI(TCODConsole *r_panel, Game &GAME, const std::vector<Unit> &Phase, co
                                     mon_list.push_back(256); // for mouse lookup on list
                                     ++init_ln;
                                     if(init_ln-2 < turnseq){
-                                        r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "%c[%d] %s%cX%c %c", TCOD_COLCTRL_5,
+                                        r_panel->print(29, init_ln, "%c[%d] %s%cX%c %c", TCOD_COLCTRL_5,
                                             monvector[b].temp_init, monvector[b].name, TCOD_COLCTRL_STOP,
                                             TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                                     } else if(init_ln-2 == turnseq){    
-                                        r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "[%c%d%c] %c%s%c%cX%c <%c %c", TCOD_COLCTRL_2,
+                                        r_panel->print(29, init_ln, "[%c%d%c] %c%s%c%cX%c <%c %c", TCOD_COLCTRL_2,
                                             monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_3, 
                                             monvector[b].name, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, TCOD_COLCTRL_STOP, 
                                             TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
                                     } else{
-                                        r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "[%c%d%c] %c%s%c%cX%c%c %c", TCOD_COLCTRL_2,
+                                        r_panel->print(29, init_ln, "[%c%d%c] %c%s%c%cX%c%c %c", TCOD_COLCTRL_2,
                                             monvector[b].temp_init, TCOD_COLCTRL_STOP, TCOD_COLCTRL_3, 
                                             monvector[b].name, TCOD_COLCTRL_STOP, TCOD_COLCTRL_4, TCOD_COLCTRL_STOP, 
                                             TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
@@ -4294,7 +4334,8 @@ int init_UI(TCODConsole *r_panel, Game &GAME, const std::vector<Unit> &Phase, co
     } else {
         mon_list.push_back(256); // for mouse lookup on list
         ++init_ln;
-        r_panel->print((win_x-MAP_WIDTH_AREA)-1, init_ln, "%c %c", TCOD_COLCTRL_1, 
+        //draw phase color
+        r_panel->print(29, init_ln, "%c %c", TCOD_COLCTRL_1, 
                 TCOD_COLCTRL_STOP);
     }    
 
@@ -4668,7 +4709,8 @@ int player_turn(Game &GAME, const std::vector<Monster> &monsters, std::vector<Un
         r_panel->clear();
         TCODConsole::root->setAlignment(TCOD_RIGHT);
 
-        r_panel->print((win_x-MAP_WIDTH_AREA)-1, 1, "Initiative list");
+        //r_panel->print(26, 0, "Initiative list");
+        print_8x16(r_panel, 12, 0, "Initiative List", TCODColor::white, TCODColor::black, 999);
         //TCODConsole::root->print(win_x-1, 3, "Initiative list");
 
         // Initiative UI list in player turn
@@ -4837,8 +4879,9 @@ int main() {
     GAME.gstate.fov_map_mons_path0 = new TCODMap(220,140);
 
     // ID, x, y, w, h
-    UI_register(GAME, 0, 0, 0, 127, 0); // top panel
-    UI_register(GAME, 1, 110, 3, 17, 66); // right panel
+    UI_register(GAME, 0, 0, 0, win_x, 2); // top panel
+    //UI_register(GAME, 1, 110, 3, 17, 66); // right panel
+    UI_register(GAME, 1, win_x - 30, 5, 30, 80); // right panel
     UI_register(GAME, 2, 0, 72, 127, 18); // combat bottom
     UI_register(GAME, 3, 34, 12, 93, 78); // extended message log
     UI_register(GAME, 4, 1, 78, 12, 7); // player combat prompt
@@ -5060,7 +5103,7 @@ int main() {
     vecstr.push_back(st2);
     vecstr.push_back(st3);
 
-    print_c64(TCODConsole::root, 5, 10, ">", TCODColor::lightGrey, TCODColor::black);
+    print_c64(TCODConsole::root, 10, 10, ">", TCODColor::lightGrey, TCODColor::black);
     eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
     TCODConsole::flush();
     eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
@@ -5070,7 +5113,7 @@ int main() {
     int colfb = 0;
     while(fade < 256 &&  (eve != TCOD_EVENT_KEY_PRESS && eve != TCOD_EVENT_MOUSE_RELEASE) ){
         TCODColor fadec(colfr, colfg, colfb);
-        print_c64(TCODConsole::root, 6, 10, "FEAR OF EXISTENCE.", fadec, TCODColor::black);
+        print_c64(TCODConsole::root, 12, 10, "FEAR OF EXISTENCE.", fadec, TCODColor::black);
         TCODConsole::flush();
         eve = TCODSystem::checkForEvent(TCOD_EVENT_ANY,&key,&mouse);
         colfr = colfr + 5;
@@ -5078,7 +5121,7 @@ int main() {
         colfb = colfb + 5;
         fade = fade + 5;
     }
-    print_c64(TCODConsole::root, 6, 10, "FEAR OF EXISTENCE.", TCODColor::white, TCODColor::black);
+    print_c64(TCODConsole::root, 12, 10, "FEAR OF EXISTENCE.", TCODColor::white, TCODColor::black);
 
     /*
     std::vector<int> buckets( 100 );
@@ -5088,8 +5131,14 @@ int main() {
 
     int menu_index = 1;
 
+    TCODConsole::root->putChar(0, 0, '0', TCOD_BKGND_SET);
+    TCODConsole::root->putChar(w_maxx, 0, '1', TCOD_BKGND_SET);
+    TCODConsole::root->putChar(0, w_maxy, '2', TCOD_BKGND_SET);
+    TCODConsole::root->putChar(w_maxx, w_maxy, '3', TCOD_BKGND_SET);
+    TCODConsole::root->putChar(w_centerx, w_centery, 'X', TCOD_BKGND_SET);
+
     while(menu_index == 1){
-        menu_index = UI_menu(19, 29, vecstr, 0);
+        menu_index = UI_menu(14, 20, vecstr, 0);
         if(menu_index == -1 || menu_index == 3) return 0;
         if(menu_index == 2) break;
         //TCODConsole::root->clear();
@@ -5132,7 +5181,7 @@ int main() {
     vecstr.push_back(st2);
     menu_index = 1;
     while(menu_index == 1){
-        menu_index = UI_menu(19, 29, vecstr, 0);
+        menu_index = UI_menu(14, 20, vecstr, 0);
         if(menu_index == 2) {load_map(player, GAME); break;}
         if(menu_index == 1) {make_map_BSP(player, GAME); break;}
         if(menu_index == -1) return 0;
@@ -5476,10 +5525,13 @@ int main() {
                 *(monsters[i].initiative) = i+1;
             }
 
+            //CHECK 2021
+            /*
             r_panel->setAlignment(TCOD_RIGHT);
             widget_top->print(win_x-6, 0, "%c%c%c%c%c%c%c%cMode-C%c", TCOD_COLCTRL_FORE_RGB,255,255,255,
                     TCOD_COLCTRL_BACK_RGB,0,0,0,TCOD_COLCTRL_STOP);
             r_panel->print((win_x-MAP_WIDTH_AREA)-1, 1, "Initiative list");
+            */
 
             //unsigned int player_own = player.initiative;
             player.player_own = player.initiative - 1;
