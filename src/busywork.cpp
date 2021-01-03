@@ -4,7 +4,7 @@ void press_key_combat(TCODConsole *thisone){
     thisone->setColorControl(TCOD_COLCTRL_1,TCODColor::white,TCODColor::black);
     thisone->setColorControl(TCOD_COLCTRL_2,TCODColor::black,TCODColor::white);
     thisone->setBackgroundFlag(TCOD_BKGND_SET);
-    thisone->print(1, 1,"%c START COMBAT TURN, Press any key %c",
+    thisone->printf(1, 1,"%c START COMBAT TURN, Press any key %c",
             TCOD_COLCTRL_2,TCOD_COLCTRL_STOP);
     thisone->setDefaultForeground(TCODColor::black);
     thisone->setDefaultBackground(TCODColor::white);

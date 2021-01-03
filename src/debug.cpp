@@ -40,8 +40,8 @@ void g_debugmsg(const char *mes, ...)
     TCODConsole::setColorControl(TCOD_COLCTRL_1,TCODColor::red,TCODColor::black);
     TCODConsole::setColorControl(TCOD_COLCTRL_2,TCODColor::yellow,TCODColor::black);
     std::cout << "DEBUG: " << buff << std::endl;
-    bugger->print(0,0, "%cDEBUG: %c%c%s%c", TCOD_COLCTRL_1,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, buff, TCOD_COLCTRL_STOP);
-    bugger->print(0,2, "<Press a key to continue...>");
+    bugger->printf(0,0, "%cDEBUG: %c%c%s%c", TCOD_COLCTRL_1,TCOD_COLCTRL_STOP,TCOD_COLCTRL_2, buff, TCOD_COLCTRL_STOP);
+    bugger->printf(0,2, "<Press a key to continue...>");
     TCODConsole::blit(bugger,0,0,x,3,TCODConsole::root, 5, 5);
     TCODConsole::flush();
     TCODConsole::waitForKeypress(true);

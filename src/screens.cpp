@@ -29,14 +29,14 @@ void char_sheet(Game &GAME){
         else button = true;
         if((mousex > 2 && mousex < 9) && mousey == 3){
             wg_char->setColorControl(TCOD_COLCTRL_1, TCODColor::black, TCODColor::white);
-            wg_char->print(3, 2, "%c>EXIT<%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            wg_char->printf(3, 2, "%c>EXIT<%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
             if(button && mouse.lbutton){
                 delete wg_char;
                 return;
             }    
         } else {    
             wg_char->setColorControl(TCOD_COLCTRL_1, TCODColor::white, TCODColor::black);
-            wg_char->print(3, 2, "%c>EXIT<%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            wg_char->printf(3, 2, "%c>EXIT<%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         }
         compile_sheet(wg_char, GAME, 3, 5, 0); // chargen.cpp
         TCODConsole::blit(wg_char,0,0,0,0, TCODConsole::root, 0, 1);
@@ -49,19 +49,27 @@ void draw_frame(int x, int y, TCODConsole *thisone){
     for (int n = 0; n <= y; ++n){
         thisone->setDefaultForeground(TCODColor::lighterGrey);
         thisone->setDefaultBackground(TCODColor::black);
-        thisone->print(0, n, "%c", TCOD_CHAR_VLINE);
-        thisone->print(x-1, n, "%c", TCOD_CHAR_VLINE);
+        //thisone->print(0, n, "%c", TCOD_CHAR_VLINE);
+        thisone->putChar(0, n, TCOD_CHAR_VLINE);
+        //thisone->print(x-1, n, "%c", TCOD_CHAR_VLINE);
+        thisone->putChar(x-1, n, TCOD_CHAR_VLINE);
     }
     for (int n = 0; n <= x; ++n){
         thisone->setDefaultForeground(TCODColor::lighterGrey);
         thisone->setDefaultBackground(TCODColor::black);
-        thisone->print(n, 0, "%c", TCOD_CHAR_HLINE);
-        thisone->print(n, y-1, "%c", TCOD_CHAR_HLINE);
+        //thisone->print(n, 0, "%c", TCOD_CHAR_HLINE);
+        thisone->putChar(n, 0, TCOD_CHAR_HLINE);
+        //thisone->print(n, y-1, "%c", TCOD_CHAR_HLINE);
+        thisone->putChar(n, y-1, TCOD_CHAR_HLINE);
     }
-    thisone->print(0, 0, "%c", TCOD_CHAR_NW);
-    thisone->print(x-1, 0, "%c", TCOD_CHAR_NE);
-    thisone->print(0, y-1, "%c", TCOD_CHAR_SW);
-    thisone->print(x-1, y-1, "%c", TCOD_CHAR_SE);
+    //thisone->print(0, 0, "%c", TCOD_CHAR_NW);
+    //thisone->print(x-1, 0, "%c", TCOD_CHAR_NE);
+    //thisone->print(0, y-1, "%c", TCOD_CHAR_SW);
+    //thisone->print(x-1, y-1, "%c", TCOD_CHAR_SE);
+    thisone->putChar(0, 0, TCOD_CHAR_NW);
+    thisone->putChar(x-1, 0, TCOD_CHAR_NE);
+    thisone->putChar(0, y-1, TCOD_CHAR_SW);
+    thisone->putChar(x-1, y-1, TCOD_CHAR_SE);
     return;
 }    
 
@@ -82,7 +90,7 @@ void event_description(Game &GAME, int sender){
     cursor_at = print_8x16(wg_char, 2, cursor_at, GAME.gstate.features[sender].content, TCODColor::lightGrey, TCODColor::black, 81); 
     cursor_at++;
     for (int n = 0; n <= 80; ++n){ // adds the line spacing
-    wg_char->print(2+n, cursor_at, "%c", TCOD_CHAR_HLINE);
+    wg_char->putChar(2+n, cursor_at, TCOD_CHAR_HLINE);
     }
     cursor_at += 2;
 
@@ -258,14 +266,14 @@ void event_description(Game &GAME, int sender){
             what_menu = menu_key(eve, sel); // polls keyboard
 
             wg_char->setDefaultForeground(TCODColor::lighterGrey);
-        wg_char->print(62, 74, "Mouse at [%d.%d]", mousex - 20, mousey - 5);
+        wg_char->printf(62, 74, "Mouse at [%d.%d]", mousex - 20, mousey - 5);
 
         framer++;
         if(framer >= 30) {sec++; framer = 0;}
-        wg_char->print(32, 74, "seconds: %d", sec);
+        wg_char->printf(32, 74, "seconds: %d", sec);
 
         wg_char->setDefaultForeground(TCODColor::darkGrey);
-        wg_char->print(2, 0, " Press %cESC%c to close ", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        wg_char->printf(2, 0, " Press %cESC%c to close ", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         TCODConsole::blit(wg_char,0,0,0,0, TCODConsole::root, wx, wy);
         TCODConsole::flush(); // this updates the screen
             }
@@ -273,14 +281,14 @@ void event_description(Game &GAME, int sender){
 
 
         wg_char->setDefaultForeground(TCODColor::lighterGrey);
-        wg_char->print(62, 74, "Mouse at [%d.%d]", mousex - 20, mousey - 5);
+        wg_char->printf(62, 74, "Mouse at [%d.%d]", mousex - 20, mousey - 5);
 
         framer++;
         if(framer >= 30) {sec++; framer = 0;}
-        wg_char->print(32, 74, "seconds: %d", sec);
+        wg_char->printf(32, 74, "seconds: %d", sec);
 
         wg_char->setDefaultForeground(TCODColor::darkGrey);
-        wg_char->print(2, 0, " Press %cESC%c to close ", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+        wg_char->printf(2, 0, " Press %cESC%c to close ", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
         TCODConsole::blit(wg_char,0,0,0,0, TCODConsole::root, wx, wy);
         TCODConsole::flush(); // this updates the screen
     }    

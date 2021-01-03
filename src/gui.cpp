@@ -83,10 +83,12 @@ void buildframe(int totx, int toty, TCODConsole *menu){
     menu->setDefaultForeground(TCODColor::lighterGrey);
     menu->setDefaultBackground(TCODColor::black);
     //for(int x = 0; x < totx; ++x) menu->putChar(x, 0, '=', TCOD_BKGND_SET);
-    for(int x = 0; x < totx; ++x) menu->print(x, 0, "%c", TCOD_CHAR_HLINE, TCOD_BKGND_SET );
+    //for(int x = 0; x < totx; ++x) menu->print(x, 0, "%c", TCOD_CHAR_HLINE);
+    for(int x = 0; x < totx; ++x) menu->putChar(x, 0, TCOD_CHAR_HLINE);
 
     //for(int x = 0; x < totx; ++x) menu->putChar(x, toty-1, '-', TCOD_BKGND_SET);
-    for(int x = 0; x < totx; ++x) menu->print(x, toty-1, "%c", TCOD_CHAR_HLINE, TCOD_BKGND_SET );
+    //for(int x = 0; x < totx; ++x) menu->print(x, toty-1, "%c", TCOD_CHAR_HLINE);
+    for(int x = 0; x < totx; ++x) menu->putChar(x, toty-1, 196);
 }
 
 int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack, bool type){
@@ -147,7 +149,7 @@ int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack
                 if (index == menu_index){
                     menu->setDefaultForeground(TCODColor::black);
                     menu->setDefaultBackground(TCODColor::white);
-                    //menu->print(1, index+1, "%s", count.c_str());
+                    //menu->printf(1, index+1, "%s", count.c_str());
                     print_8x16(menu, 1, index*2, 
                         count.c_str(), TCODColor::black, TCODColor::white, 81);
                     menu->setDefaultForeground(TCODColor::white);
@@ -155,7 +157,7 @@ int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack
                 } else {
                     menu->setDefaultForeground(colorbase);
                     menu->setDefaultBackground(TCODColor::black);
-                    //menu->print(1, index+1, "%s", count.c_str());
+                    //menu->printf(1, index+1, "%s", count.c_str());
                     print_8x16(menu, 1, index*2, 
                         count.c_str(), colorbase, TCODColor::black, 81);
                 }
@@ -183,7 +185,7 @@ int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack
                     menu->setDefaultForeground(TCODColor::black);
                     menu->setDefaultBackground(TCODColor::white);
                     a = 3 * (index-1);
-                    menu->print(((index-1)*tempsiz)+(tempsiz/2)+a, 1, "%s", count.c_str());
+                    menu->printf(((index-1)*tempsiz)+(tempsiz/2)+a, 1, "%s", count.c_str());
                     menu->setDefaultForeground(TCODColor::white);
                     menu->setDefaultBackground(TCODColor::black);
                     for(int fill = 0; fill < tempsiz; ++fill) menu->setCharBackground(fill+(tempsiz*(index-1))+a, 1, TCODColor::white);
@@ -191,7 +193,7 @@ int UI_menu (unsigned int posx, unsigned int posy, std::vector<std::string> pack
                     menu->setDefaultForeground(colorbase);
                     menu->setDefaultBackground(TCODColor::black);
                     a = 3 * (index-1);
-                    menu->print((index-1)*tempsiz+(tempsiz/2)+a, 1, "%s", count.c_str());
+                    menu->printf((index-1)*tempsiz+(tempsiz/2)+a, 1, "%s", count.c_str());
                 }
                 ++index;
             } // next block highlight the letter 
